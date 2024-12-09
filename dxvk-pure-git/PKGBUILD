@@ -20,7 +20,6 @@ source=(
     "git+https://github.com/KhronosGroup/Vulkan-Headers.git"
     "git+https://github.com/KhronosGroup/SPIRV-Headers.git"
     "dxvk-extraopts.patch"
-    "llvm.patch"
 )
 sha256sums=(
     "SKIP"
@@ -28,7 +27,6 @@ sha256sums=(
     "SKIP"
     "SKIP"
     "bcc15521e4c7f966a0192a1dabb7fb4935b33db39344ab5b861f9d81486f1362"
-    "SKIP"
 )
 
 
@@ -51,9 +49,9 @@ prepare() {
     # If you want the "best" possible optimizations for your system you can use
     # `-march=native` and remove the `-mtune=core-avx2` option.
     # Thanks for flags https://github.com/ms178/archpkgbuilds/blob/main/packages/dxvk-mingw-git/PKGBUILD.clang
-    export CFLAGS="-Ofast -march=native -mtune=native -falign-functions=32 -fno-math-errno -fno-trapping-math -fcf-protection=none -mharden-sls=none -funroll-loops -fomit-frame-pointer -mprefer-vector-width=256 -fdata-sections -ffunction-sections -flto -fwhole-program-vtables -fsplit-lto-unit -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement -mllvm -enable-gvn-hoist -mllvm -enable-dfa-jump-thread -ffp-contract=fast -fdata-sections -ffunction-sections -fno-unique-section-names -fgnuc-version=14.2.0 -fno-plt"
-    export CXXFLAGS="$CFLAGS -Wp,-U_GLIBCXX_ASSERTIONS"
-    export LDFLAGS="-Wl,-O3,--as-needed -flto -fwhole-program-vtables -Wl,--gc-sections"
+    export CFLAGS="-O3 -march=native -mtune=native -flto=auto -fdata-sections -ffunction-sections -fdevirtualize-at-ltrans -mharden-sls=none -fcf-protection=none -fno-semantic-interposition -D_WIN32_WINNT=0xA00"
+    export CXXFLAGS="-O3 -march=native -mtune=native -flto=auto -fdata-sections -ffunction-sections -fdevirtualize-at-ltrans -mharden-sls=none -fcf-protection=none -fno-semantic-interposition -Wp,-U_GLIBCXX_ASSERTIONS -D_WIN32_WINNT=0xA00"
+    export LDFLAGS="-Wl,-O3,--as-needed,-Bsymbolic-functions,--sort-common,-flto=auto -Wl,--gc-sections"
 
     # These flags are taken from Proton
     CFLAGS+=" -mfpmath=sse -fwrapv -fno-strict-aliasing -std=gnu2x"
@@ -86,8 +84,8 @@ prepare() {
         -e "s|@CXXARGS@|\'${cross_cxxflags// /\',\'}\'|g" \
         -e "s|@LDARGS@|\'${cross_ldflags// /\',\'}\'|g"
 
-    local cross_cflags="$CFLAGS -mstackrealign"
-    local cross_cxxflags="$CXXFLAGS -mstackrealign"
+    local cross_cflags="$CFLAGS -mstackrealign -mno-avx"
+    local cross_cxxflags="$CXXFLAGS -mstackrealign -mno-avx"
     sed -i build-win32.txt \
         -e "s|@CARGS@|\'${cross_cflags// /\',\'}\'|g" \
         -e "s|@CXXARGS@|\'${cross_cxxflags// /\',\'}\'|g" \
