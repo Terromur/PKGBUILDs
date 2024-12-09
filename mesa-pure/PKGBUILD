@@ -15,63 +15,97 @@ url="https://www.mesa3d.org/"
 arch=(x86_64)
 license=("MIT AND BSD-3-Clause AND SGI-B-2.0")
 makedepends=(
-    'xorgproto'
-    'libxml2'
-    'libvdpau'
-    'libva'
-    'elfutils'
-    'libxrandr'
-    'meson'
-    'ninja'
-    'glslang'
-    'python-mako'
-    'python-ply'
     'cbindgen'
-    'wayland-protocols'
+    'clang'
     'cmake'
-    'python-packaging'
-    'python-pyaml'
-)
-depends=(
-    'libdrm'
-    'libxxf86vm'
-    'libxdamage'
-    'libxshmfence'
-    'libelf'
-    'libunwind'
-    'libglvnd'
-    'wayland'
-    'lm_sensors'
-    'vulkan-icd-loader'
-    'zstd'
+    'directx-headers'
+    'elfutils'
     'expat'
     'gcc-libs'
-    'libxfixes'
-    'libx11'
-    'systemd-libs'
-    'libxext'
-    'libxcb'
     'glibc'
+    'glslang'
+    'libclc'
+    'libdrm'
+    'libelf'
+    'libglvnd'
+    'libomxil-bellagio'
+    'libva'
+    'libvdpau'
+    'libx11'
+    'libxcb'
+    'libxext'
+    'libxfixes'
+    'libxml2'
+    'libxrandr'
+    'libxshmfence'
+    'libxxf86vm'
+    'llvm'
+    'llvm-libs'
+    'lm_sensors'
+    'meson'
+    'python-mako'
+    'python-packaging'
+    'python-ply'
+    'rust'
+    'rust-bindgen'
+    'spirv-llvm-translator'
+    'spirv-tools'
+    'systemd-libs'
+    'vulkan-icd-loader'
+    'wayland'
+    'wayland-protocols'
+    'xcb-util-keysyms'
+    'xorgproto'
     'zlib'
+    'zstd'
+)
+depends=(
+    'expat'
+    'gcc-libs'
+    'glibc'
+    'libdrm'
+    'libelf'
+    'libglvnd'
+    'libomxil-bellagio'
+    'libx11'
+    'libxcb'
+    'libxext'
+    'libxfixes'
+    'libxshmfence'
+    'libxxf86vm'
+    'llvm-libs'
+    'lm_sensors'
+    'wayland'
+    'zlib'
+    'zstd'
+    'libxdamage'
+    'libunwind'
+    'vulkan-icd-loader'
+    'systemd-libs'
     'python'
     'xcb-util-keysyms'
 )
-optdepends=('opengl-man-pages: for the OpenGL API man pages')
+optdepends=('opengl-man-pages: for the OpenGL API man pages' 'clang: opencl' 'compiler-rt: opencl')
 provides=(
     'vulkan-mesa-layers'
+    'opencl-rusticl-mesa'
     'opencl-driver'
     'opengl-driver'
     'vulkan-driver'
     'vulkan-radeon'
+    'vulkan-swrast'
     'libva-mesa-driver'
+    'mesa-vdpau'
     'mesa-libgl'
     'mesa'
 )
 conflicts=(
     'vulkan-mesa-layers'
-    'opencl-clover-mesa'
+    'opencl-rusticl-mesa'
     'vulkan-radeon'
+    'vulkan-swrast'
     'libva-mesa-driver'
+    'mesa-vdpau'
     'mesa-libgl'
     'mesa'
 )
@@ -125,12 +159,23 @@ prepare() {
 build() {
   local meson_options=(
     -D android-libbacktrace=disabled
+    -D android-strict=false
+    -D c_args="-O3 -g0 -march=native"
+    -D c_link_args="-O3 -g0 -march=native"
+    -D cpp_args="-O3 -g0 -march=native"
+    -D cpp_link_args="-O3 -g0 -march=native"
+    -D rust_args=""
+    -D rust_link_args=""
+    -D b_asneeded=false
+    -D b_pch=false
+    -D b_lto=false
+    --buildtype=release
     -D b_ndebug=true
     -D gallium-drivers=radeonsi,zink
     -D gallium-extra-hud=false
     -D gallium-nine=false
     -D gallium-opencl=disabled
-    -D gallium-rusticl=false
+    -D gallium-rusticl=true
     -D gallium-xa=disabled
     -D gallium-vdpau=disabled
     -D gles1=disabled
@@ -145,6 +190,13 @@ build() {
     -D video-codecs=all
     -D vulkan-drivers=amd
     -D vulkan-layers=device-select,overlay,screenshot
+    -D rust_std=2021
+    -D llvm=enabled
+    -D vulkan-beta=true
+    --wrap-mode=nofallback
+    --force-fallback-for=syn,paste
+    --prefix=/usr
+    -D sysconfdir=/etc
   )
 
   # Build only minimal debug info to reduce size
