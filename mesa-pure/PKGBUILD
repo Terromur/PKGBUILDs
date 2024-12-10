@@ -199,7 +199,7 @@ build() {
     -D microsoft-clc=disabled
     -D osmesa=false
     -D platforms=x11,wayland
-    -D valgrind=enabled
+    -D valgrind=disabled
     -D video-codecs=all
     -D vulkan-drivers=amd
     -D vulkan-layers=device-select,overlay,screenshot
