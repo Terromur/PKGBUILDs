@@ -124,6 +124,9 @@ source=(
   d58064d68c7b436ed9c62b020a91ffe646ee60d1.patch
   3df25e76a5e83a42b4db9527ac6ca3cc14c47ae6.patch
   06ea60e4d820ecc058d565d25ff55c66fcc37d65.patch
+  0001-Revert-dri-revert-INVALID-modifier-special-casing.patch
+  100.patch
+  20275.patch
 )
 sha256sums=(
   '9c795900449ce5bc7c526ba0ab3532a22c3c951cab7e0dd9de5fcac41b0843af'
@@ -133,6 +136,9 @@ sha256sums=(
   'd1725b68d23abe8e7f75c35a9d494c91c9becb24b37888227fad02e53ec878e9'
   '99247002327d3471cd2d758c0e81483af773f368645a16b0952356243727c28f'
   '30d87cd454f50b32d689fa44339c81deea3f10441c8909bf71b2ce37c2206e09'
+  'SKIP'
+  'SKIP'
+  'SKIP'
 )
 
 prepare() {
@@ -149,6 +155,13 @@ prepare() {
   patch -Np1 -i ../d58064d68c7b436ed9c62b020a91ffe646ee60d1.patch
   patch -Np1 -i ../3df25e76a5e83a42b4db9527ac6ca3cc14c47ae6.patch
   patch -Np1 -i ../06ea60e4d820ecc058d565d25ff55c66fcc37d65.patch
+  
+  # Исправления для старых видеокарт Radeon
+  patch -Np1 -i ../0001-Revert-dri-revert-INVALID-modifier-special-casing.patch
+  
+  # Доп патчи на исправления и оптимизацию
+  patch -Np1 -i ../100.patch
+  patch -Np1 -i ../20275.patch
 
   # Include package release in version string so Chromium invalidates
   # its GPU cache; otherwise it can cause pages to render incorrectly.
@@ -207,14 +220,21 @@ build() {
   export MESON_PACKAGE_CACHE_DIR="$srcdir"
 
   arch-meson mesa-$pkgver build "${meson_options[@]}"
-  meson compile -C build
+  ninja $NINJAFLAGS -C build
 }
 
 package() {
-  meson install -C build --destdir "$pkgdir"
+    conflicts+=("opencl-rusticl-mesa<$pkgver-$pkgrel")
 
-  # indirect rendering
-  ln -s /usr/lib/libGLX_mesa.so.0 "${pkgdir}/usr/lib/libGLX_indirect.so.0"
+    DESTDIR="${pkgdir}" ninja $NINJAFLAGS -C build install
+
+    # rusticl files go to a separate package
+    mkdir -p "$srcdir"/rusticl/{etc/OpenCL/vendors,usr/lib} 
+    mv "$pkgdir"/etc/OpenCL/vendors/rusticl.icd "$srcdir"/rusticl/etc/OpenCL/vendors
+    mv "$pkgdir"/usr/lib/libRusticlOpenCL* "$srcdir"/rusticl/usr/lib
+
+    # indirect rendering
+    ln -s /usr/lib/libGLX_mesa.so.0 "${pkgdir}/usr/lib/libGLX_indirect.so.0"
 
   install -Dm644 mesa-$pkgver/docs/license.rst -t "$pkgdir/usr/share/licenses/$pkgname"
 }
