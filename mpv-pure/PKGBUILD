@@ -18,7 +18,7 @@ depends=('alsa-lib' 'desktop-file-utils' 'ffmpeg' 'glibc' 'hicolor-icon-theme'
          'libjpeg-turbo' 'libplacebo' 'libva' 'libxkbcommon' 'libxss' 
          'luajit' 'mesa' 'libpipewire' 'wayland' 'zlib')
 makedepends=('git' 'meson' 'python-docutils' 'ladspa' 'wayland-protocols'
-             'ffnvcodec-headers')
+             'ffnvcodec-headers' 'vulkan-headers')
 optdepends=('yt-dlp: for video-sharing websites playback')
 conflicts=('libmpv.so' 'mpv')
 provides=('libmpv.so' 'mpv')
@@ -52,7 +52,7 @@ build() {
     -Duchardet=disabled
     -Dvapoursynth=disabled
     -Dvdpau=disabled
-    -Dvulkan=disabled
+    -Dvulkan=enabled
     -Dx11=disabled
     -Dxv=disabled
   )
@@ -70,7 +70,7 @@ package() {
   depends+=('libasound.so' 'libavcodec.so' 'libavdevice.so' 'libavfilter.so'
             'libavformat.so' 'libavutil.so' 'libswresample.so' 'libswscale.so'
             'liblcms2.so' 'libarchive.so' 'libass.so' 'libjpeg.so' 'libplacebo.so'
-            'libva.so' 'libva-drm.so' 'libva-wayland.so' 'libxkbcommon.so')
+            'libva.so' 'libva-drm.so' 'libva-wayland.so' 'libxkbcommon.so' 'libvulkan.so')
 
   meson install -C build --destdir "${pkgdir}"
 
