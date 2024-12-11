@@ -173,6 +173,10 @@ build() {
   local meson_options=(
     -D android-libbacktrace=disabled
     -D android-strict=false
+#Вы можете добавить для c_args и cpp_args флаг -mavx2, если процессор поддерживает.
+#Так же вы можете добавить флаг -ftree-vectorize, но Может вызывать регрессии 
+#или ошибки на не поддерживаемых процессорах AVX2 архитектурах, потому что флаг пытается использовать SSE и 
+#появляются проблемы при сборке пакета https://github.com/easybuilders/easybuild-easyconfigs/issues/6344
     -D c_args="-O3 -g0 -march=native"
     -D c_link_args="-O3 -g0 -march=native"
     -D cpp_args="-O3 -g0 -march=native"
