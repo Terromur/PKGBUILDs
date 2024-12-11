@@ -208,6 +208,7 @@ build() {
     -D vulkan-beta=true
     -D python.bytecompile=2
     -D strip=true
+    -Db_pie=false
     --wrap-mode=nofallback
     --force-fallback-for=syn,paste
     --prefix=/usr
