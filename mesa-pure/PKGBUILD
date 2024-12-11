@@ -206,6 +206,8 @@ build() {
     -D rust_std=2021
     -D llvm=enabled
     -D vulkan-beta=true
+    -D python.bytecompile=2
+    -D strip=true
     --wrap-mode=nofallback
     --force-fallback-for=syn,paste
     --prefix=/usr
