@@ -181,8 +181,6 @@ build() {
     -D c_link_args="-O3 -g0 -march=native"
     -D cpp_args="-O3 -g0 -march=native"
     -D cpp_link_args="-O3 -g0 -march=native"
-    -D rust_args=""
-    -D rust_link_args=""
     -D b_asneeded=false
     -D b_pch=false
     -D b_lto=false
