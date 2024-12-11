@@ -46,8 +46,6 @@ makedepends=(
     'python-mako'
     'python-packaging'
     'python-ply'
-    'rust'
-    'rust-bindgen'
     'spirv-llvm-translator'
     'spirv-tools'
     'systemd-libs'
