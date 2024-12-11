@@ -202,7 +202,7 @@ build() {
     -D valgrind=disabled
     -D video-codecs=all
     -D vulkan-drivers=amd
-    -D vulkan-layers=device-select,overlay,screenshot
+    -D vulkan-layers=device-select,overlay
     -D rust_std=2021
     -D llvm=enabled
     -D vulkan-beta=true
