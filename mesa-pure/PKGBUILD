@@ -227,15 +227,7 @@ build() {
 }
 
 package() {
-    conflicts+=("opencl-rusticl-mesa<$pkgver-$pkgrel")
-
     DESTDIR="${pkgdir}" ninja $NINJAFLAGS -C build install
-
-    # rusticl files go to a separate package
-    mkdir -p "$srcdir"/rusticl/{etc/OpenCL/vendors,usr/lib} 
-    mv "$pkgdir"/etc/OpenCL/vendors/rusticl.icd "$srcdir"/rusticl/etc/OpenCL/vendors
-    mv "$pkgdir"/usr/lib/libRusticlOpenCL* "$srcdir"/rusticl/usr/lib
-
     # indirect rendering
     ln -s /usr/lib/libGLX_mesa.so.0 "${pkgdir}/usr/lib/libGLX_indirect.so.0"
 
