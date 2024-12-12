@@ -27,7 +27,6 @@ makedepends=(
     'libclc'
     'libdrm'
     'libelf'
-    'lib'
     'libomxil-bellagio'
     'libva'
     'libvdpau'
