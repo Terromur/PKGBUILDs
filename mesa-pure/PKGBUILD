@@ -62,7 +62,6 @@ depends=(
     'glibc'
     'libdrm'
     'libelf'
-    'lib'
     'libomxil-bellagio'
     'libx11'
     'libxcb'
