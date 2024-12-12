@@ -27,7 +27,7 @@ makedepends=(
     'libclc'
     'libdrm'
     'libelf'
-    'libglvnd'
+    'lib'
     'libomxil-bellagio'
     'libva'
     'libvdpau'
@@ -63,7 +63,7 @@ depends=(
     'glibc'
     'libdrm'
     'libelf'
-    'libglvnd'
+    'lib'
     'libomxil-bellagio'
     'libx11'
     'libxcb'
@@ -209,6 +209,8 @@ build() {
     -D python.bytecompile=2
     -D strip=true
     -Db_pie=false
+    -Dshared-glapi=enabled
+    -Dshared-llvm=enabled
     --wrap-mode=nofallback
     --force-fallback-for=syn,paste
     --prefix=/usr
