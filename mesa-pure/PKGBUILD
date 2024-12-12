@@ -160,11 +160,6 @@ prepare() {
   # Доп патчи на исправления и оптимизацию
   patch -Np1 -i ../100.patch
   patch -Np1 -i ../20275.patch
-
-  # Include package release in version string so Chromium invalidates
-  # its GPU cache; otherwise it can cause pages to render incorrectly.
-  # https://bugs.launchpad.net/ubuntu/+source/chromium-browser/+bug/2020604
-  echo "$pkgver-arch$epoch.$pkgrel" >VERSION
 }
 
 #Вы можете добавить для c_args и cpp_args флаг -mavx2, если процессор поддерживает.
