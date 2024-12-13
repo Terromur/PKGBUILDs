@@ -4,6 +4,7 @@
 Так же были добавлены мои PKGBUILDS, которые я сопровожданию и форкнутый CachyOS-Settings.
 
 Ссылка на официальный репозиторий PKGBUILDS Ventureoo - https://github.com/ventureoo/PKGBUILDs
+
 Ссылка на официальный репозиторий CachyOS-Settings - https://github.com/CachyOS/CachyOS-Settings
 
 Был добавлен dxvk-sarek-pure и dxvk-sarek-async-pure:
