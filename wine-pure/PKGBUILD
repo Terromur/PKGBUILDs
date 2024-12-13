@@ -126,6 +126,7 @@ prepare() {
 # Для CFLAGS можно добавить -falign-functions=32 -Wl,-z,max-page-size=0x4000 -ftree-vectorize
 # Для CXXFLAGS можно добавить -falign-functions=32
 # Для CROSSCFLAGS можно добавить -ftree-vectorize
+# -falign-functions=32 и -ftree-vectorize зависит от того, насколько старый процессор, а -Wl,-z,max-page-size=0x4000 для CFLAGS подойдёт для Intel процессоров
 build() {
 export CFLAGS="-O3 -march=native -mtune=native -fno-semantic-interposition -fcf-protection=none -mharden-sls=none -funroll-loops -fivopts -fmodulo-sched -fdata-sections -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine -ffat-lto-objects"
 export CXXFLAGS="-O3 -march=native -mtune=native -fno-semantic-interposition -fcf-protection=none -mharden-sls=none -funroll-loops -fivopts -fmodulo-sched -fdata-sections -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine -ffat-lto-objects"
