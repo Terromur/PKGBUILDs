@@ -1,0 +1,37 @@
+# Maintainer: Peter Jung <admin@ptr1337.dev>
+
+_gitname=CachyOS-Settings
+pkgname=cachyos-settings
+pkgver=1.1.5
+pkgrel=2
+epoch=1
+groups=(cachyos)
+arch=('any')
+license=(GPL-1.0-only)
+makedepends=('coreutils')
+pkgdesc='CachyOS - Settings'
+source=("git+https://github.com/Terromur/CachyOS-Settings.git")
+install="$pkgname.install"
+sha256sums=('SKIP')
+depends=(
+  zram-generator
+  ananicy-cpp
+  cachyos-ananicy-rules
+  inxi
+  "systemd>=256"
+)
+optdepends=('libluv: for topmem'
+            'lua-luv: for topmem'
+            'power-profiles-daemon: For game-performance')
+
+prepare() {
+  cd $_gitname
+  git cherry-pick -n cb8fba300066723e87c55cc2d1c3472891c9217d
+}
+
+package() {
+  install -d "$pkgdir/etc"
+  cp -rf "${srcdir}/${_gitname}/etc" "$pkgdir"
+  install -d "$pkgdir/usr"
+  cp -rf "${srcdir}/${_gitname}/usr" "$pkgdir"
+}
