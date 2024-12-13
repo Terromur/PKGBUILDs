@@ -4,8 +4,8 @@
 
 Ссылка на официальный репозиторий PKGBUILDS Ventureoo - https://github.com/ventureoo/PKGBUILDs
 
-Был добавлен dxvk-sarek-pure и dxvk-sarek-async-pure
--Все теже изменения, которые есть в dxvk-pure-git
+Был добавлен dxvk-sarek-pure и dxvk-sarek-async-pure:
+- Все теже изменения, которые есть в dxvk-pure-git
 
 Был добавлен Cachyos-Settings с изменениями:
 - Оптимизация интернета, увеличение стабильности, улучшение работы прокси, прочие дополнительные оптимизации
