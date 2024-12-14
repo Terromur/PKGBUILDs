@@ -7,9 +7,8 @@
 
 Ссылка на официальный репозиторий CachyOS-Settings - https://github.com/CachyOS/CachyOS-Settings
 
-Был добавлен dxvk-sarek-pure и dxvk-sarek-async-pure:
+Был добавлен dxvk-sarek-pure:
 - Все теже изменения, которые есть в dxvk-pure-git
-- Напомню, что dxvk-sarek-async-pure можно использовать тогда, когда вы не планируете использовать ntsync
 
 Был добавлен Cachyos-Settings с изменениями:
 - Оптимизация интернета, увеличение стабильности, улучшение работы прокси, прочие дополнительные оптимизации
