@@ -11,14 +11,14 @@ conflicts=(ghostty)
 replaces=(ghostty)
 depends=(
   bzip2
-  fontconfig
-  freetype2
-  gcc-libs
-  glibc
+  fontconfig libfontconfig.so
+  freetype2 libfreetype.so
+  gcc-libs # ld-linux-x86-64.so
+  glibc # libc.so libm.so
   glfw
-  harfbuzz
+  harfbuzz libharfbuzz.so
   libpng
-  oniguruma
+  oniguruma # libonig.so
   pixman
   zlib
 )
