@@ -11,14 +11,14 @@ conflicts=(ghostty)
 replaces=(ghostty)
 depends=(
   bzip2
-  fontconfig libfontconfig.so
-  freetype2 libfreetype.so
-  gcc-libs # ld-linux-x86-64.so
-  glibc # libc.so libm.so
+  fontconfig
+  freetype2
+  gcc-libs
+  glibc
   glfw
-  harfbuzz libharfbuzz.so
+  harfbuzz
   libpng
-  oniguruma # libonig.so
+  oniguruma
   pixman
   zlib
 )
@@ -40,7 +40,7 @@ build() {
     --summary all \
     --prefix "$PWD/build/usr" \
     -Doptimize=ReleaseFast \
-    -Dcpu=baseline \
+    -Dcpu=native \
     -Dpie=true \
     -Demit-docs=false \
     -Dapp-runtime=glfw
