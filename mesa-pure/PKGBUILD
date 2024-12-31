@@ -155,14 +155,14 @@ build() {
     -D video-codecs=all
     -D vulkan-drivers=amd
     -D vulkan-layers=device-select,overlay
-    -D rust_std=2021
-    -D llvm=enabled
+    -D llvm=disabled
     -D vulkan-beta=true
     -D python.bytecompile=2
     -D strip=true
     -Db_pie=false
     -Dshared-glapi=enabled
-    -Dshared-llvm=enabled
+    -Dshared-llvm=disabled
+    -Damd-use-llvm=false
     --wrap-mode=nofallback
     --force-fallback-for=syn,paste
     --prefix=/usr
