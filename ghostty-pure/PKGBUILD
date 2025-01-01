@@ -41,8 +41,9 @@ build() {
     --prefix "$PWD/build/usr" \
     -Doptimize=ReleaseFast \
     -Dcpu=native \
-    -Dpie=true \
-    -Demit-docs=false
+    -Dpie=false \
+    -Demit-docs=false \
+    -Demit-webdata=false
 }
 
 package() {
