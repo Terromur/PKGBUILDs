@@ -8,7 +8,7 @@ pkgdesc='Fast, native, feature-rich terminal emulator pushing modern features'
 arch=(x86_64)
 url="https://github.com/ghostty-org/ghostty"
 license=(MIT)
-conflicts=(ghostty)
+conflicts=(ghostty ghostty-glfw)
 replaces=(ghostty)
 depends=(
   bzip2
