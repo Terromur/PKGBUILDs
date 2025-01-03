@@ -83,9 +83,9 @@ prepare() {
         -e "s|@CARGS@|\'${cross_cflags// /\',\'}\'|g" \
         -e "s|@CXXARGS@|\'${cross_cxxflags// /\',\'}\'|g" \
         -e "s|@LDARGS@|\'${cross_ldflags// /\',\'}\'|g"
-
-    local cross_cflags="$CFLAGS -mstackrealign -mno-avx"
-    local cross_cxxflags="$CXXFLAGS -mstackrealign -mno-avx"
+# Добавьте параметры, если имеются проблемы с 32 битными приложениями:
+#    local cross_cflags="$CFLAGS -mstackrealign -mno-avx"
+#    local cross_cxxflags="$CXXFLAGS -mstackrealign -mno-avx"
     sed -i build-win32.txt \
         -e "s|@CARGS@|\'${cross_cflags// /\',\'}\'|g" \
         -e "s|@CXXARGS@|\'${cross_cxxflags// /\',\'}\'|g" \
