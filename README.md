@@ -20,8 +20,8 @@
 - Добавление патчей на оптимизацию
 - Отключение дополнительных ненужных опций
 - Добавление опций на оптимизацию и ускорения сборки пакета
-- Добавление комментария про -falign-functions=32 и -ftree-vectorize в PKGBUILD
-- Добавление комментария про -D b_lto=true и -D b_lto_mode=full в PKGBUILD
+- Добавление комментария про -falign-functions=32 -falign-functions=64 и -ftree-vectorize в PKGBUILD
+- Добавление комментария про -D b_lto=true и -D b_lto_mode=default в PKGBUILD
 
 Был изменён dxvk-pure-git:
 - Агрессивная оптимизация -O3 и другие флаги
