@@ -91,12 +91,22 @@ source=(
   06ea60e4d820ecc058d565d25ff55c66fcc37d65.patch
   100.patch
   20275.patch
+  28973.patch
+  30720.patch
+  31658.patch
+  32726.patch
+  32876.patch
 )
 sha256sums=(
   'ad9f5f3a6d2169e4786254ee6eb5062f746d11b826739291205d360f1f3ff716'
   'd1725b68d23abe8e7f75c35a9d494c91c9becb24b37888227fad02e53ec878e9'
   '99247002327d3471cd2d758c0e81483af773f368645a16b0952356243727c28f'
   '30d87cd454f50b32d689fa44339c81deea3f10441c8909bf71b2ce37c2206e09'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
   'SKIP'
   'SKIP'
 )
@@ -112,6 +122,11 @@ prepare() {
   # Доп патчи на исправления и оптимизацию
   patch -Np1 -i ../100.patch
   patch -Np1 -i ../20275.patch
+  patch -Np1 -i ../28973.patch
+  patch -Np1 -i ../30720.patch
+  patch -Np1 -i ../31658.patch
+  patch -Np1 -i ../32726.patch
+  patch -Np1 -i ../32876.patch
 }
 
 # Так же вы можете добавить флаги -falign-functions=32 только для старых процессоров и -falign-functions=64 для современных. 
