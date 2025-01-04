@@ -6,8 +6,8 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-staging-ntsync-pure-git
-pkgver=10.0rc3.r0.gd7a7cae2e2d
-pkgrel=1
+pkgver=10.0rc3.r23.g0fbaa325d49
+pkgrel=2
 source=(
   "git+https://gitlab.winehq.org/wine/wine.git"
   "git+https://gitlab.winehq.org/wine/wine-staging.git"
@@ -15,9 +15,9 @@ source=(
   wine-binfmt.conf
   ntsync-v7-10.0-rc1-staging.patch
   wineserver-enable-link-time-optimization.patch
-  explorer-prefer-wayland-over-x11-by-default.patch
   msvcrt_nativebuiltin.patch
   6663.patch
+  7064.patch
 )
 sha512sums=(
   'SKIP'
@@ -26,10 +26,11 @@ sha512sums=(
   'bdde7ae015d8a98ba55e84b86dc05aca1d4f8de85be7e4bd6187054bfe4ac83b5a20538945b63fb073caab78022141e9545685e4e3698c97ff173cf30859e285'
   '891dcf9f1ffb45d6636e6ffd50ccae23eb1f774f2bf4ec885915d6aec0e25b2bd7ae80db66aab5d57214be9ba7df72dcb77a39e5ef4bc780eb5e32996f8f935e'
   'f47afccd51f010a282cab07f343479fba6f14ed8c654c8ff7bbc5c808c0d15be967f35d555f496b5f9bc281aa34f78bb9fd2c93a6e1241682cf3ad201dfe88f3'
-  'd32d06216d05bdcd6b00b26820f3ba141f58e7874bb51ed2958a7b0f4dd05da612ae0e8d792e7134fae92f2a6cc05f77077e1443a221cda242a836747a7e22ea'
   '8d4fca16472648e68e9e29e0d406384d8a0e48863c69e511e548b664353a930af83e3ddedf34aab6931b29ca47ee8340980c2c9c84196b0fce0b2f64e0b1cfd9'
   'b6b369fd1307d3adf805d5c9abd0bca787d7d59dc4c433371049cacf8f08c58e740c0345a174d8a211c45c8301498c986d5a637abd713a752d6de3b49be81b9a'
+  '03fe5c70d61028f49120e34eeae464889c4592f6fd9ae90928ae31cfbe69593c3aa4b697ed6bdf13592a2bb88ec23e3c1c7c880d7424936b2907a0643d11b73b'
 )
+
 
 pkgdesc="A compatibility layer for running Windows programs"
 url="https://www.winehq.org"
@@ -108,9 +109,6 @@ prepare() {
   # LTO for Wineserver
   patch -Np1 -i "${srcdir}/wineserver-enable-link-time-optimization.patch"
 
-  # Prefer Wayland over X11 by default
-  patch -Np1 -i "${srcdir}/explorer-prefer-wayland-over-x11-by-default.patch"
-
   # Use native Visual C++ DLLs
   patch -Np1 -i "${srcdir}/msvcrt_nativebuiltin.patch"
 
@@ -118,6 +116,10 @@ prepare() {
   # Requires patches for Mesa Zink driver:
   # https://gitlab.freedesktop.org/Guy1524/mesa/-/commits/placed_allocation
   patch -Np1 -i "${srcdir}/6663.patch"
+
+  # Fixes crashes in many games in new WoW64 mode
+  # https://bugs.winehq.org/show_bug.cgi?id=57444
+  patch -Np1 -i "${srcdir}/7064.patch"
 }
 
 
