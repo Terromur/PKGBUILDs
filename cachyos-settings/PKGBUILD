@@ -1,3 +1,4 @@
+# Maintainer: Terromur <terromuroz@proton.me>
 # Maintainer: Peter Jung <admin@ptr1337.dev>
 
 _gitname=CachyOS-Settings
@@ -10,9 +11,11 @@ arch=('any')
 license=(GPL-1.0-only)
 makedepends=('coreutils')
 pkgdesc='CachyOS - Settings'
-source=("git+https://github.com/Terromur/CachyOS-Settings.git")
+source=("git+https://github.com/Terromur/CachyOS-Settings.git"
+	"set_shm_params.sh")
 install="$pkgname.install"
-sha256sums=('SKIP')
+sha256sums=('SKIP'
+	    'SKIP')
 depends=(
   zram-generator
   ananicy-cpp
@@ -34,4 +37,6 @@ package() {
   cp -rf "${srcdir}/${_gitname}/etc" "$pkgdir"
   install -d "$pkgdir/usr"
   cp -rf "${srcdir}/${_gitname}/usr" "$pkgdir"
+  
+  install -Dm755 "${srcdir}/set_shm_params.sh" "$pkgdir/usr/bin/set_shm_params"
 }
