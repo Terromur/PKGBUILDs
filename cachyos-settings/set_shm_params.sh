@@ -10,10 +10,6 @@ PAGE_SIZE=$(getconf PAGESIZE)
 SHMMAX=$TOTAL_RAM
 SHMALL=$((TOTAL_RAM / PAGE_SIZE))
 
-# Применение параметров
-sysctl -w kernel.shmmax=$SHMMAX
-sysctl -w kernel.shmall=$SHMALL
-
-# Сохранение параметров для применения после перезагрузки
+# Сохранение параметров
 echo "kernel.shmmax = $SHMMAX" > /etc/sysctl.d/99-shm.conf
 echo "kernel.shmall = $SHMALL" >> /etc/sysctl.d/99-shm.conf
