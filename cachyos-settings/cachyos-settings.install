@@ -5,6 +5,23 @@ post_install() {
     for service in "${SERVICES[@]}"; do
         systemctl enable "$service"
     done
+
+    # Настройка kernel.shmmax и kernel.shmall
+    echo "Configuring kernel.shmmax and kernel.shmall..."
+    TOTAL_RAM=$(grep MemTotal /proc/meminfo | awk '{print $2 * 1024}')
+    PAGE_SIZE=$(getconf PAGESIZE)
+    SHMMAX=$TOTAL_RAM
+    SHMALL=$((TOTAL_RAM / PAGE_SIZE))
+
+    # Применение параметров
+    sysctl -w kernel.shmmax=$SHMMAX
+    sysctl -w kernel.shmall=$SHMALL
+
+    # Сохранение параметров для применения после перезагрузки
+    echo "kernel.shmmax = $SHMMAX" > /usr/lib/sysctl.d/99-shm.conf
+    echo "kernel.shmall = $SHMALL" >> /usr/lib/sysctl.d/99-shm.conf
+
+    echo "Kernel parameters configured successfully."
 }
 
 post_upgrade() {
@@ -14,8 +31,25 @@ post_upgrade() {
         if systemctl is-active "$service" >/dev/null; then
             systemctl restart "$service"
         fi
-
     done
+
     # Enable systemd-resolved only once for the upcoming upgrade
     systemctl enable systemd-resolved
+
+    # Настройка kernel.shmmax и kernel.shmall (повторно, на случай обновления)
+    echo "Reconfiguring kernel.shmmax and kernel.shmall..."
+    TOTAL_RAM=$(grep MemTotal /proc/meminfo | awk '{print $2 * 1024}')
+    PAGE_SIZE=$(getconf PAGESIZE)
+    SHMMAX=$TOTAL_RAM
+    SHMALL=$((TOTAL_RAM / PAGE_SIZE))
+
+    # Применение параметров
+    sysctl -w kernel.shmmax=$SHMMAX
+    sysctl -w kernel.shmall=$SHMALL
+
+    # Сохранение параметров для применения после перезагрузки
+    echo "kernel.shmmax = $SHMMAX" > /usr/lib/sysctl.d/99-shm.conf
+    echo "kernel.shmall = $SHMALL" >> /usr/lib/sysctl.d/99-shm.conf
+
+    echo "Kernel parameters reconfigured successfully."
 }
