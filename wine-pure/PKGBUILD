@@ -6,8 +6,8 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-staging-ntsync-pure-git
-pkgver=10.0rc4.r0.g9008e655e4e
-pkgrel=1
+pkgver=10.0rc3.r23.g0fbaa325d49
+pkgrel=2
 source=(
   "git+https://gitlab.winehq.org/wine/wine.git"
   "git+https://gitlab.winehq.org/wine/wine-staging.git"
@@ -130,11 +130,11 @@ prepare() {
 # -falign-functions=32 и -ftree-vectorize зависит от того, используется более современный процессор, если слишком старый процессор и не имеет никаких инструкций, не стоит включать 
 # -Wl,-z,max-page-size=0x4000 для CFLAGS подойдёт для Intel процессоров
 build() {
-export CFLAGS="-O3 -march=native -mtune=native -fno-semantic-interposition -fcf-protection=none -funroll-loops -fdata-sections -ffunction-sections -ffat-lto-objects -mcmodel=small"
-export CXXFLAGS="-O3 -march=native -mtune=native -fno-semantic-interposition -fcf-protection=none -funroll-loops -fdata-sections -ffunction-sections -ffat-lto-objects -mcmodel=small"
+export CFLAGS="-O3 -march=native -mtune=native -fno-semantic-interposition -fcf-protection=none -funroll-loops -fivopts -fmodulo-sched -fdata-sections -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine -ffat-lto-objects -mcmodel=small"
+export CXXFLAGS="-O3 -march=native -mtune=native -fno-semantic-interposition -fcf-protection=none -funroll-loops -fivopts -fmodulo-sched -fdata-sections -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine -ffat-lto-objects -mcmodel=small"
 
-export CROSSCFLAGS="-O3 -march=native -mtune=native -fno-semantic-interposition -fcf-protection=none -funroll-loops -fdata-sections -ffunction-sections"
-export CROSSCXXFLAGS="-O3 -march=native -mtune=native -fno-semantic-interposition -fcf-protection=none -funroll-loops -fdata-sections -ffunction-sections"
+export CROSSCFLAGS="-O3 -march=native -mtune=native -fno-semantic-interposition -fcf-protection=none -funroll-loops -fivopts -fmodulo-sched -fdata-sections -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine"
+export CROSSCXXFLAGS="-O3 -march=native -mtune=native -fno-semantic-interposition -fcf-protection=none -funroll-loops -fivopts -fmodulo-sched -fdata-sections -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine"
 export CROSSLDFLAGS="-Wl,-O3,--sort-common,--as-needed,-lgomp,--file-alignment,4096"
 
   echo "Building Wine..."
