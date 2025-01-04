@@ -135,7 +135,6 @@ build() {
     -D cpp_link_args="-O3 -g0 -march=native"
     -D b_asneeded=false
     -D b_pch=false
-    -D b_lto=false
     --buildtype=release
     -D b_ndebug=true
     -D gallium-drivers=radeonsi,zink
