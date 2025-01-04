@@ -13,3 +13,6 @@ SHMALL=$((TOTAL_RAM / PAGE_SIZE))
 # Сохранение параметров
 echo "kernel.shmmax = $SHMMAX" > /etc/sysctl.d/99-shm.conf
 echo "kernel.shmall = $SHMALL" >> /etc/sysctl.d/99-shm.conf
+
+# Самоудаление скрипта после применения
+rm -f "$0"
