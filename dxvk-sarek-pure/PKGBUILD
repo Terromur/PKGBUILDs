@@ -1,6 +1,6 @@
 # Maintainer: Terromur <terromuroz@proton.me>
 pkgname=dxvk-sarek-pure
-pkgver=1.10.5
+pkgver=1.10.6
 pkgrel=1
 pkgdesc="DXVK with Sarek patches for Proton"
 arch=('x86_64')
