@@ -82,6 +82,220 @@ prepare() {
   scripts/config -e NTSYNC
   scripts/config -d CC_OPTIMIZE_FOR_PERFORMANCE -e CC_OPTIMIZE_FOR_PERFORMANCE_O3
 
+    # Отключение ненужных драйверов и функций
+  scripts/config -d DRM_MGAG200_DISABLE_WRITECOMBINE
+  scripts/config -d GPIO_BT8XX
+  scripts/config -d INTEL_TDX_HOST
+  scripts/config -d SND_SE6X
+  scripts/config -d MEMORY_HOTPLUG
+
+  # Отключение кластерного шедулера на x86
+    scripts/config -d SCHED_CLUSTER
+    
+  # Отключение ненужной файловой системы
+  scripts/config -d MSDOS_FS
+
+  # Включение оптимизации HugeTLB Vmemmap по умолчанию
+  scripts/config -e HUGETLB_PAGE_OPTIMIZE_VMEMMAP_DEFAULT_ON
+
+  # Отключение аппаратных мониторов
+  scripts/config -d IGB_HWMON
+  scripts/config -d IXGBE_HWMON
+  scripts/config -d TIGON3_HWMON
+  scripts/config -d SCSI_UFS_HWMON
+  scripts/config -d SENSORS_IIO_HWMON
+
+  # Отключение трассировщиков
+  scripts/config -d ATH5K_TRACER
+  scripts/config -d DM_UEVENT
+  scripts/config -d FUNCTION_PROFILER
+  scripts/config -d FTRACE_RECORD_RECURSION
+  scripts/config -d FTRACE_SORT_STARTUP_TEST
+  scripts/config -d FTRACE_VALIDATE_RCU_IS_WATCHING
+  scripts/config -d HWLAT_TRACER
+  scripts/config -d IRQSOFF_TRACER
+  scripts/config -d KPROBE_EVENTS_ON_NOTRACE
+  scripts/config -d LOCK_EVENT_COUNTS
+  scripts/config -d MMIOTRACE
+  scripts/config -d MMIOTRACE_TEST
+  scripts/config -d OSNOISE_TRACER
+  scripts/config -d PM_DEVFREQ_EVENT
+  scripts/config -d PREEMPT_TRACER
+  scripts/config -d PSTORE_FTRACE
+  scripts/config -d SCHED_TRACER
+  scripts/config -d TIMERLAT_TRACER
+  scripts/config -d SYNTH_EVENTS
+  scripts/config -d USER_EVENTS
+  scripts/config -d HIST_TRIGGERS
+
+  # Отключение отладочных функций
+  scripts/config -d SLUB_DEBUG
+  scripts/config -d SLUB_DEBUG_ON
+  scripts/config -d PAGE_POISONING
+  scripts/config -d GDB_SCRIPTS
+  scripts/config -d ACPI_DEBUG
+  scripts/config -d PM_DEBUG
+  scripts/config -d PM_ADVANCED_DEBUG
+  scripts/config -d PM_SLEEP_DEBUG
+  scripts/config -d PM_TRACE_RTC
+  scripts/config -d LATENCYTOP
+  scripts/config -d LEDS_TRIGGER_CPU
+  scripts/config -d LEDS_TRIGGER_GPIO
+  scripts/config -d MEMTEST
+  scripts/config -d PCIEAER_INJECT
+  scripts/config -d PCIE_ECRC
+  scripts/config -d GENERIC_IRQ_DEBUGFS
+  scripts/config -d GENERIC_IRQ_INJECTION
+  scripts/config -d FUNCTION_ERROR_INJECTION
+  scripts/config -d PRINTK_INDEX
+  scripts/config -d SOFTLOCKUP_DETECTOR_INTR_STORM
+  scripts/config -d GENERIC_IRQ_STAT_SNAPSHOT
+  scripts/config -d 6LOWPAN_DEBUGFS
+  scripts/config -d AF_RXRPC_DEBUG
+  scripts/config -d AFS_DEBUG
+  scripts/config -d AFS_DEBUG_CURSOR
+  scripts/config -d ATA_VERBOSE_ERROR
+  scripts/config -d ATH10K_DEBUG
+  scripts/config -d ATH10K_DEBUGFS
+  scripts/config -d ATH12K_DEBUG
+  scripts/config -d ATH5K_DEBUG
+  scripts/config -d ATH6KL_DEBUG
+  scripts/config -d ATH9K_HTC_DEBUGFS
+  scripts/config -d ATM_ENI_DEBUG
+  scripts/config -d ATM_IA_DEBUG
+  scripts/config -d ATM_IDT77252_DEBUG
+  scripts/config -d BCACHE_DEBUG
+  scripts/config -d BCACHEFS_DEBUG
+  scripts/config -d BEFS_DEBUG
+  scripts/config -d BLK_DEBUG_FS
+  scripts/config -d BT_DEBUGFS
+  scripts/config -d CEPH_LIB_PRETTYDEBUG
+  scripts/config -d CFG80211_DEBUGFS
+  scripts/config -d CIFS_DEBUG
+  scripts/config -d CIFS_DEBUG2
+  scripts/config -d CIFS_DEBUG_DUMP_KEYS
+  scripts/config -d CMA_DEBUGFS
+  scripts/config -d CROS_EC_DEBUGFS
+  scripts/config -d CRYPTO_DEV_AMLOGIC_GXL_DEBUG
+  scripts/config -d CRYPTO_DEV_CCP_DEBUGFS
+  scripts/config -d DEBUG_BUGVERBOSE
+  scripts/config -d DEBUG_MEMORY_INIT
+  scripts/config -d DEBUG_RODATA_TEST
+  scripts/config -d DEBUG_RSEQ
+  scripts/config -d DEBUG_SHIRQ
+  scripts/config -d DEBUG_WX
+  scripts/config -d DLM_DEBUG
+  scripts/config -d DM_DEBUG_BLOCK_MANAGER_LOCKING
+  scripts/config -d DM_DEBUG_BLOCK_STACK_TRACING
+  scripts/config -d DRM_DEBUG_DP_MST_TOPOLOGY_REFS
+  scripts/config -d DRM_DEBUG_MODESET_LOCK
+  scripts/config -d DRM_DISPLAY_DP_TUNNEL_STATE_DEBUG
+  scripts/config -d DRM_I915_DEBUG
+  scripts/config -d DRM_I915_DEBUG_GUC
+  scripts/config -d DRM_I915_DEBUG_MMIO
+  scripts/config -d DRM_I915_DEBUG_VBLANK_EVADE
+  scripts/config -d DRM_I915_DEBUG_WAKEREF
+  scripts/config -d DRM_I915_SW_FENCE_DEBUG_OBJECTS
+  scripts/config -d DRM_XE_DEBUG
+  scripts/config -d DRM_XE_DEBUG_MEM
+  scripts/config -d DRM_XE_DEBUG_SRIOV
+  scripts/config -d DRM_XE_DEBUG_VM
+  scripts/config -d DVB_USB_DEBUG
+  scripts/config -d EARLY_PRINTK_DBGP
+  scripts/config -d EARLY_PRINTK_USB_XDBC
+  scripts/config -d EXT4_DEBUG
+  scripts/config -d HIST_TRIGGERS_DEBUG
+  scripts/config -d INFINIBAND_MTHCA_DEBUG
+  scripts/config -d IWLEGACY_DEBUG
+  scripts/config -d IWLWIFI_DEBUG
+  scripts/config -d JFS_DEBUG
+  scripts/config -d LDM_DEBUG
+  scripts/config -d LIBERTAS_THINFIRM_DEBUG
+  scripts/config -d NETFS_DEBUG
+  scripts/config -d NFS_DEBUG
+  scripts/config -d NVME_TARGET_DEBUGFS
+  scripts/config -d NVME_VERBOSE_ERRORS
+  scripts/config -d OCFS2_DEBUG_FS
+  scripts/config -d PNP_DEBUG_MESSAGES
+  scripts/config -d QUOTA_DEBUG
+  scripts/config -d RTLWIFI_DEBUG
+  scripts/config -d RTW88_DEBUG
+  scripts/config -d RTW88_DEBUGFS
+  scripts/config -d RTW89_DEBUGFS
+  scripts/config -d RTW89_DEBUGMSG
+  scripts/config -d SHRINKER_DEBUG
+  scripts/config -d SMS_SIANO_DEBUGFS
+  scripts/config -d SND_SOC_SOF_DEBUG
+  scripts/config -d SUNRPC_DEBUG
+  scripts/config -d UFS_DEBUG
+  scripts/config -d USB_DWC2_DEBUG
+  scripts/config -d VFIO_DEBUGFS
+  scripts/config -d VIRTIO_DEBUG
+  scripts/config -d VISL_DEBUGFS
+  scripts/config -d WCN36XX_DEBUGFS
+  scripts/config -d WWAN_DEBUGFS
+  scripts/config -d XEN_DEBUG_FS
+
+  # Применение настроек Clear Linux для x86
+    scripts/config -d IOMMU_DEFAULT_DMA_LAZY -e IOMMU_DEFAULT_PASSTHROUGH
+    scripts/config -d ACPI_TABLE_UPGRADE
+    scripts/config -d ACPI_PCI_SLOT
+    scripts/config -d ACPI_EXTLOG
+    scripts/config -d BALLOON_COMPACTION
+    scripts/config -d CMA
+    scripts/config -d DAMON
+    scripts/config -d HWPOISON_INJECT
+    scripts/config -d MEM_SOFT_DIRTY -d IDLE_PAGE_TRACKING
+    scripts/config -d PARAVIRT_TIME_ACCOUNTING
+    scripts/config -e PSI_DEFAULT_DISABLED
+    scripts/config -d READ_ONLY_THP_FOR_FS
+    scripts/config -e DEBUG_FORCE_FUNCTION_ALIGN_64B
+    scripts/config -d SECURITY_IPE
+    scripts/config -d SND_UTIMER
+    scripts/config -d WATCH_QUEUE
+    scripts/config -d WATCHDOG
+    scripts/config -d PCIEASPM_DEFAULT -e PCIEASPM_PERFORMANCE
+    scripts/config -d WQ_POWER_EFFICIENT_DEFAULT
+    scripts/config -d X86_BOOTPARAM_MEMORY_CORRUPTION_CHECK
+    scripts/config -d X86_CPA_STATISTICS
+    scripts/config -d X86_DECODER_SELFTEST
+    scripts/config -d X86_5LEVEL
+    scripts/config -d STACKPROTECTOR_STRONG -e STACKPROTECTOR
+    scripts/config -d LEGACY_VSYSCALL_XONLY -e LEGACY_VSYSCALL_NONE
+    scripts/config -d UID16 -d X86_16BIT -d MODIFY_LDT_SYSCALL
+    scripts/config -d SYSFS_SYSCALL
+    scripts/config -e STRICT_SIGALTSTACK_SIZE
+    scripts/config -d KEXEC -d KEXEC_FILE -d CRASH_DUMP
+    scripts/config -d KFENCE
+    scripts/config -d INIT_STACK_ALL_ZERO -e INIT_STACK_NONE
+    scripts/config -d UCLAMP_TASK
+    scripts/config -d CGROUP_HUGETLB
+    scripts/config -d CGROUP_NET_PRIO
+    scripts/config -d CGROUP_PERF
+    scripts/config -d CGROUP_RDMA
+    scripts/config -d BLK_CGROUP_IOLATENCY
+    scripts/config -d BLK_CGROUP_IOCOST
+    scripts/config -d BLK_CGROUP_IOPRIO
+    scripts/config -d NETFILTER_XT_MATCH_CGROUP
+    scripts/config -d CPUMASK_OFFSTACK -d MAXSMP
+    scripts/config -d ZSWAP_DEFAULT_ON -d ZSWAP_SHRINKER_DEFAULT_ON
+    scripts/config -d ZSWAP_ZPOOL_DEFAULT_ZSMALLOC -d ZSMALLOC_STAT
+
+  # Отключение NUMA и связанных параметров
+  scripts/config -d NUMA \
+    -d AMD_NUMA \
+    -d X86_64_ACPI_NUMA \
+    -d NODES_SPAN_OTHER_NODES \
+    -d NUMA_EMU \
+    -d USE_PERCPU_NUMA_NODE_ID \
+    -d ACPI_NUMA \
+    -d ARCH_SUPPORTS_NUMA_BALANCING \
+    -d NODES_SHIFT \
+    -u NODES_SHIFT \
+    -d NEED_MULTIPLE_NODES \
+    -d NUMA_BALANCING \
+    -d NUMA_BALANCING_DEFAULT_ENABLED  
+
   if grep -q AMD /proc/cpuinfo; then
     scripts/config -e MNATIVE_AMD
   else
