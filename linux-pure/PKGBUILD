@@ -37,6 +37,9 @@ source=(
   0005-Add-sysctl-and-CONFIG-to-disallow-unprivileged-CLONE_NEWUSER.patch
   0006-Default-to-maximum-amount-of-ASLR-bits.patch
   0007-skip-simpledrm-if-nvidia-drm.modeset=1-is-set.patch
+  dkms-clang.patch
+  uinput.patch
+  polly.patch
 )
 sha256sums=(
   'f785fb648a0e0b66a943bb3228a4b6ed62c90b985cd1ebf69da5d38e589da0cf'
@@ -49,6 +52,9 @@ sha256sums=(
   '0460b771badb209dd4a2db6310083031707d41c5ce682dabed63b5077e2768f9'
   '97509ff14bc98e8c8a93ae7412717bd0637b64b7fe4c3fa782e857a9a75c692f'
   '601705db7a8ce1f3a9183d4273ee9c5cef88685a6a63e47b3127dbfafd7e0e97'
+  'SKIP'
+  'SKIP'
+  'SKIP'
 )
 
 export KBUILD_BUILD_HOST=archlinux
