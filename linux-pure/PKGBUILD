@@ -38,7 +38,6 @@ source=(
   0006-Default-to-maximum-amount-of-ASLR-bits.patch
   0007-skip-simpledrm-if-nvidia-drm.modeset=1-is-set.patch
   dkms-clang.patch
-  uinput.patch
   polly.patch
 )
 sha256sums=(
