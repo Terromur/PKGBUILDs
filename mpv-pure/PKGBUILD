@@ -1,3 +1,4 @@
+# Maintainer: Terromur <terromuroz@proton.me>
 # Maintainer: Vasiliy Stelmachenok <ventureo@yandex.ru>
 ## Arch Linux maintainers:
 # Maintainer: Christian Hesse <mail@eworm.de>
@@ -33,8 +34,8 @@ build() {
     --auto-features auto
     -Dcaca=disabled
     -Dcdda=disabled
-    -Dcuda-hwaccel=enabled
-    -Dcuda-interop=enabled
+    -Dcuda-hwaccel=auto
+    -Dcuda-interop=auto
     -Ddvbin=disabled
     -Ddvdnav=disabled
     -Dgl-x11=disabled
@@ -52,7 +53,7 @@ build() {
     -Duchardet=disabled
     -Dvapoursynth=disabled
     -Dvdpau=disabled
-    -Dvulkan=enabled
+    -Dvulkan=auto
     -Dx11=disabled
     -Dxv=disabled
   )
@@ -67,11 +68,6 @@ check() {
 }
 
 package() {
-  depends+=('libasound.so' 'libavcodec.so' 'libavdevice.so' 'libavfilter.so'
-            'libavformat.so' 'libavutil.so' 'libswresample.so' 'libswscale.so'
-            'liblcms2.so' 'libarchive.so' 'libass.so' 'libjpeg.so' 'libplacebo.so'
-            'libva.so' 'libva-drm.so' 'libva-wayland.so' 'libxkbcommon.so' 'libvulkan.so')
-
   meson install -C build --destdir "${pkgdir}"
 
   # delete private entries only required for static linking 
