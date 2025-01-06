@@ -7,12 +7,12 @@
 
 Ссылка на официальный репозиторий CachyOS-Settings - https://github.com/CachyOS/CachyOS-Settings
 
-Был добавлен dxvk-sarek-pure:
-- Все теже изменения, которые есть в dxvk-pure-git
-
 Был добавлен Cachyos-Settings с изменениями:
 - Оптимизация интернета, увеличение стабильности, улучшение работы прокси, улучшение безопасности, прочие дополнительные оптимизации
 - Автоматический расчёт значений kernel.shmmax и kernel.shmall в cachyos-settings.install
+
+Был добавлен dxvk-sarek-async-pure и dxvk-sarek-pure:
+- Все теже изменения, которые есть в dxvk-pure-git
 
 Был изменён mesa-pure:
 - Добавление агрессивной оптимизации -O3 и собирание пакета в native
