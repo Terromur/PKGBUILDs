@@ -11,6 +11,9 @@
 - Оптимизация интернета, увеличение стабильности, улучшение работы прокси, улучшение безопасности, прочие дополнительные оптимизации
 - Автоматический расчёт значений kernel.shmmax и kernel.shmall в cachyos-settings.install
 
+Был добавлен dxvk-gplasync-pure-git:
+- Все теже изменения, которые есть в dxvk-pure-git
+
 Был добавлен dxvk-sarek-async-pure и dxvk-sarek-pure:
 - Все теже изменения, которые есть в dxvk-pure-git
 
