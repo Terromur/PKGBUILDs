@@ -1,3 +1,5 @@
+Источник dxvk-gplasync - https://gitlab.com/Ph42oN/dxvk-gplasync
+
 # dxvk-gplasync
 https://github.com/Sporif/dxvk-async updated to work with newer dxvk versions and gpl.
 
