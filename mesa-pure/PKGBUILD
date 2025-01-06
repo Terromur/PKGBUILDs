@@ -134,7 +134,6 @@ prepare() {
 # появляются проблемы при сборке пакета https://github.com/easybuilders/easybuild-easyconfigs/issues/6344
 # Возможно ошибка неактуальна, к тому же я предполагаю, что проблем с ним не будет, если -ftree-vectorize используется
 # -march=native флагом, при условии, что процессор поддерживает AVX инструкцию.
-# Экспериментально! Можете добавить -D b_lto=true и -D b_lto_mode=default
 build() {
   local meson_options=(
     -D b_lto=true
