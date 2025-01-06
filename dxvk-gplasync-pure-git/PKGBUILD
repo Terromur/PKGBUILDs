@@ -20,7 +20,7 @@ source=(
     "git+https://github.com/KhronosGroup/Vulkan-Headers.git"
     "git+https://github.com/KhronosGroup/SPIRV-Headers.git"
     "dxvk-extraopts.patch"
-    "dxvk-gplasync-2.5.1-2.patch"
+    "dxvk-gplasync-master.patch"
     "global-dxvk.conf.patch"
 )
 sha256sums=(
@@ -49,7 +49,7 @@ prepare() {
     patch -p1 -i "$srcdir"/dxvk-extraopts.patch
 
     # Патч для внедрения gplasync (спасибо Ph42oN)
-    patch -p1 -i "$srcdir"/dxvk-gplasync-2.5.1-2.patch
+    patch -p1 -i "$srcdir"/dxvk-gplasync-master.patch
     patch -p1 -i "$srcdir"/global-dxvk.conf.patch
 
     # By default export FLAGS used by proton and ignore makepkg
