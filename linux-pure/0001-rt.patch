@@ -1,368 +1,35 @@
-patch-6.13-rc1-rt1
+From e39e9f0187f025e3b688796f77c5836fc522debb Mon Sep 17 00:00:00 2001
+From: Eric Naim <dnaim@cachyos.org>
+Date: Thu, 5 Dec 2024 22:00:13 +0800
+Subject: [PATCH] rt
 
-diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-index 202397be76d80..d70e3c69f5ef7 100644
---- a/arch/arm/Kconfig
-+++ b/arch/arm/Kconfig
-@@ -40,6 +40,7 @@ config ARM
- 	select ARCH_SUPPORTS_CFI_CLANG
- 	select ARCH_SUPPORTS_HUGETLBFS if ARM_LPAE
- 	select ARCH_SUPPORTS_PER_VMA_LOCK
-+	select ARCH_SUPPORTS_RT if HAVE_POSIX_CPU_TIMERS_TASK_WORK
- 	select ARCH_USE_BUILTIN_BSWAP
- 	select ARCH_USE_CMPXCHG_LOCKREF
- 	select ARCH_USE_MEMTEST
-@@ -79,7 +80,7 @@ config ARM
- 	select HAS_IOPORT
- 	select HAVE_ARCH_AUDITSYSCALL if AEABI && !OABI_COMPAT
- 	select HAVE_ARCH_BITREVERSE if (CPU_32v7M || CPU_32v7) && !CPU_32v6
--	select HAVE_ARCH_JUMP_LABEL if !XIP_KERNEL && !CPU_ENDIAN_BE32 && MMU
-+	select HAVE_ARCH_JUMP_LABEL if !XIP_KERNEL && !CPU_ENDIAN_BE32 && MMU && !PREEMPT_RT
- 	select HAVE_ARCH_KFENCE if MMU && !XIP_KERNEL
- 	select HAVE_ARCH_KGDB if !CPU_ENDIAN_BE32 && MMU
- 	select HAVE_ARCH_KASAN if MMU && !XIP_KERNEL
-@@ -103,7 +104,7 @@ config ARM
- 	select HAVE_DYNAMIC_FTRACE_WITH_REGS if HAVE_DYNAMIC_FTRACE
- 	select HAVE_EFFICIENT_UNALIGNED_ACCESS if (CPU_V6 || CPU_V6K || CPU_V7) && MMU
- 	select HAVE_EXIT_THREAD
--	select HAVE_GUP_FAST if ARM_LPAE
-+	select HAVE_GUP_FAST if ARM_LPAE && !(PREEMPT_RT && HIGHPTE)
- 	select HAVE_FTRACE_MCOUNT_RECORD if !XIP_KERNEL
- 	select HAVE_FUNCTION_ERROR_INJECTION
- 	select HAVE_FUNCTION_GRAPH_TRACER
-@@ -127,6 +128,7 @@ config ARM
- 	select HAVE_PERF_EVENTS
- 	select HAVE_PERF_REGS
- 	select HAVE_PERF_USER_STACK_DUMP
-+	select HAVE_POSIX_CPU_TIMERS_TASK_WORK if !KVM
- 	select MMU_GATHER_RCU_TABLE_FREE if SMP && ARM_LPAE
- 	select HAVE_REGS_AND_STACK_ACCESS_API
- 	select HAVE_RSEQ
-diff --git a/arch/arm/kernel/traps.c b/arch/arm/kernel/traps.c
-index 6ea645939573f..1254992184d2e 100644
---- a/arch/arm/kernel/traps.c
-+++ b/arch/arm/kernel/traps.c
-@@ -258,13 +258,6 @@ void show_stack(struct task_struct *tsk, unsigned long *sp, const char *loglvl)
- 	barrier();
- }
- 
--#ifdef CONFIG_PREEMPT
--#define S_PREEMPT " PREEMPT"
--#elif defined(CONFIG_PREEMPT_RT)
--#define S_PREEMPT " PREEMPT_RT"
--#else
--#define S_PREEMPT ""
--#endif
- #ifdef CONFIG_SMP
- #define S_SMP " SMP"
- #else
-@@ -282,8 +275,8 @@ static int __die(const char *str, int err, struct pt_regs *regs)
- 	static int die_counter;
- 	int ret;
- 
--	pr_emerg("Internal error: %s: %x [#%d]" S_PREEMPT S_SMP S_ISA "\n",
--	         str, err, ++die_counter);
-+	pr_emerg("Internal error: %s: %x [#%d] %s" S_SMP S_ISA "\n",
-+		 str, err, ++die_counter, preempt_model_str());
- 
- 	/* trap and error numbers are mostly meaningless on ARM */
- 	ret = notify_die(DIE_OOPS, str, regs, err, tsk->thread.trap_no, SIGSEGV);
-diff --git a/arch/arm/mm/fault.c b/arch/arm/mm/fault.c
-index ab01b51de5590..cd030e2734e5d 100644
---- a/arch/arm/mm/fault.c
-+++ b/arch/arm/mm/fault.c
-@@ -474,6 +474,9 @@ do_translation_fault(unsigned long addr, unsigned int fsr,
- 	if (addr < TASK_SIZE)
- 		return do_page_fault(addr, fsr, regs);
- 
-+	if (interrupts_enabled(regs))
-+		local_irq_enable();
-+
- 	if (user_mode(regs))
- 		goto bad_area;
- 
-@@ -544,6 +547,9 @@ do_translation_fault(unsigned long addr, unsigned int fsr,
- static int
- do_sect_fault(unsigned long addr, unsigned int fsr, struct pt_regs *regs)
- {
-+	if (interrupts_enabled(regs))
-+		local_irq_enable();
-+
- 	do_bad_area(addr, fsr, regs);
- 	return 0;
- }
-diff --git a/arch/arm64/kernel/traps.c b/arch/arm64/kernel/traps.c
-index 4e26bd356a482..0b6f92fcdb304 100644
---- a/arch/arm64/kernel/traps.c
-+++ b/arch/arm64/kernel/traps.c
-@@ -172,14 +172,6 @@ static void dump_kernel_instr(const char *lvl, struct pt_regs *regs)
- 	printk("%sCode: %s\n", lvl, str);
- }
- 
--#ifdef CONFIG_PREEMPT
--#define S_PREEMPT " PREEMPT"
--#elif defined(CONFIG_PREEMPT_RT)
--#define S_PREEMPT " PREEMPT_RT"
--#else
--#define S_PREEMPT ""
--#endif
--
- #define S_SMP " SMP"
- 
- static int __die(const char *str, long err, struct pt_regs *regs)
-@@ -187,8 +179,8 @@ static int __die(const char *str, long err, struct pt_regs *regs)
- 	static int die_counter;
- 	int ret;
- 
--	pr_emerg("Internal error: %s: %016lx [#%d]" S_PREEMPT S_SMP "\n",
--		 str, err, ++die_counter);
-+	pr_emerg("Internal error: %s: %016lx [#%d] %s" S_SMP "\n",
-+		 str, err, ++die_counter, preempt_model_str());
- 
- 	/* trap and error numbers are mostly meaningless on ARM */
- 	ret = notify_die(DIE_OOPS, str, regs, err, 0, SIGSEGV);
-diff --git a/arch/powerpc/Kconfig b/arch/powerpc/Kconfig
-index a0ce777f97063..7ece090edf4d3 100644
---- a/arch/powerpc/Kconfig
-+++ b/arch/powerpc/Kconfig
-@@ -168,6 +168,7 @@ config PPC
- 	select ARCH_STACKWALK
- 	select ARCH_SUPPORTS_ATOMIC_RMW
- 	select ARCH_SUPPORTS_DEBUG_PAGEALLOC	if PPC_BOOK3S || PPC_8xx
-+	select ARCH_SUPPORTS_RT			if HAVE_POSIX_CPU_TIMERS_TASK_WORK
- 	select ARCH_USE_BUILTIN_BSWAP
- 	select ARCH_USE_CMPXCHG_LOCKREF		if PPC64
- 	select ARCH_USE_MEMTEST
-@@ -271,6 +272,7 @@ config PPC
- 	select HAVE_PERF_EVENTS_NMI		if PPC64
- 	select HAVE_PERF_REGS
- 	select HAVE_PERF_USER_STACK_DUMP
-+	select HAVE_POSIX_CPU_TIMERS_TASK_WORK	if !KVM
- 	select HAVE_RETHOOK			if KPROBES
- 	select HAVE_REGS_AND_STACK_ACCESS_API
- 	select HAVE_RELIABLE_STACKTRACE
-diff --git a/arch/powerpc/include/asm/stackprotector.h b/arch/powerpc/include/asm/stackprotector.h
-index 283c346478565..4727f40052ddd 100644
---- a/arch/powerpc/include/asm/stackprotector.h
-+++ b/arch/powerpc/include/asm/stackprotector.h
-@@ -19,8 +19,13 @@
-  */
- static __always_inline void boot_init_stack_canary(void)
- {
--	unsigned long canary = get_random_canary();
-+	unsigned long canary;
- 
-+#ifndef CONFIG_PREEMPT_RT
-+	canary = get_random_canary();
-+#else
-+	canary = ((unsigned long)&canary) & CANARY_MASK;
-+#endif
- 	current->stack_canary = canary;
- #ifdef CONFIG_PPC64
- 	get_paca()->canary = canary;
-diff --git a/arch/powerpc/kernel/traps.c b/arch/powerpc/kernel/traps.c
-index edf5cabe5dfdb..d6d77d92b3358 100644
---- a/arch/powerpc/kernel/traps.c
-+++ b/arch/powerpc/kernel/traps.c
-@@ -263,10 +263,10 @@ static int __die(const char *str, struct pt_regs *regs, long err)
- {
- 	printk("Oops: %s, sig: %ld [#%d]\n", str, err, ++die_counter);
- 
--	printk("%s PAGE_SIZE=%luK%s%s%s%s%s%s %s\n",
-+	printk("%s PAGE_SIZE=%luK%s %s %s%s%s%s %s\n",
- 	       IS_ENABLED(CONFIG_CPU_LITTLE_ENDIAN) ? "LE" : "BE",
- 	       PAGE_SIZE / 1024, get_mmu_str(),
--	       IS_ENABLED(CONFIG_PREEMPT) ? " PREEMPT" : "",
-+	       preempt_model_str(),
- 	       IS_ENABLED(CONFIG_SMP) ? " SMP" : "",
- 	       IS_ENABLED(CONFIG_SMP) ? (" NR_CPUS=" __stringify(NR_CPUS)) : "",
- 	       debug_pagealloc_enabled() ? " DEBUG_PAGEALLOC" : "",
-diff --git a/arch/powerpc/kvm/Kconfig b/arch/powerpc/kvm/Kconfig
-index dbfdc126bf144..82dd033cf7968 100644
---- a/arch/powerpc/kvm/Kconfig
-+++ b/arch/powerpc/kvm/Kconfig
-@@ -221,6 +221,7 @@ config KVM_E500MC
- config KVM_MPIC
- 	bool "KVM in-kernel MPIC emulation"
- 	depends on KVM && PPC_E500
-+	depends on !PREEMPT_RT
- 	select HAVE_KVM_IRQCHIP
- 	select HAVE_KVM_IRQ_ROUTING
- 	select HAVE_KVM_MSI
-diff --git a/arch/powerpc/platforms/pseries/Kconfig b/arch/powerpc/platforms/pseries/Kconfig
-index 42fc66e97539b..e0d0b3ba9fb0d 100644
---- a/arch/powerpc/platforms/pseries/Kconfig
-+++ b/arch/powerpc/platforms/pseries/Kconfig
-@@ -2,6 +2,7 @@
- config PPC_PSERIES
- 	depends on PPC64 && PPC_BOOK3S
- 	bool "IBM pSeries & new (POWER5-based) iSeries"
-+	select GENERIC_ALLOCATOR
- 	select HAVE_PCSPKR_PLATFORM
- 	select MPIC
- 	select OF_DYNAMIC
-diff --git a/arch/powerpc/platforms/pseries/iommu.c b/arch/powerpc/platforms/pseries/iommu.c
-index 534cd159e9ab4..abc4c1ea16c42 100644
---- a/arch/powerpc/platforms/pseries/iommu.c
-+++ b/arch/powerpc/platforms/pseries/iommu.c
-@@ -26,6 +26,7 @@
- #include <linux/of_address.h>
- #include <linux/iommu.h>
- #include <linux/rculist.h>
-+#include <linux/local_lock.h>
- #include <asm/io.h>
- #include <asm/prom.h>
- #include <asm/rtas.h>
-@@ -244,7 +245,13 @@ static int tce_build_pSeriesLP(unsigned long liobn, long tcenum, long tceshift,
- 	return ret;
- }
- 
--static DEFINE_PER_CPU(__be64 *, tce_page);
-+struct tce_page {
-+	__be64 * page;
-+	local_lock_t lock;
-+};
-+static DEFINE_PER_CPU(struct tce_page, tce_page) = {
-+	.lock = INIT_LOCAL_LOCK(lock),
-+};
- 
- static int tce_buildmulti_pSeriesLP(struct iommu_table *tbl, long tcenum,
- 				     long npages, unsigned long uaddr,
-@@ -267,9 +274,10 @@ static int tce_buildmulti_pSeriesLP(struct iommu_table *tbl, long tcenum,
- 		                           direction, attrs);
- 	}
- 
--	local_irq_save(flags);	/* to protect tcep and the page behind it */
-+	/* to protect tcep and the page behind it */
-+	local_lock_irqsave(&tce_page.lock, flags);
- 
--	tcep = __this_cpu_read(tce_page);
-+	tcep = __this_cpu_read(tce_page.page);
- 
- 	/* This is safe to do since interrupts are off when we're called
- 	 * from iommu_alloc{,_sg}()
-@@ -278,12 +286,12 @@ static int tce_buildmulti_pSeriesLP(struct iommu_table *tbl, long tcenum,
- 		tcep = (__be64 *)__get_free_page(GFP_ATOMIC);
- 		/* If allocation fails, fall back to the loop implementation */
- 		if (!tcep) {
--			local_irq_restore(flags);
-+			local_unlock_irqrestore(&tce_page.lock, flags);
- 			return tce_build_pSeriesLP(tbl->it_index, tcenum,
- 					tceshift,
- 					npages, uaddr, direction, attrs);
- 		}
--		__this_cpu_write(tce_page, tcep);
-+		__this_cpu_write(tce_page.page, tcep);
- 	}
- 
- 	rpn = __pa(uaddr) >> tceshift;
-@@ -313,7 +321,7 @@ static int tce_buildmulti_pSeriesLP(struct iommu_table *tbl, long tcenum,
- 		tcenum += limit;
- 	} while (npages > 0 && !rc);
- 
--	local_irq_restore(flags);
-+	local_unlock_irqrestore(&tce_page.lock, flags);
- 
- 	if (unlikely(rc == H_NOT_ENOUGH_RESOURCES)) {
- 		ret = (int)rc;
-@@ -497,16 +505,17 @@ static int tce_setrange_multi_pSeriesLP(unsigned long start_pfn,
- 				DMA_BIDIRECTIONAL, 0);
- 	}
- 
--	local_irq_disable();	/* to protect tcep and the page behind it */
--	tcep = __this_cpu_read(tce_page);
-+	/* to protect tcep and the page behind it */
-+	local_lock_irq(&tce_page.lock);
-+	tcep = __this_cpu_read(tce_page.page);
- 
- 	if (!tcep) {
- 		tcep = (__be64 *)__get_free_page(GFP_ATOMIC);
- 		if (!tcep) {
--			local_irq_enable();
-+			local_unlock_irq(&tce_page.lock);
- 			return -ENOMEM;
- 		}
--		__this_cpu_write(tce_page, tcep);
-+		__this_cpu_write(tce_page.page, tcep);
- 	}
- 
- 	proto_tce = TCE_PCI_READ | TCE_PCI_WRITE;
-@@ -549,7 +558,7 @@ static int tce_setrange_multi_pSeriesLP(unsigned long start_pfn,
- 
- 	/* error cleanup: caller will clear whole range */
- 
--	local_irq_enable();
-+	local_unlock_irq(&tce_page.lock);
- 	return rc;
- }
- 
-diff --git a/arch/s390/kernel/dumpstack.c b/arch/s390/kernel/dumpstack.c
-index 1ecd0580561f6..7930fbab69dbb 100644
---- a/arch/s390/kernel/dumpstack.c
-+++ b/arch/s390/kernel/dumpstack.c
-@@ -198,13 +198,8 @@ void __noreturn die(struct pt_regs *regs, const char *str)
- 	console_verbose();
- 	spin_lock_irq(&die_lock);
- 	bust_spinlocks(1);
--	printk("%s: %04x ilc:%d [#%d] ", str, regs->int_code & 0xffff,
--	       regs->int_code >> 17, ++die_counter);
--#ifdef CONFIG_PREEMPT
--	pr_cont("PREEMPT ");
--#elif defined(CONFIG_PREEMPT_RT)
--	pr_cont("PREEMPT_RT ");
--#endif
-+	printk("%s: %04x ilc:%d [#%d] %s", str, regs->int_code & 0xffff,
-+	       regs->int_code >> 17, ++die_counter, preempt_model_str());
- 	pr_cont("SMP ");
- 	if (debug_pagealloc_enabled())
- 		pr_cont("DEBUG_PAGEALLOC");
-diff --git a/arch/x86/kernel/dumpstack.c b/arch/x86/kernel/dumpstack.c
-index a7d562697e50e..064b23a93c6fe 100644
---- a/arch/x86/kernel/dumpstack.c
-+++ b/arch/x86/kernel/dumpstack.c
-@@ -395,18 +395,13 @@ NOKPROBE_SYMBOL(oops_end);
- 
- static void __die_header(const char *str, struct pt_regs *regs, long err)
- {
--	const char *pr = "";
--
- 	/* Save the regs of the first oops for the executive summary later. */
- 	if (!die_counter)
- 		exec_summary_regs = *regs;
- 
--	if (IS_ENABLED(CONFIG_PREEMPTION))
--		pr = IS_ENABLED(CONFIG_PREEMPT_RT) ? " PREEMPT_RT" : " PREEMPT";
--
- 	printk(KERN_DEFAULT
- 	       "Oops: %s: %04lx [#%d]%s%s%s%s%s\n", str, err & 0xffff,
--	       ++die_counter, pr,
-+	       ++die_counter, preempt_model_str(),
- 	       IS_ENABLED(CONFIG_SMP)     ? " SMP"             : "",
- 	       debug_pagealloc_enabled()  ? " DEBUG_PAGEALLOC" : "",
- 	       IS_ENABLED(CONFIG_KASAN)   ? " KASAN"           : "",
-diff --git a/arch/xtensa/kernel/traps.c b/arch/xtensa/kernel/traps.c
-index 38092d21acf8e..0edba7d8df8c7 100644
---- a/arch/xtensa/kernel/traps.c
-+++ b/arch/xtensa/kernel/traps.c
-@@ -629,15 +629,11 @@ DEFINE_SPINLOCK(die_lock);
- void __noreturn die(const char * str, struct pt_regs * regs, long err)
- {
- 	static int die_counter;
--	const char *pr = "";
--
--	if (IS_ENABLED(CONFIG_PREEMPTION))
--		pr = IS_ENABLED(CONFIG_PREEMPT_RT) ? " PREEMPT_RT" : " PREEMPT";
- 
- 	console_verbose();
- 	spin_lock_irq(&die_lock);
- 
--	pr_info("%s: sig: %ld [#%d]%s\n", str, err, ++die_counter, pr);
-+	pr_info("%s: sig: %ld [#%d]%s\n", str, err, ++die_counter, preempt_model_str());
- 	show_regs(regs);
- 	if (!user_mode(regs))
- 		show_stack(NULL, (unsigned long *)regs->areg[1], KERN_INFO);
+Signed-off-by: Eric Naim <dnaim@cachyos.org>
+---
+ drivers/gpu/drm/i915/Kconfig                  |  1 -
+ drivers/gpu/drm/i915/display/intel_crtc.c     |  9 ++-
+ drivers/gpu/drm/i915/display/intel_cursor.c   |  9 ++-
+ .../drm/i915/display/intel_display_trace.h    |  4 ++
+ drivers/gpu/drm/i915/display/intel_vblank.c   | 49 +++++++++----
+ .../drm/i915/gt/intel_execlists_submission.c  | 17 ++---
+ drivers/gpu/drm/i915/gt/uc/intel_guc.h        |  2 +-
+ drivers/gpu/drm/i915/i915_request.c           |  2 -
+ drivers/gpu/drm/i915/i915_trace.h             |  4 ++
+ drivers/gpu/drm/i915/i915_utils.h             |  9 ++-
+ include/linux/interrupt.h                     | 44 ++++++++++++
+ include/linux/spinlock_rt.h                   |  5 +-
+ kernel/Kconfig.preempt                        |  2 +-
+ kernel/ksysfs.c                               | 12 ++++
+ kernel/locking/rtmutex.c                      |  2 +
+ kernel/locking/spinlock_rt.c                  | 14 ++--
+ kernel/rcu/rcutorture.c                       |  6 ++
+ kernel/softirq.c                              | 69 ++++++++++++++++++-
+ kernel/time/hrtimer.c                         |  4 +-
+ kernel/time/tick-sched.c                      |  2 +-
+ kernel/time/timer.c                           |  2 +-
+ 21 files changed, 215 insertions(+), 53 deletions(-)
+
 diff --git a/drivers/gpu/drm/i915/Kconfig b/drivers/gpu/drm/i915/Kconfig
-index 5e939004b6463..40a9234e6e5dc 100644
+index 14ac351fd76d..610969840e3b 100644
 --- a/drivers/gpu/drm/i915/Kconfig
 +++ b/drivers/gpu/drm/i915/Kconfig
 @@ -3,7 +3,6 @@ config DRM_I915
@@ -374,10 +41,10 @@ index 5e939004b6463..40a9234e6e5dc 100644
  	select INTERVAL_TREE
  	# we need shmfs for the swappable backing store, and in particular
 diff --git a/drivers/gpu/drm/i915/display/intel_crtc.c b/drivers/gpu/drm/i915/display/intel_crtc.c
-index a2c528d707f40..1a5035be9eb42 100644
+index 1b578cad2813..90c4ac64f8ca 100644
 --- a/drivers/gpu/drm/i915/display/intel_crtc.c
 +++ b/drivers/gpu/drm/i915/display/intel_crtc.c
-@@ -555,7 +555,8 @@ void intel_pipe_update_start(struct intel_atomic_state *state,
+@@ -521,7 +521,8 @@ void intel_pipe_update_start(struct intel_atomic_state *state,
  	 */
  	intel_psr_wait_for_idle_locked(new_crtc_state);
  
@@ -387,7 +54,7 @@ index a2c528d707f40..1a5035be9eb42 100644
  
  	crtc->debug.min_vbl = evade.min;
  	crtc->debug.max_vbl = evade.max;
-@@ -573,7 +574,8 @@ void intel_pipe_update_start(struct intel_atomic_state *state,
+@@ -539,7 +540,8 @@ void intel_pipe_update_start(struct intel_atomic_state *state,
  	return;
  
  irq_disable:
@@ -397,7 +64,7 @@ index a2c528d707f40..1a5035be9eb42 100644
  }
  
  #if IS_ENABLED(CONFIG_DRM_I915_DEBUG_VBLANK_EVADE)
-@@ -715,7 +717,8 @@ void intel_pipe_update_end(struct intel_atomic_state *state,
+@@ -668,7 +670,8 @@ void intel_pipe_update_end(struct intel_atomic_state *state,
  	 */
  	intel_vrr_send_push(new_crtc_state);
  
@@ -408,10 +75,10 @@ index a2c528d707f40..1a5035be9eb42 100644
  	if (intel_vgpu_active(dev_priv))
  		goto out;
 diff --git a/drivers/gpu/drm/i915/display/intel_cursor.c b/drivers/gpu/drm/i915/display/intel_cursor.c
-index 9ba77970dab76..70db13c8ccb12 100644
+index 9ad53e1cbbd0..6cbe81a2fa66 100644
 --- a/drivers/gpu/drm/i915/display/intel_cursor.c
 +++ b/drivers/gpu/drm/i915/display/intel_cursor.c
-@@ -901,13 +901,15 @@ intel_legacy_cursor_update(struct drm_plane *_plane,
+@@ -895,13 +895,15 @@ intel_legacy_cursor_update(struct drm_plane *_plane,
  		 */
  		intel_psr_wait_for_idle_locked(crtc_state);
  
@@ -429,8 +96,8 @@ index 9ba77970dab76..70db13c8ccb12 100644
  	}
  
  	if (new_plane_state->uapi.visible) {
-@@ -917,7 +919,8 @@ intel_legacy_cursor_update(struct drm_plane *_plane,
- 		intel_plane_disable_arm(NULL, plane, crtc_state);
+@@ -911,7 +913,8 @@ intel_legacy_cursor_update(struct drm_plane *_plane,
+ 		intel_plane_disable_arm(plane, crtc_state);
  	}
  
 -	local_irq_enable();
@@ -440,7 +107,7 @@ index 9ba77970dab76..70db13c8ccb12 100644
  	intel_psr_unlock(crtc_state);
  
 diff --git a/drivers/gpu/drm/i915/display/intel_display_trace.h b/drivers/gpu/drm/i915/display/intel_display_trace.h
-index 9bd8f1e505b04..f2c9e7b3ab943 100644
+index c734ef1fba3c..5e813b317d2a 100644
 --- a/drivers/gpu/drm/i915/display/intel_display_trace.h
 +++ b/drivers/gpu/drm/i915/display/intel_display_trace.h
 @@ -9,6 +9,10 @@
@@ -451,14 +118,14 @@ index 9bd8f1e505b04..f2c9e7b3ab943 100644
 +#define NOTRACE
 +#endif
 +
- #include <linux/string.h>
  #include <linux/string_helpers.h>
  #include <linux/types.h>
+ #include <linux/tracepoint.h>
 diff --git a/drivers/gpu/drm/i915/display/intel_vblank.c b/drivers/gpu/drm/i915/display/intel_vblank.c
-index a95fb3349eba7..d0995cbb04575 100644
+index 0b7f2134e441..1dd02efc0f24 100644
 --- a/drivers/gpu/drm/i915/display/intel_vblank.c
 +++ b/drivers/gpu/drm/i915/display/intel_vblank.c
-@@ -309,6 +309,20 @@ static void intel_vblank_section_exit(struct intel_display *display)
+@@ -308,6 +308,20 @@ static void intel_vblank_section_exit(struct intel_display *display)
  	struct drm_i915_private *i915 = to_i915(display->drm);
  	spin_unlock(&i915->uncore.lock);
  }
@@ -479,7 +146,7 @@ index a95fb3349eba7..d0995cbb04575 100644
  #else
  static void intel_vblank_section_enter(struct intel_display *display)
  {
-@@ -317,6 +331,17 @@ static void intel_vblank_section_enter(struct intel_display *display)
+@@ -316,6 +330,17 @@ static void intel_vblank_section_enter(struct intel_display *display)
  static void intel_vblank_section_exit(struct intel_display *display)
  {
  }
@@ -541,7 +208,7 @@ index a95fb3349eba7..d0995cbb04575 100644
  
  	return position;
  }
-@@ -689,11 +712,13 @@ int intel_vblank_evade(struct intel_vblank_evade_ctx *evade)
+@@ -688,11 +711,13 @@ int intel_vblank_evade(struct intel_vblank_evade_ctx *evade)
  			break;
  		}
  
@@ -558,7 +225,7 @@ index a95fb3349eba7..d0995cbb04575 100644
  
  	finish_wait(wq, &wait);
 diff --git a/drivers/gpu/drm/i915/gt/intel_execlists_submission.c b/drivers/gpu/drm/i915/gt/intel_execlists_submission.c
-index 72090f52fb850..1c6bb872de1a2 100644
+index 72090f52fb85..1c6bb872de1a 100644
 --- a/drivers/gpu/drm/i915/gt/intel_execlists_submission.c
 +++ b/drivers/gpu/drm/i915/gt/intel_execlists_submission.c
 @@ -1303,7 +1303,7 @@ static void execlists_dequeue(struct intel_engine_cs *engine)
@@ -621,7 +288,7 @@ index 72090f52fb850..1c6bb872de1a2 100644
  	}
  
 diff --git a/drivers/gpu/drm/i915/gt/uc/intel_guc.h b/drivers/gpu/drm/i915/gt/uc/intel_guc.h
-index 57b9031327767..ff213b79ba83d 100644
+index 57b903132776..ff213b79ba83 100644
 --- a/drivers/gpu/drm/i915/gt/uc/intel_guc.h
 +++ b/drivers/gpu/drm/i915/gt/uc/intel_guc.h
 @@ -362,7 +362,7 @@ static inline int intel_guc_send_busy_loop(struct intel_guc *guc,
@@ -634,10 +301,10 @@ index 57b9031327767..ff213b79ba83d 100644
  	/*
  	 * FIXME: Have caller pass in if we are in an atomic context to avoid
 diff --git a/drivers/gpu/drm/i915/i915_request.c b/drivers/gpu/drm/i915/i915_request.c
-index 8f62cfa23fb76..d8b8ce3a66023 100644
+index 519e096c607c..466b5ee8ed6d 100644
 --- a/drivers/gpu/drm/i915/i915_request.c
 +++ b/drivers/gpu/drm/i915/i915_request.c
-@@ -609,7 +609,6 @@ bool __i915_request_submit(struct i915_request *request)
+@@ -608,7 +608,6 @@ bool __i915_request_submit(struct i915_request *request)
  
  	RQ_TRACE(request, "\n");
  
@@ -645,7 +312,7 @@ index 8f62cfa23fb76..d8b8ce3a66023 100644
  	lockdep_assert_held(&engine->sched_engine->lock);
  
  	/*
-@@ -718,7 +717,6 @@ void __i915_request_unsubmit(struct i915_request *request)
+@@ -717,7 +716,6 @@ void __i915_request_unsubmit(struct i915_request *request)
  	 */
  	RQ_TRACE(request, "\n");
  
@@ -654,7 +321,7 @@ index 8f62cfa23fb76..d8b8ce3a66023 100644
  
  	/*
 diff --git a/drivers/gpu/drm/i915/i915_trace.h b/drivers/gpu/drm/i915/i915_trace.h
-index 09d89bdf82f45..4250340508a09 100644
+index ce1cbee1b39d..247e7d9448d7 100644
 --- a/drivers/gpu/drm/i915/i915_trace.h
 +++ b/drivers/gpu/drm/i915/i915_trace.h
 @@ -6,6 +6,10 @@
@@ -669,7 +336,7 @@ index 09d89bdf82f45..4250340508a09 100644
  #include <linux/types.h>
  #include <linux/tracepoint.h>
 diff --git a/drivers/gpu/drm/i915/i915_utils.h b/drivers/gpu/drm/i915/i915_utils.h
-index 609214231ffcb..91b3e55c389eb 100644
+index 71bdc89bd621..3f53c64e7f18 100644
 --- a/drivers/gpu/drm/i915/i915_utils.h
 +++ b/drivers/gpu/drm/i915/i915_utils.h
 @@ -269,8 +269,13 @@ wait_remaining_ms_from_jiffies(unsigned long timestamp_jiffies, int to_wait_ms)
@@ -677,352 +344,110 @@ index 609214231ffcb..91b3e55c389eb 100644
  #define wait_for(COND, MS)		_wait_for((COND), (MS) * 1000, 10, 1000)
  
 -/* If CONFIG_PREEMPT_COUNT is disabled, in_atomic() always reports false. */
--#if IS_ENABLED(CONFIG_DRM_I915_DEBUG) && IS_ENABLED(CONFIG_PREEMPT_COUNT)
+-#if defined(CONFIG_DRM_I915_DEBUG) && defined(CONFIG_PREEMPT_COUNT)
 +/*
 + * If CONFIG_PREEMPT_COUNT is disabled, in_atomic() always reports false.
 + * On PREEMPT_RT the context isn't becoming atomic because it is used in an
 + * interrupt handler or because a spinlock_t is acquired. This leads to
 + * warnings which don't occur otherwise and therefore the check is disabled.
 + */
-+#if IS_ENABLED(CONFIG_DRM_I915_DEBUG) && IS_ENABLED(CONFIG_PREEMPT_COUNT) && !defined(CONFIG_PREEMPT_RT)
++#if defined(CONFIG_DRM_I915_DEBUG) && defined(CONFIG_PREEMPT_COUNT) && !defined(CONFIG_PREEMPT_RT)
  # define _WAIT_FOR_ATOMIC_CHECK(ATOMIC) WARN_ON_ONCE((ATOMIC) && !in_atomic())
  #else
  # define _WAIT_FOR_ATOMIC_CHECK(ATOMIC) do { } while (0)
-diff --git a/drivers/tty/serial/8250/8250_core.c b/drivers/tty/serial/8250/8250_core.c
-index 5f9f06911795c..ccf681de86702 100644
---- a/drivers/tty/serial/8250/8250_core.c
-+++ b/drivers/tty/serial/8250/8250_core.c
-@@ -388,6 +388,7 @@ void __init serial8250_register_ports(struct uart_driver *drv, struct device *de
+diff --git a/include/linux/interrupt.h b/include/linux/interrupt.h
+index 457151f9f263..9637af78087f 100644
+--- a/include/linux/interrupt.h
++++ b/include/linux/interrupt.h
+@@ -616,6 +616,50 @@ extern void __raise_softirq_irqoff(unsigned int nr);
+ extern void raise_softirq_irqoff(unsigned int nr);
+ extern void raise_softirq(unsigned int nr);
  
- #ifdef CONFIG_SERIAL_8250_CONSOLE
- 
-+#ifdef CONFIG_SERIAL_8250_LEGACY_CONSOLE
- static void univ8250_console_write(struct console *co, const char *s,
- 				   unsigned int count)
- {
-@@ -395,6 +396,37 @@ static void univ8250_console_write(struct console *co, const char *s,
- 
- 	serial8250_console_write(up, s, count);
- }
-+#else
-+static void univ8250_console_write_atomic(struct console *co,
-+					  struct nbcon_write_context *wctxt)
-+{
-+	struct uart_8250_port *up = &serial8250_ports[co->index];
-+
-+	serial8250_console_write_atomic(up, wctxt);
-+}
-+
-+static void univ8250_console_write_thread(struct console *co,
-+					  struct nbcon_write_context *wctxt)
-+{
-+	struct uart_8250_port *up = &serial8250_ports[co->index];
-+
-+	serial8250_console_write_thread(up, wctxt);
-+}
-+
-+static void univ8250_console_device_lock(struct console *con, unsigned long *flags)
-+{
-+	struct uart_port *up = &serial8250_ports[con->index].port;
-+
-+	__uart_port_lock_irqsave(up, flags);
-+}
-+
-+static void univ8250_console_device_unlock(struct console *con, unsigned long flags)
-+{
-+	struct uart_port *up = &serial8250_ports[con->index].port;
-+
-+	__uart_port_unlock_irqrestore(up, flags);
-+}
-+#endif /* CONFIG_SERIAL_8250_LEGACY_CONSOLE */
- 
- static int univ8250_console_setup(struct console *co, char *options)
- {
-@@ -494,12 +526,20 @@ static int univ8250_console_match(struct console *co, char *name, int idx,
- 
- static struct console univ8250_console = {
- 	.name		= "ttyS",
-+#ifdef CONFIG_SERIAL_8250_LEGACY_CONSOLE
- 	.write		= univ8250_console_write,
-+	.flags		= CON_PRINTBUFFER | CON_ANYTIME,
-+#else
-+	.write_atomic	= univ8250_console_write_atomic,
-+	.write_thread	= univ8250_console_write_thread,
-+	.device_lock	= univ8250_console_device_lock,
-+	.device_unlock	= univ8250_console_device_unlock,
-+	.flags		= CON_PRINTBUFFER | CON_ANYTIME | CON_NBCON,
-+#endif
- 	.device		= uart_console_device,
- 	.setup		= univ8250_console_setup,
- 	.exit		= univ8250_console_exit,
- 	.match		= univ8250_console_match,
--	.flags		= CON_PRINTBUFFER | CON_ANYTIME,
- 	.index		= -1,
- 	.data		= &serial8250_reg,
- };
-diff --git a/drivers/tty/serial/8250/8250_port.c b/drivers/tty/serial/8250/8250_port.c
-index 4d63d80e78a92..e886a93a8f110 100644
---- a/drivers/tty/serial/8250/8250_port.c
-+++ b/drivers/tty/serial/8250/8250_port.c
-@@ -565,6 +565,13 @@ static int serial8250_em485_init(struct uart_8250_port *p)
- 	if (!p->em485)
- 		return -ENOMEM;
- 
-+#ifndef CONFIG_SERIAL_8250_LEGACY_CONSOLE
-+	if (uart_console(&p->port)) {
-+		dev_warn(p->port.dev, "no atomic printing for rs485 consoles\n");
-+		p->port.cons->write_atomic = NULL;
-+	}
-+#endif
-+
- 	hrtimer_init(&p->em485->stop_tx_timer, CLOCK_MONOTONIC,
- 		     HRTIMER_MODE_REL);
- 	hrtimer_init(&p->em485->start_tx_timer, CLOCK_MONOTONIC,
-@@ -710,7 +717,11 @@ static void serial8250_set_sleep(struct uart_8250_port *p, int sleep)
- 	serial8250_rpm_put(p);
- }
- 
--static void serial8250_clear_IER(struct uart_8250_port *up)
 +/*
-+ * Only to be used by write_atomic() and the legacy write(), which do not
-+ * require port lock.
++ * Handle timers in a dedicated thread at a low SCHED_FIFO priority instead in
++ * ksoftirqd as to be prefred over SCHED_NORMAL tasks.
 + */
-+static void __serial8250_clear_IER(struct uart_8250_port *up)
- {
- 	if (up->capabilities & UART_CAP_UUE)
- 		serial_out(up, UART_IER, UART_IER_UUE);
-@@ -718,6 +729,14 @@ static void serial8250_clear_IER(struct uart_8250_port *up)
- 		serial_out(up, UART_IER, 0);
- }
- 
-+static inline void serial8250_clear_IER(struct uart_8250_port *up)
-+{
-+	/* Port locked to synchronize UART_IER access against the console. */
-+	lockdep_assert_held_once(&up->port.lock);
++#ifdef CONFIG_PREEMPT_RT
++DECLARE_PER_CPU(struct task_struct *, timersd);
++DECLARE_PER_CPU(unsigned long, pending_timer_softirq);
 +
-+	__serial8250_clear_IER(up);
++void raise_ktimers_thread(unsigned int nr);
++
++static inline void raise_timer_softirq(void)
++{
++	raise_ktimers_thread(TIMER_SOFTIRQ);
 +}
 +
- #ifdef CONFIG_SERIAL_8250_RSA
- /*
-  * Attempts to turn on the RSA FIFO.  Returns zero on failure.
-@@ -3288,6 +3307,11 @@ static void serial8250_console_putchar(struct uart_port *port, unsigned char ch)
- 
- 	wait_for_xmitr(up, UART_LSR_THRE);
- 	serial_port_out(port, UART_TX, ch);
++static inline void raise_hrtimer_softirq(void)
++{
++	raise_ktimers_thread(HRTIMER_SOFTIRQ);
++}
 +
-+	if (ch == '\n')
-+		up->console_newline_needed = false;
-+	else
-+		up->console_newline_needed = true;
- }
- 
- /*
-@@ -3316,6 +3340,7 @@ static void serial8250_console_restore(struct uart_8250_port *up)
- 	serial8250_out_MCR(up, up->mcr | UART_MCR_DTR | UART_MCR_RTS);
- }
- 
-+#ifdef CONFIG_SERIAL_8250_LEGACY_CONSOLE
- /*
-  * Print a string to the serial port using the device FIFO
-  *
-@@ -3374,7 +3399,7 @@ void serial8250_console_write(struct uart_8250_port *up, const char *s,
- 	 *	First save the IER then disable the interrupts
- 	 */
- 	ier = serial_port_in(port, UART_IER);
--	serial8250_clear_IER(up);
-+	__serial8250_clear_IER(up);
- 
- 	/* check scratch reg to see if port powered off during system sleep */
- 	if (up->canary && (up->canary != serial_port_in(port, UART_SCR))) {
-@@ -3440,6 +3465,131 @@ void serial8250_console_write(struct uart_8250_port *up, const char *s,
- 	if (locked)
- 		uart_port_unlock_irqrestore(port, flags);
- }
++static inline unsigned int local_timers_pending(void)
++{
++	return __this_cpu_read(pending_timer_softirq);
++}
++
 +#else
-+void serial8250_console_write_thread(struct uart_8250_port *up,
-+				     struct nbcon_write_context *wctxt)
++static inline void raise_timer_softirq(void)
 +{
-+	struct uart_8250_em485 *em485 = up->em485;
-+	struct uart_port *port = &up->port;
-+	unsigned int ier;
-+
-+	touch_nmi_watchdog();
-+
-+	if (!nbcon_enter_unsafe(wctxt))
-+		return;
-+
-+	/* First save IER then disable the interrupts. */
-+	ier = serial_port_in(port, UART_IER);
-+	serial8250_clear_IER(up);
-+
-+	/* Check scratch reg if port powered off during system sleep. */
-+	if (up->canary && (up->canary != serial_port_in(port, UART_SCR))) {
-+		serial8250_console_restore(up);
-+		up->canary = 0;
-+	}
-+
-+	if (em485) {
-+		if (em485->tx_stopped)
-+			up->rs485_start_tx(up);
-+		mdelay(port->rs485.delay_rts_before_send);
-+	}
-+
-+	if (nbcon_exit_unsafe(wctxt)) {
-+		int len = READ_ONCE(wctxt->len);
-+		int i;
-+
-+		/*
-+		 * Write out the message. Toggle unsafe for each byte in order
-+		 * to give another (higher priority) context the opportunity
-+		 * for a friendly takeover. If such a takeover occurs, this
-+		 * context must reacquire ownership in order to perform final
-+		 * actions (such as re-enabling the interrupts).
-+		 *
-+		 * IMPORTANT: wctxt->outbuf and wctxt->len are no longer valid
-+		 *	      after a reacquire so writing the message must be
-+		 *	      aborted.
-+		 */
-+		for (i = 0; i < len; i++) {
-+			if (!nbcon_enter_unsafe(wctxt)) {
-+				nbcon_reacquire_nobuf(wctxt);
-+				break;
-+			}
-+
-+			uart_console_write(port, wctxt->outbuf + i, 1, serial8250_console_putchar);
-+
-+			if (!nbcon_exit_unsafe(wctxt)) {
-+				nbcon_reacquire_nobuf(wctxt);
-+				break;
-+			}
-+		}
-+	} else {
-+		nbcon_reacquire_nobuf(wctxt);
-+	}
-+
-+	while (!nbcon_enter_unsafe(wctxt))
-+		nbcon_reacquire_nobuf(wctxt);
-+
-+	/* Finally, wait for transmitter to become empty and restore IER. */
-+	wait_for_xmitr(up, UART_LSR_BOTH_EMPTY);
-+	if (em485) {
-+		mdelay(port->rs485.delay_rts_after_send);
-+		if (em485->tx_stopped)
-+			up->rs485_stop_tx(up);
-+	}
-+	serial_port_out(port, UART_IER, ier);
-+
-+	/*
-+	 * The receive handling will happen properly because the receive ready
-+	 * bit will still be set; it is not cleared on read.  However, modem
-+	 * control will not, we must call it if we have saved something in the
-+	 * saved flags while processing with interrupts off.
-+	 */
-+	if (up->msr_saved_flags)
-+		serial8250_modem_status(up);
-+
-+	nbcon_exit_unsafe(wctxt);
++	lockdep_assert_in_irq();
++	__raise_softirq_irqoff(TIMER_SOFTIRQ);
 +}
 +
-+void serial8250_console_write_atomic(struct uart_8250_port *up,
-+				     struct nbcon_write_context *wctxt)
++static inline void raise_hrtimer_softirq(void)
 +{
-+	struct uart_port *port = &up->port;
-+	unsigned int ier;
-+
-+	/* Atomic console not supported for rs485 mode. */
-+	if (WARN_ON_ONCE(up->em485))
-+		return;
-+
-+	touch_nmi_watchdog();
-+
-+	if (!nbcon_enter_unsafe(wctxt))
-+		return;
-+
-+	/*
-+	 * First save IER then disable the interrupts. The special variant to
-+	 * clear IER is used because atomic printing may occur without holding
-+	 * the port lock.
-+	 */
-+	ier = serial_port_in(port, UART_IER);
-+	__serial8250_clear_IER(up);
-+
-+	/* Check scratch reg if port powered off during system sleep. */
-+	if (up->canary && (up->canary != serial_port_in(port, UART_SCR))) {
-+		serial8250_console_restore(up);
-+		up->canary = 0;
-+	}
-+
-+	if (up->console_newline_needed)
-+		uart_console_write(port, "\n", 1, serial8250_console_putchar);
-+	uart_console_write(port, wctxt->outbuf, wctxt->len, serial8250_console_putchar);
-+
-+	/* Finally, wait for transmitter to become empty and restore IER. */
-+	wait_for_xmitr(up, UART_LSR_BOTH_EMPTY);
-+	serial_port_out(port, UART_IER, ier);
-+
-+	nbcon_exit_unsafe(wctxt);
++	lockdep_assert_in_irq();
++	__raise_softirq_irqoff(HRTIMER_SOFTIRQ);
 +}
-+#endif /* CONFIG_SERIAL_8250_LEGACY_CONSOLE */
- 
- static unsigned int probe_baud(struct uart_port *port)
- {
-@@ -3458,6 +3608,7 @@ static unsigned int probe_baud(struct uart_port *port)
- 
- int serial8250_console_setup(struct uart_port *port, char *options, bool probe)
- {
-+	struct uart_8250_port *up = up_to_u8250p(port);
- 	int baud = 9600;
- 	int bits = 8;
- 	int parity = 'n';
-@@ -3467,6 +3618,8 @@ int serial8250_console_setup(struct uart_port *port, char *options, bool probe)
- 	if (!port->iobase && !port->membase)
- 		return -ENODEV;
- 
-+	up->console_newline_needed = false;
 +
- 	if (options)
- 		uart_parse_options(options, &baud, &parity, &bits, &flow);
- 	else if (probe)
-diff --git a/include/linux/preempt.h b/include/linux/preempt.h
-index ca86235ac15c0..3e9808f2b5491 100644
---- a/include/linux/preempt.h
-+++ b/include/linux/preempt.h
-@@ -515,6 +515,8 @@ static inline bool preempt_model_rt(void)
- 	return IS_ENABLED(CONFIG_PREEMPT_RT);
- }
- 
-+extern const char *preempt_model_str(void);
++static inline unsigned int local_timers_pending(void)
++{
++	return local_softirq_pending();
++}
++#endif
 +
- /*
-  * Does the preemption model allow non-cooperative preemption?
-  *
-diff --git a/include/linux/serial_8250.h b/include/linux/serial_8250.h
-index e0717c8393d7f..a968e6941237f 100644
---- a/include/linux/serial_8250.h
-+++ b/include/linux/serial_8250.h
-@@ -153,6 +153,8 @@ struct uart_8250_port {
- #define MSR_SAVE_FLAGS UART_MSR_ANY_DELTA
- 	unsigned char		msr_saved_flags;
+ DECLARE_PER_CPU(struct task_struct *, ksoftirqd);
  
-+	bool			console_newline_needed;
-+
- 	struct uart_8250_dma	*dma;
- 	const struct uart_8250_ops *ops;
+ static inline struct task_struct *this_cpu_ksoftirqd(void)
+diff --git a/include/linux/spinlock_rt.h b/include/linux/spinlock_rt.h
+index 6175cd682ca0..f6499c37157d 100644
+--- a/include/linux/spinlock_rt.h
++++ b/include/linux/spinlock_rt.h
+@@ -131,7 +131,7 @@ static __always_inline void spin_unlock_irqrestore(spinlock_t *lock,
+ #define spin_trylock_irq(lock)				\
+ 	__cond_lock(lock, rt_spin_trylock(lock))
  
-@@ -204,6 +206,10 @@ void serial8250_init_port(struct uart_8250_port *up);
- void serial8250_set_defaults(struct uart_8250_port *up);
- void serial8250_console_write(struct uart_8250_port *up, const char *s,
- 			      unsigned int count);
-+void serial8250_console_write_atomic(struct uart_8250_port *up,
-+				     struct nbcon_write_context *wctxt);
-+void serial8250_console_write_thread(struct uart_8250_port *up,
-+				     struct nbcon_write_context *wctxt);
- int serial8250_console_setup(struct uart_port *port, char *options, bool probe);
- int serial8250_console_exit(struct uart_port *port);
+-#define __spin_trylock_irqsave(lock, flags)		\
++#define spin_trylock_irqsave(lock, flags)		\
+ ({							\
+ 	int __locked;					\
+ 							\
+@@ -141,9 +141,6 @@ static __always_inline void spin_unlock_irqrestore(spinlock_t *lock,
+ 	__locked;					\
+ })
  
+-#define spin_trylock_irqsave(lock, flags)		\
+-	__cond_lock(lock, __spin_trylock_irqsave(lock, flags))
+-
+ #define spin_is_contended(lock)		(((void)(lock), 0))
+ 
+ static inline int spin_is_locked(spinlock_t *lock)
+diff --git a/kernel/Kconfig.preempt b/kernel/Kconfig.preempt
+index fe782cd77388..f415983be9d4 100644
+--- a/kernel/Kconfig.preempt
++++ b/kernel/Kconfig.preempt
+@@ -69,7 +69,7 @@ config PREEMPT
+ 
+ config PREEMPT_RT
+ 	bool "Fully Preemptible Kernel (Real-Time)"
+-	depends on EXPERT && ARCH_SUPPORTS_RT
++	depends on ARCH_SUPPORTS_RT && !COMPILE_TEST
+ 	select PREEMPTION
+ 	help
+ 	  This option turns the kernel into a real-time kernel by replacing
 diff --git a/kernel/ksysfs.c b/kernel/ksysfs.c
-index 1bab21b4718ff..8d3bee77cacc6 100644
+index 1bab21b4718f..8d3bee77cacc 100644
 --- a/kernel/ksysfs.c
 +++ b/kernel/ksysfs.c
 @@ -188,6 +188,15 @@ KERNEL_ATTR_RO(crash_elfcorehdr_size);
@@ -1051,519 +476,256 @@ index 1bab21b4718ff..8d3bee77cacc6 100644
  #endif
  	NULL
  };
-diff --git a/kernel/module/internal.h b/kernel/module/internal.h
-index daef2be839022..030d2ed175fa8 100644
---- a/kernel/module/internal.h
-+++ b/kernel/module/internal.h
-@@ -122,17 +122,6 @@ char *module_next_tag_pair(char *string, unsigned long *secsize);
- #define for_each_modinfo_entry(entry, info, name) \
- 	for (entry = get_modinfo(info, name); entry; entry = get_next_modinfo(info, name, entry))
- 
--static inline void module_assert_mutex_or_preempt(void)
--{
--#ifdef CONFIG_LOCKDEP
--	if (unlikely(!debug_locks))
--		return;
--
--	WARN_ON_ONCE(!rcu_read_lock_sched_held() &&
--		     !lockdep_is_held(&module_mutex));
--#endif
--}
--
- static inline unsigned long kernel_symbol_value(const struct kernel_symbol *sym)
+diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
+index ebebd0eec7f6..d3b72c2f983f 100644
+--- a/kernel/locking/rtmutex.c
++++ b/kernel/locking/rtmutex.c
+@@ -1601,6 +1601,7 @@ static int __sched rt_mutex_slowlock_block(struct rt_mutex_base *lock,
+ 					   unsigned int state,
+ 					   struct hrtimer_sleeper *timeout,
+ 					   struct rt_mutex_waiter *waiter)
++	__releases(&lock->wait_lock) __acquires(&lock->wait_lock)
  {
- #ifdef CONFIG_HAVE_ARCH_PREL32_RELOCATIONS
-diff --git a/kernel/module/kallsyms.c b/kernel/module/kallsyms.c
-index bf65e0c3c86fc..d8e0a51ff9968 100644
---- a/kernel/module/kallsyms.c
-+++ b/kernel/module/kallsyms.c
-@@ -179,8 +179,7 @@ void add_kallsyms(struct module *mod, const struct load_info *info)
- 	void *init_data_base = mod->mem[MOD_INIT_DATA].base;
- 
- 	/* Set up to point into init section. */
--	mod->kallsyms = (void __rcu *)init_data_base +
--		info->mod_kallsyms_init_off;
-+	rcu_assign_pointer(mod->kallsyms, init_data_base + info->mod_kallsyms_init_off);
- 
- 	rcu_read_lock();
- 	/* The following is safe since this pointer cannot change */
-@@ -260,7 +259,7 @@ static const char *find_kallsyms_symbol(struct module *mod,
- {
- 	unsigned int i, best = 0;
- 	unsigned long nextval, bestval;
--	struct mod_kallsyms *kallsyms = rcu_dereference_sched(mod->kallsyms);
-+	struct mod_kallsyms *kallsyms = rcu_dereference(mod->kallsyms);
- 	struct module_memory *mod_mem;
- 
- 	/* At worse, next value is at end of module */
-@@ -319,7 +318,7 @@ void * __weak dereference_module_function_descriptor(struct module *mod,
- 
- /*
-  * For kallsyms to ask for address resolution.  NULL means not found.  Careful
-- * not to lock to avoid deadlock on oopses, simply disable preemption.
-+ * not to lock to avoid deadlock on oopses, RCU is enough.
+ 	struct rt_mutex *rtm = container_of(lock, struct rt_mutex, rtmutex);
+ 	struct task_struct *owner;
+@@ -1805,6 +1806,7 @@ static __always_inline int __rt_mutex_lock(struct rt_mutex_base *lock,
+  * @lock:	The underlying RT mutex
   */
- int module_address_lookup(unsigned long addr,
- 			  unsigned long *size,
-@@ -332,7 +331,7 @@ int module_address_lookup(unsigned long addr,
- 	int ret = 0;
- 	struct module *mod;
- 
--	preempt_disable();
-+	guard(rcu)();
- 	mod = __module_address(addr);
- 	if (mod) {
- 		if (modname)
-@@ -350,7 +349,6 @@ int module_address_lookup(unsigned long addr,
- 		if (sym)
- 			ret = strscpy(namebuf, sym, KSYM_NAME_LEN);
- 	}
--	preempt_enable();
- 
- 	return ret;
- }
-@@ -359,7 +357,7 @@ int lookup_module_symbol_name(unsigned long addr, char *symname)
+ static void __sched rtlock_slowlock_locked(struct rt_mutex_base *lock)
++	__releases(&lock->wait_lock) __acquires(&lock->wait_lock)
  {
- 	struct module *mod;
- 
--	preempt_disable();
-+	guard(rcu)();
- 	list_for_each_entry_rcu(mod, &modules, list) {
- 		if (mod->state == MODULE_STATE_UNFORMED)
- 			continue;
-@@ -371,12 +369,10 @@ int lookup_module_symbol_name(unsigned long addr, char *symname)
- 				goto out;
- 
- 			strscpy(symname, sym, KSYM_NAME_LEN);
--			preempt_enable();
- 			return 0;
- 		}
- 	}
- out:
--	preempt_enable();
- 	return -ERANGE;
+ 	struct rt_mutex_waiter waiter;
+ 	struct task_struct *owner;
+diff --git a/kernel/locking/spinlock_rt.c b/kernel/locking/spinlock_rt.c
+index 38e292454fcc..d1cf8b2b6dca 100644
+--- a/kernel/locking/spinlock_rt.c
++++ b/kernel/locking/spinlock_rt.c
+@@ -51,7 +51,7 @@ static __always_inline void __rt_spin_lock(spinlock_t *lock)
+ 	migrate_disable();
  }
  
-@@ -385,13 +381,13 @@ int module_get_kallsym(unsigned int symnum, unsigned long *value, char *type,
+-void __sched rt_spin_lock(spinlock_t *lock)
++void __sched rt_spin_lock(spinlock_t *lock) __acquires(RCU)
  {
- 	struct module *mod;
- 
--	preempt_disable();
-+	guard(rcu)();
- 	list_for_each_entry_rcu(mod, &modules, list) {
- 		struct mod_kallsyms *kallsyms;
- 
- 		if (mod->state == MODULE_STATE_UNFORMED)
- 			continue;
--		kallsyms = rcu_dereference_sched(mod->kallsyms);
-+		kallsyms = rcu_dereference(mod->kallsyms);
- 		if (symnum < kallsyms->num_symtab) {
- 			const Elf_Sym *sym = &kallsyms->symtab[symnum];
- 
-@@ -400,12 +396,10 @@ int module_get_kallsym(unsigned int symnum, unsigned long *value, char *type,
- 			strscpy(name, kallsyms_symbol_name(kallsyms, symnum), KSYM_NAME_LEN);
- 			strscpy(module_name, mod->name, MODULE_NAME_LEN);
- 			*exported = is_exported(name, *value, mod);
--			preempt_enable();
- 			return 0;
- 		}
- 		symnum -= kallsyms->num_symtab;
- 	}
--	preempt_enable();
- 	return -ERANGE;
- }
- 
-@@ -413,7 +407,7 @@ int module_get_kallsym(unsigned int symnum, unsigned long *value, char *type,
- static unsigned long __find_kallsyms_symbol_value(struct module *mod, const char *name)
- {
- 	unsigned int i;
--	struct mod_kallsyms *kallsyms = rcu_dereference_sched(mod->kallsyms);
-+	struct mod_kallsyms *kallsyms = rcu_dereference(mod->kallsyms);
- 
- 	for (i = 0; i < kallsyms->num_symtab; i++) {
- 		const Elf_Sym *sym = &kallsyms->symtab[i];
-@@ -453,23 +447,15 @@ static unsigned long __module_kallsyms_lookup_name(const char *name)
- /* Look for this name: can be of form module:name. */
- unsigned long module_kallsyms_lookup_name(const char *name)
- {
--	unsigned long ret;
--
- 	/* Don't lock: we're in enough trouble already. */
--	preempt_disable();
--	ret = __module_kallsyms_lookup_name(name);
--	preempt_enable();
--	return ret;
-+	guard(rcu)();
-+	return __module_kallsyms_lookup_name(name);
- }
- 
- unsigned long find_kallsyms_symbol_value(struct module *mod, const char *name)
- {
--	unsigned long ret;
--
--	preempt_disable();
--	ret = __find_kallsyms_symbol_value(mod, name);
--	preempt_enable();
--	return ret;
-+	guard(rcu)();
-+	return __find_kallsyms_symbol_value(mod, name);
- }
- 
- int module_kallsyms_on_each_symbol(const char *modname,
-@@ -490,11 +476,8 @@ int module_kallsyms_on_each_symbol(const char *modname,
- 		if (modname && strcmp(modname, mod->name))
- 			continue;
- 
--		/* Use rcu_dereference_sched() to remain compliant with the sparse tool */
--		preempt_disable();
--		kallsyms = rcu_dereference_sched(mod->kallsyms);
--		preempt_enable();
--
-+		kallsyms = rcu_dereference_check(mod->kallsyms,
-+						 lockdep_is_held(&module_mutex));
- 		for (i = 0; i < kallsyms->num_symtab; i++) {
- 			const Elf_Sym *sym = &kallsyms->symtab[i];
- 
-diff --git a/kernel/module/main.c b/kernel/module/main.c
-index 5399c182b3cbe..073a8d57884d8 100644
---- a/kernel/module/main.c
-+++ b/kernel/module/main.c
-@@ -67,7 +67,7 @@
- 
- /*
-  * Mutex protects:
-- * 1) List of modules (also safely readable with preempt_disable),
-+ * 1) List of modules (also safely readable within RCU read section),
-  * 2) module_use links,
-  * 3) mod_tree.addr_min/mod_tree.addr_max.
-  * (delete and add uses RCU list operations).
-@@ -331,7 +331,7 @@ static bool find_exported_symbol_in_section(const struct symsearch *syms,
- 
- /*
-  * Find an exported symbol and return it, along with, (optional) crc and
-- * (optional) module which owns it.  Needs preempt disabled or module_mutex.
-+ * (optional) module which owns it.  Needs RCU or module_mutex.
-  */
- bool find_symbol(struct find_symbol_arg *fsa)
- {
-@@ -345,8 +345,6 @@ bool find_symbol(struct find_symbol_arg *fsa)
- 	struct module *mod;
- 	unsigned int i;
- 
--	module_assert_mutex_or_preempt();
--
- 	for (i = 0; i < ARRAY_SIZE(arr); i++)
- 		if (find_exported_symbol_in_section(&arr[i], NULL, fsa))
- 			return true;
-@@ -374,16 +372,14 @@ bool find_symbol(struct find_symbol_arg *fsa)
- }
- 
- /*
-- * Search for module by name: must hold module_mutex (or preempt disabled
-- * for read-only access).
-+ * Search for module by name: must hold module_mutex (or RCU for read-only
-+ * access).
-  */
- struct module *find_module_all(const char *name, size_t len,
- 			       bool even_unformed)
- {
- 	struct module *mod;
- 
--	module_assert_mutex_or_preempt();
--
- 	list_for_each_entry_rcu(mod, &modules, list,
- 				lockdep_is_held(&module_mutex)) {
- 		if (!even_unformed && mod->state == MODULE_STATE_UNFORMED)
-@@ -454,8 +450,7 @@ bool __is_module_percpu_address(unsigned long addr, unsigned long *can_addr)
- 	struct module *mod;
- 	unsigned int cpu;
- 
--	preempt_disable();
--
-+	guard(rcu)();
- 	list_for_each_entry_rcu(mod, &modules, list) {
- 		if (mod->state == MODULE_STATE_UNFORMED)
- 			continue;
-@@ -472,13 +467,10 @@ bool __is_module_percpu_address(unsigned long addr, unsigned long *can_addr)
- 						per_cpu_ptr(mod->percpu,
- 							    get_boot_cpu_id());
- 				}
--				preempt_enable();
- 				return true;
- 			}
- 		}
- 	}
--
--	preempt_enable();
- 	return false;
- }
- 
-@@ -814,10 +806,9 @@ void __symbol_put(const char *symbol)
- 		.gplok	= true,
- 	};
- 
--	preempt_disable();
-+	guard(rcu)();
- 	BUG_ON(!find_symbol(&fsa));
- 	module_put(fsa.owner);
--	preempt_enable();
- }
- EXPORT_SYMBOL(__symbol_put);
- 
-@@ -830,15 +821,10 @@ void symbol_put_addr(void *addr)
- 	if (core_kernel_text(a))
- 		return;
- 
--	/*
--	 * Even though we hold a reference on the module; we still need to
--	 * disable preemption in order to safely traverse the data structure.
--	 */
--	preempt_disable();
-+	guard(rcu)();
- 	modaddr = __module_text_address(a);
- 	BUG_ON(!modaddr);
- 	module_put(modaddr);
--	preempt_enable();
- }
- EXPORT_SYMBOL_GPL(symbol_put_addr);
- 
-@@ -1348,7 +1334,7 @@ static void free_module(struct module *mod)
- 	mod_tree_remove(mod);
- 	/* Remove this module from bug list, this uses list_del_rcu */
- 	module_bug_cleanup(mod);
--	/* Wait for RCU-sched synchronizing before releasing mod->list and buglist. */
-+	/* Wait for RCU synchronizing before releasing mod->list and buglist. */
- 	synchronize_rcu();
- 	if (try_add_tainted_module(mod))
- 		pr_err("%s: adding tainted module to the unloaded tainted modules list failed.\n",
-@@ -1371,21 +1357,17 @@ void *__symbol_get(const char *symbol)
- 		.warn	= true,
- 	};
- 
--	preempt_disable();
-+	guard(rcu)();
- 	if (!find_symbol(&fsa))
--		goto fail;
-+		return NULL;
- 	if (fsa.license != GPL_ONLY) {
- 		pr_warn("failing symbol_get of non-GPLONLY symbol %s.\n",
- 			symbol);
--		goto fail;
-+		return NULL;
- 	}
- 	if (strong_try_module_get(fsa.owner))
--		goto fail;
--	preempt_enable();
-+		return NULL;
- 	return (void *)kernel_symbol_value(fsa.sym);
--fail:
--	preempt_enable();
--	return NULL;
- }
- EXPORT_SYMBOL_GPL(__symbol_get);
- 
-@@ -2965,7 +2947,7 @@ static noinline int do_init_module(struct module *mod)
+ 	spin_acquire(&lock->dep_map, 0, 0, _RET_IP_);
+ 	__rt_spin_lock(lock);
+@@ -75,7 +75,7 @@ void __sched rt_spin_lock_nest_lock(spinlock_t *lock,
+ EXPORT_SYMBOL(rt_spin_lock_nest_lock);
  #endif
- 	/*
- 	 * We want to free module_init, but be aware that kallsyms may be
--	 * walking this with preempt disabled.  In all the failure paths, we
-+	 * walking this within an RCU read section. In all the failure paths, we
- 	 * call synchronize_rcu(), but we don't want to slow down the success
- 	 * path. execmem_free() cannot be called in an interrupt, so do the
- 	 * work and call synchronize_rcu() in a work queue.
-@@ -3636,7 +3618,7 @@ const struct exception_table_entry *search_module_extables(unsigned long addr)
- 	const struct exception_table_entry *e = NULL;
- 	struct module *mod;
  
--	preempt_disable();
-+	guard(rcu)();
- 	mod = __module_address(addr);
- 	if (!mod)
- 		goto out;
-@@ -3648,8 +3630,6 @@ const struct exception_table_entry *search_module_extables(unsigned long addr)
- 			   mod->num_exentries,
- 			   addr);
- out:
--	preempt_enable();
--
- 	/*
- 	 * Now, if we found one, we are running inside it now, hence
- 	 * we cannot unload the module, hence no refcnt needed.
-@@ -3668,9 +3648,8 @@ bool is_module_address(unsigned long addr)
+-void __sched rt_spin_unlock(spinlock_t *lock)
++void __sched rt_spin_unlock(spinlock_t *lock) __releases(RCU)
  {
- 	bool ret;
- 
--	preempt_disable();
-+	guard(rcu)();
- 	ret = __module_address(addr) != NULL;
--	preempt_enable();
- 
- 	return ret;
+ 	spin_release(&lock->dep_map, _RET_IP_);
+ 	migrate_enable();
+@@ -225,7 +225,7 @@ int __sched rt_write_trylock(rwlock_t *rwlock)
  }
-@@ -3679,7 +3658,7 @@ bool is_module_address(unsigned long addr)
-  * __module_address() - get the module which contains an address.
-  * @addr: the address.
-  *
-- * Must be called with preempt disabled or module mutex held so that
-+ * Must be called within RCU read section or module mutex held so that
-  * module doesn't get freed during this.
-  */
- struct module *__module_address(unsigned long addr)
-@@ -3697,8 +3676,6 @@ struct module *__module_address(unsigned long addr)
- 	return NULL;
+ EXPORT_SYMBOL(rt_write_trylock);
  
- lookup:
--	module_assert_mutex_or_preempt();
--
- 	mod = mod_find(addr, &mod_tree);
- 	if (mod) {
- 		BUG_ON(!within_module(addr, mod));
-@@ -3720,9 +3697,8 @@ bool is_module_text_address(unsigned long addr)
+-void __sched rt_read_lock(rwlock_t *rwlock)
++void __sched rt_read_lock(rwlock_t *rwlock) __acquires(RCU)
  {
- 	bool ret;
- 
--	preempt_disable();
-+	guard(rcu)();
- 	ret = __module_text_address(addr) != NULL;
--	preempt_enable();
- 
- 	return ret;
+ 	rtlock_might_resched();
+ 	rwlock_acquire_read(&rwlock->dep_map, 0, 0, _RET_IP_);
+@@ -235,7 +235,7 @@ void __sched rt_read_lock(rwlock_t *rwlock)
  }
-@@ -3731,7 +3707,7 @@ bool is_module_text_address(unsigned long addr)
-  * __module_text_address() - get the module whose code contains an address.
-  * @addr: the address.
-  *
-- * Must be called with preempt disabled or module mutex held so that
-+ * Must be called within RCU read section or module mutex held so that
-  * module doesn't get freed during this.
-  */
- struct module *__module_text_address(unsigned long addr)
-@@ -3753,8 +3729,7 @@ void print_modules(void)
- 	char buf[MODULE_FLAGS_BUF_SIZE];
+ EXPORT_SYMBOL(rt_read_lock);
  
- 	printk(KERN_DEFAULT "Modules linked in:");
--	/* Most callers should already have preempt disabled, but make sure */
--	preempt_disable();
-+	guard(rcu)();
- 	list_for_each_entry_rcu(mod, &modules, list) {
- 		if (mod->state == MODULE_STATE_UNFORMED)
- 			continue;
-@@ -3762,7 +3737,6 @@ void print_modules(void)
+-void __sched rt_write_lock(rwlock_t *rwlock)
++void __sched rt_write_lock(rwlock_t *rwlock) __acquires(RCU)
+ {
+ 	rtlock_might_resched();
+ 	rwlock_acquire(&rwlock->dep_map, 0, 0, _RET_IP_);
+@@ -246,7 +246,7 @@ void __sched rt_write_lock(rwlock_t *rwlock)
+ EXPORT_SYMBOL(rt_write_lock);
+ 
+ #ifdef CONFIG_DEBUG_LOCK_ALLOC
+-void __sched rt_write_lock_nested(rwlock_t *rwlock, int subclass)
++void __sched rt_write_lock_nested(rwlock_t *rwlock, int subclass) __acquires(RCU)
+ {
+ 	rtlock_might_resched();
+ 	rwlock_acquire(&rwlock->dep_map, subclass, 0, _RET_IP_);
+@@ -257,7 +257,7 @@ void __sched rt_write_lock_nested(rwlock_t *rwlock, int subclass)
+ EXPORT_SYMBOL(rt_write_lock_nested);
+ #endif
+ 
+-void __sched rt_read_unlock(rwlock_t *rwlock)
++void __sched rt_read_unlock(rwlock_t *rwlock) __releases(RCU)
+ {
+ 	rwlock_release(&rwlock->dep_map, _RET_IP_);
+ 	migrate_enable();
+@@ -266,7 +266,7 @@ void __sched rt_read_unlock(rwlock_t *rwlock)
+ }
+ EXPORT_SYMBOL(rt_read_unlock);
+ 
+-void __sched rt_write_unlock(rwlock_t *rwlock)
++void __sched rt_write_unlock(rwlock_t *rwlock) __releases(RCU)
+ {
+ 	rwlock_release(&rwlock->dep_map, _RET_IP_);
+ 	rcu_read_unlock();
+diff --git a/kernel/rcu/rcutorture.c b/kernel/rcu/rcutorture.c
+index bb75dbf5c800..609687fd742d 100644
+--- a/kernel/rcu/rcutorture.c
++++ b/kernel/rcu/rcutorture.c
+@@ -2440,6 +2440,12 @@ static int rcutorture_booster_init(unsigned int cpu)
+ 		WARN_ON_ONCE(!t);
+ 		sp.sched_priority = 2;
+ 		sched_setscheduler_nocheck(t, SCHED_FIFO, &sp);
++#ifdef CONFIG_PREEMPT_RT
++		t = per_cpu(timersd, cpu);
++		WARN_ON_ONCE(!t);
++		sp.sched_priority = 2;
++		sched_setscheduler_nocheck(t, SCHED_FIFO, &sp);
++#endif
  	}
  
- 	print_unloaded_tainted_modules();
--	preempt_enable();
- 	if (last_unloaded_module.name[0])
- 		pr_cont(" [last unloaded: %s%s]", last_unloaded_module.name,
- 			last_unloaded_module.taints);
-diff --git a/kernel/module/tracking.c b/kernel/module/tracking.c
-index 16742d1c630c6..4fefec5b683c6 100644
---- a/kernel/module/tracking.c
-+++ b/kernel/module/tracking.c
-@@ -21,8 +21,6 @@ int try_add_tainted_module(struct module *mod)
- {
- 	struct mod_unload_taint *mod_taint;
- 
--	module_assert_mutex_or_preempt();
--
- 	if (!mod->taints)
- 		goto out;
- 
-diff --git a/kernel/module/version.c b/kernel/module/version.c
-index 53f43ac5a73e9..0437eea1d209f 100644
---- a/kernel/module/version.c
-+++ b/kernel/module/version.c
-@@ -65,14 +65,13 @@ int check_modstruct_version(const struct load_info *info,
- 
- 	/*
- 	 * Since this should be found in kernel (which can't be removed), no
--	 * locking is necessary -- use preempt_disable() to placate lockdep.
-+	 * locking is necessary. Regardless use a RCU read section to keep
-+	 * lockdep happy.
- 	 */
--	preempt_disable();
--	if (!find_symbol(&fsa)) {
--		preempt_enable();
--		BUG();
-+	scoped_guard(rcu) {
-+		if (!find_symbol(&fsa))
-+			BUG();
- 	}
--	preempt_enable();
- 	return check_version(info, "module_layout", mod, fsa.crc);
+ 	/* Don't allow time recalculation while creating a new task. */
+diff --git a/kernel/softirq.c b/kernel/softirq.c
+index d082e7840f88..b452206cf93b 100644
+--- a/kernel/softirq.c
++++ b/kernel/softirq.c
+@@ -624,6 +624,24 @@ static inline void tick_irq_exit(void)
+ #endif
  }
  
-diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 95e40895a5190..8f5517dbe07d4 100644
---- a/kernel/sched/core.c
-+++ b/kernel/sched/core.c
-@@ -7642,6 +7642,30 @@ static inline void preempt_dynamic_init(void) { }
- 
- #endif /* CONFIG_PREEMPT_DYNAMIC */
- 
-+const char *preempt_model_str(void)
++#ifdef CONFIG_PREEMPT_RT
++DEFINE_PER_CPU(struct task_struct *, timersd);
++DEFINE_PER_CPU(unsigned long, pending_timer_softirq);
++
++static void wake_timersd(void)
 +{
-+	if (IS_ENABLED(CONFIG_ARCH_HAS_PREEMPT_LAZY) && preempt_model_lazy()) {
-+		if (preempt_model_rt())
-+			return "PREEMPT_RT+LAZY";
-+		if (preempt_model_full())
-+			return "PREEMPT+LAZY";
-+		if (preempt_model_voluntary())
-+			return "VOLUNTARY+LAZY";
-+		if (preempt_model_none())
-+			return "NONE+LAZY";
-+	} else {
-+		if (preempt_model_rt())
-+			return "PREEMPT_RT";
-+		if (preempt_model_full())
-+			return "PREEMPT";
-+		if (preempt_model_voluntary())
-+			return "VOLUNTARY";
-+		if (preempt_model_none())
-+			return "NONE";
-+	}
-+	return "UNKNOWN-PREEMPT";
++	struct task_struct *tsk = __this_cpu_read(timersd);
++
++	if (tsk)
++		wake_up_process(tsk);
 +}
 +
- int io_schedule_prepare(void)
++#else
++
++static inline void wake_timersd(void) { }
++
++#endif
++
+ static inline void __irq_exit_rcu(void)
  {
- 	int old_iowait = current->in_iowait;
-diff --git a/kernel/trace/trace.c b/kernel/trace/trace.c
-index be62f0ea1814d..3861f53f9a434 100644
---- a/kernel/trace/trace.c
-+++ b/kernel/trace/trace.c
-@@ -4266,11 +4266,7 @@ print_trace_header(struct seq_file *m, struct trace_iterator *iter)
- 		   entries,
- 		   total,
- 		   buf->cpu,
--		   preempt_model_none()      ? "server" :
--		   preempt_model_voluntary() ? "desktop" :
--		   preempt_model_full()      ? "preempt" :
--		   preempt_model_rt()        ? "preempt_rt" :
--		   "unknown",
-+		   preempt_model_str(),
- 		   /* These are reserved for later use */
- 		   0, 0, 0, 0);
- #ifdef CONFIG_SMP
-diff --git a/lib/dump_stack.c b/lib/dump_stack.c
-index 388da1aea14a5..c3e59f8992279 100644
---- a/lib/dump_stack.c
-+++ b/lib/dump_stack.c
-@@ -54,7 +54,7 @@ void __init dump_stack_set_arch_desc(const char *fmt, ...)
-  */
- void dump_stack_print_info(const char *log_lvl)
- {
--	printk("%sCPU: %d UID: %u PID: %d Comm: %.20s %s%s %s %.*s" BUILD_ID_FMT "\n",
-+	printk("%sCPU: %d UID: %u PID: %d Comm: %.20s %s%s %s %.*s %s" BUILD_ID_FMT "\n",
- 	       log_lvl, raw_smp_processor_id(),
- 	       __kuid_val(current_real_cred()->euid),
- 	       current->pid, current->comm,
-@@ -62,7 +62,7 @@ void dump_stack_print_info(const char *log_lvl)
- 	       print_tainted(),
- 	       init_utsname()->release,
- 	       (int)strcspn(init_utsname()->version, " "),
--	       init_utsname()->version, BUILD_ID_VAL);
-+	       init_utsname()->version, preempt_model_str(), BUILD_ID_VAL);
+ #ifndef __ARCH_IRQ_EXIT_IRQS_DISABLED
+@@ -636,6 +654,10 @@ static inline void __irq_exit_rcu(void)
+ 	if (!in_interrupt() && local_softirq_pending())
+ 		invoke_softirq();
  
- 	if (get_taint())
- 		printk("%s%s\n", log_lvl, print_tainted_verbose());
++	if (IS_ENABLED(CONFIG_PREEMPT_RT) && local_timers_pending() &&
++	    !(in_nmi() | in_hardirq()))
++		wake_timersd();
++
+ 	tick_irq_exit();
+ }
+ 
+@@ -971,12 +993,57 @@ static struct smp_hotplug_thread softirq_threads = {
+ 	.thread_comm		= "ksoftirqd/%u",
+ };
+ 
++#ifdef CONFIG_PREEMPT_RT
++static void timersd_setup(unsigned int cpu)
++{
++	/* Above SCHED_NORMAL to handle timers before regular tasks. */
++	sched_set_fifo_low(current);
++}
++
++static int timersd_should_run(unsigned int cpu)
++{
++	return local_timers_pending();
++}
++
++void raise_ktimers_thread(unsigned int nr)
++{
++	lockdep_assert_in_irq();
++	trace_softirq_raise(nr);
++	__this_cpu_or(pending_timer_softirq, 1 << nr);
++}
++
++static void run_timersd(unsigned int cpu)
++{
++	unsigned int timer_si;
++
++	ksoftirqd_run_begin();
++
++	timer_si = local_timers_pending();
++	__this_cpu_write(pending_timer_softirq, 0);
++	or_softirq_pending(timer_si);
++
++	__do_softirq();
++
++	ksoftirqd_run_end();
++}
++
++static struct smp_hotplug_thread timer_threads = {
++	.store			= &timersd,
++	.setup			= timersd_setup,
++	.thread_should_run	= timersd_should_run,
++	.thread_fn		= run_timersd,
++	.thread_comm		= "ktimers/%u",
++};
++#endif
++
+ static __init int spawn_ksoftirqd(void)
+ {
+ 	cpuhp_setup_state_nocalls(CPUHP_SOFTIRQ_DEAD, "softirq:dead", NULL,
+ 				  takeover_tasklets);
+ 	BUG_ON(smpboot_register_percpu_thread(&softirq_threads));
+-
++#ifdef CONFIG_PREEMPT_RT
++	BUG_ON(smpboot_register_percpu_thread(&timer_threads));
++#endif
+ 	return 0;
+ }
+ early_initcall(spawn_ksoftirqd);
+diff --git a/kernel/time/hrtimer.c b/kernel/time/hrtimer.c
+index cddcd08ea827..133d49f703d9 100644
+--- a/kernel/time/hrtimer.c
++++ b/kernel/time/hrtimer.c
+@@ -1811,7 +1811,7 @@ void hrtimer_interrupt(struct clock_event_device *dev)
+ 	if (!ktime_before(now, cpu_base->softirq_expires_next)) {
+ 		cpu_base->softirq_expires_next = KTIME_MAX;
+ 		cpu_base->softirq_activated = 1;
+-		raise_softirq_irqoff(HRTIMER_SOFTIRQ);
++		raise_hrtimer_softirq();
+ 	}
+ 
+ 	__hrtimer_run_queues(cpu_base, now, flags, HRTIMER_ACTIVE_HARD);
+@@ -1906,7 +1906,7 @@ void hrtimer_run_queues(void)
+ 	if (!ktime_before(now, cpu_base->softirq_expires_next)) {
+ 		cpu_base->softirq_expires_next = KTIME_MAX;
+ 		cpu_base->softirq_activated = 1;
+-		raise_softirq_irqoff(HRTIMER_SOFTIRQ);
++		raise_hrtimer_softirq();
+ 	}
+ 
+ 	__hrtimer_run_queues(cpu_base, now, flags, HRTIMER_ACTIVE_HARD);
+diff --git a/kernel/time/tick-sched.c b/kernel/time/tick-sched.c
+index f203f000da1a..e0c47259e91a 100644
+--- a/kernel/time/tick-sched.c
++++ b/kernel/time/tick-sched.c
+@@ -865,7 +865,7 @@ static void tick_nohz_restart(struct tick_sched *ts, ktime_t now)
+ 
+ static inline bool local_timer_softirq_pending(void)
+ {
+-	return local_softirq_pending() & BIT(TIMER_SOFTIRQ);
++	return local_timers_pending() & BIT(TIMER_SOFTIRQ);
+ }
+ 
+ /*
+diff --git a/kernel/time/timer.c b/kernel/time/timer.c
+index 7835f9b376e7..8dc35774bd6f 100644
+--- a/kernel/time/timer.c
++++ b/kernel/time/timer.c
+@@ -2500,7 +2500,7 @@ static void run_local_timers(void)
+ 		 */
+ 		if (time_after_eq(jiffies, READ_ONCE(base->next_expiry)) ||
+ 		    (i == BASE_DEF && tmigr_requires_handle_remote())) {
+-			raise_softirq(TIMER_SOFTIRQ);
++			raise_timer_softirq();
+ 			return;
+ 		}
+ 	}
+-- 
+2.47.1
