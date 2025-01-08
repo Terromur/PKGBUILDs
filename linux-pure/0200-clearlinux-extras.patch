@@ -781,7 +781,7 @@ gcc12/build workarounds
  #    https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53383
  #
 -KBUILD_CFLAGS += -mno-sse -mno-mmx -mno-sse2 -mno-3dnow -mno-avx
-+KBUILD_CFLAGS += -mno-sse -mno-mmx -mno-sse2 -mno-3dnow -mno-avx -mno-avx2 -mno-avx512f
++KBUILD_CFLAGS += -mno-sse -mno-mmx -mno-sse2 -mno-3dnow -mno-avx -mno-avx2
  KBUILD_RUSTFLAGS += --target=$(objtree)/scripts/target.json
  KBUILD_RUSTFLAGS += -Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-avx,-avx2
  
@@ -1070,4 +1070,3 @@ index 54ca8dcbfb43..9adc51e8085b 100644
  #define SK_RMEM_MAX		(_SK_MEM_OVERHEAD * _SK_MEM_PACKETS)
 -- 
 2.44.0
-
