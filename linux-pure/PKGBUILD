@@ -30,6 +30,7 @@ source=(
   https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.xz
   config
   modules.db
+  0001-rt.patch
   0001-ntsync.patch
   0002-bore.patch
   0003-Restore-CONFIG_OPTIMIZE_FOR_PERFORMANCE_O3.patch
@@ -37,8 +38,11 @@ source=(
   0005-Add-sysctl-and-CONFIG-to-disallow-unprivileged-CLONE_NEWUSER.patch
   0006-Default-to-maximum-amount-of-ASLR-bits.patch
   0007-skip-simpledrm-if-nvidia-drm.modeset=1-is-set.patch
+  0200-clearlinux-extras.patch
+  valve-gamescope-framerate-control-fixups.patch
   dkms-clang.patch
   polly.patch
+  thinlto.patch
 )
 sha256sums=(
   'f785fb648a0e0b66a943bb3228a4b6ed62c90b985cd1ebf69da5d38e589da0cf'
