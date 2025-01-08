@@ -1,0 +1,20 @@
+Improve low-latency performance clang, thin-LTO, and full-LTO.
+
+Signed-off-by: Mario Roy <...>
+
+diff -uarp a/Makefile b/Makefile
+--- a/Makefile
++++ b/Makefile
+@@ -821,6 +821,12 @@ KBUILD_CFLAGS += $(call cc-option,-fmodu
+ KBUILD_RUSTFLAGS += -Cdebug-assertions=$(if $(CONFIG_RUST_DEBUG_ASSERTIONS),y,n)
+ KBUILD_RUSTFLAGS += -Coverflow-checks=$(if $(CONFIG_RUST_OVERFLOW_CHECKS),y,n)
+ 
++ifdef CONFIG_CC_IS_CLANG
++KBUILD_CFLAGS	+= -mllvm -enable-gvn-hoist \
++		   -mllvm -inline-threshold=1000 \
++		   -mllvm -unroll-threshold=50
++endif
++
+ # Tell gcc to never replace conditional load with a non-conditional one
+ ifdef CONFIG_CC_IS_GCC
+ # gcc-10 renamed --param=allow-store-data-races=0 to
