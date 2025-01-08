@@ -247,49 +247,54 @@ prepare() {
   scripts/config -d XEN_DEBUG_FS
 
   # Применение настроек Clear Linux для x86
-    scripts/config -d IOMMU_DEFAULT_DMA_LAZY -e IOMMU_DEFAULT_PASSTHROUGH
-    scripts/config -d ACPI_TABLE_UPGRADE
-    scripts/config -d ACPI_PCI_SLOT
-    scripts/config -d ACPI_EXTLOG
-    scripts/config -d BALLOON_COMPACTION
-    scripts/config -d CMA
-    scripts/config -d DAMON
-    scripts/config -d HWPOISON_INJECT
-    scripts/config -d MEM_SOFT_DIRTY -d IDLE_PAGE_TRACKING
-    scripts/config -d PARAVIRT_TIME_ACCOUNTING
-    scripts/config -e PSI_DEFAULT_DISABLED
-    scripts/config -d READ_ONLY_THP_FOR_FS
-    scripts/config -e DEBUG_FORCE_FUNCTION_ALIGN_64B
-    scripts/config -d SECURITY_IPE
-    scripts/config -d SND_UTIMER
-    scripts/config -d WATCH_QUEUE
-    scripts/config -d WATCHDOG
-    scripts/config -d PCIEASPM_DEFAULT -e PCIEASPM_PERFORMANCE
-    scripts/config -d WQ_POWER_EFFICIENT_DEFAULT
-    scripts/config -d X86_BOOTPARAM_MEMORY_CORRUPTION_CHECK
-    scripts/config -d X86_CPA_STATISTICS
-    scripts/config -d X86_DECODER_SELFTEST
-    scripts/config -d X86_5LEVEL
-    scripts/config -d STACKPROTECTOR_STRONG -e STACKPROTECTOR
-    scripts/config -d LEGACY_VSYSCALL_XONLY -e LEGACY_VSYSCALL_NONE
-    scripts/config -d UID16 -d X86_16BIT -d MODIFY_LDT_SYSCALL
-    scripts/config -d SYSFS_SYSCALL
-    scripts/config -e STRICT_SIGALTSTACK_SIZE
-    scripts/config -d KEXEC -d KEXEC_FILE -d CRASH_DUMP
-    scripts/config -d KFENCE
-    scripts/config -d INIT_STACK_ALL_ZERO -e INIT_STACK_NONE
-    scripts/config -d UCLAMP_TASK
-    scripts/config -d CGROUP_HUGETLB
-    scripts/config -d CGROUP_NET_PRIO
-    scripts/config -d CGROUP_PERF
-    scripts/config -d CGROUP_RDMA
-    scripts/config -d BLK_CGROUP_IOLATENCY
-    scripts/config -d BLK_CGROUP_IOCOST
-    scripts/config -d BLK_CGROUP_IOPRIO
-    scripts/config -d NETFILTER_XT_MATCH_CGROUP
-    scripts/config -d CPUMASK_OFFSTACK -d MAXSMP
-    scripts/config -d ZSWAP_DEFAULT_ON -d ZSWAP_SHRINKER_DEFAULT_ON
-    scripts/config -d ZSWAP_ZPOOL_DEFAULT_ZSMALLOC -d ZSMALLOC_STAT
+  scripts/config -d IOMMU_DEFAULT_DMA_LAZY -e IOMMU_DEFAULT_PASSTHROUGH
+  scripts/config -d ACPI_TABLE_UPGRADE
+  scripts/config -d ACPI_PCI_SLOT
+  scripts/config -d ACPI_EXTLOG
+  scripts/config -d BALLOON_COMPACTION
+  scripts/config -d CMA
+  scripts/config -d DAMON
+  scripts/config -d HWPOISON_INJECT
+  scripts/config -d MEM_SOFT_DIRTY -d IDLE_PAGE_TRACKING
+  scripts/config -d PARAVIRT_TIME_ACCOUNTING
+  scripts/config -e PSI_DEFAULT_DISABLED
+  scripts/config -d READ_ONLY_THP_FOR_FS
+  scripts/config -e DEBUG_FORCE_FUNCTION_ALIGN_64B
+  scripts/config -d SECURITY_IPE
+  scripts/config -d SND_UTIMER
+  scripts/config -d WATCH_QUEUE
+  scripts/config -d WATCHDOG
+  scripts/config -d PCIEASPM_DEFAULT -e PCIEASPM_PERFORMANCE
+  scripts/config -d WQ_POWER_EFFICIENT_DEFAULT
+  scripts/config -d X86_BOOTPARAM_MEMORY_CORRUPTION_CHECK
+  scripts/config -d X86_CPA_STATISTICS
+  scripts/config -d X86_DECODER_SELFTEST
+  scripts/config -d X86_5LEVEL
+  scripts/config -d STACKPROTECTOR_STRONG -e STACKPROTECTOR
+  scripts/config -d LEGACY_VSYSCALL_XONLY -e LEGACY_VSYSCALL_NONE
+  scripts/config -d UID16 -d X86_16BIT -d MODIFY_LDT_SYSCALL
+  scripts/config -d SYSFS_SYSCALL
+  scripts/config -e STRICT_SIGALTSTACK_SIZE
+  scripts/config -d KEXEC -d KEXEC_FILE -d CRASH_DUMP
+  scripts/config -d KFENCE
+  scripts/config -d INIT_STACK_ALL_ZERO -e INIT_STACK_NONE
+  scripts/config -d UCLAMP_TASK
+  scripts/config -d CGROUP_HUGETLB
+  scripts/config -d CGROUP_NET_PRIO
+  scripts/config -d CGROUP_PERF
+  scripts/config -d CGROUP_RDMA
+  scripts/config -d BLK_CGROUP_IOLATENCY
+  scripts/config -d BLK_CGROUP_IOCOST
+  scripts/config -d BLK_CGROUP_IOPRIO
+  scripts/config -d NETFILTER_XT_MATCH_CGROUP
+  scripts/config -d CPUMASK_OFFSTACK -d MAXSMP
+  scripts/config -d ZSWAP_DEFAULT_ON -d ZSWAP_SHRINKER_DEFAULT_ON
+  scripts/config -d ZSWAP_ZPOOL_DEFAULT_ZSMALLOC -d ZSMALLOC_STAT
+
+  # Отключение профилирования gcov
+  scripts/config -d GCOV_KERNEL
+  # Отключение профилирования gcov всего ядра
+  scripts/config -d GCOV_PROFILE_ALL
 
   # Отключение NUMA и связанных параметров
   scripts/config -d NUMA \
