@@ -30,7 +30,6 @@ source=(
   https://cdn.kernel.org/pub/linux/kernel/v${pkgver%%.*}.x/${_srcname}.tar.xz
   config
   modules.db
-  0001-rt.patch
   0001-ntsync.patch
   0002-bore.patch
   0002-clear-patches-misc.patch
@@ -46,7 +45,6 @@ source=(
   thinlto.patch
 )
 sha256sums=(
-  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
