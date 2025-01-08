@@ -17,7 +17,6 @@
 # Patch0128: 0128-itmt_epb-use-epb-to-scale-itmt.patch
 # Patch0130: 0130-itmt2-ADL-fixes.patch
 # Patch0131: 0131-add-a-per-cpu-minimum-high-watermark-an-tune-batch-s.patch
-# Patch0133: 0133-novector.patch
 # Patch0135: 0135-initcall-only-print-non-zero-initcall-debug-to-speed.patch
 # Patch0137: libsgrowdown.patch
 # Patch0141: epp-retune.patch
@@ -761,33 +760,6 @@ index e6f211dcf82e..0ea48434ac7d 100644
 -- 
 https://clearlinux.org
 
-# Patch0133: 0133-novector.patch
-
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Arjan van de Ven <arjan.van.de.ven@intel.com>
-Date: Fri, 15 Apr 2022 00:07:38 +0000
-Subject: [PATCH] novector
-
-gcc12/build workarounds
-
----
- arch/x86/Makefile | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
---- linux-6.9.1/arch/x86/Makefile~	2024-05-17 10:18:09.000000000 +0000
-+++ linux-6.9.1/arch/x86/Makefile	2024-05-17 18:54:31.463961414 +0000
-@@ -70,7 +70,7 @@
- #
- #    https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53383
- #
--KBUILD_CFLAGS += -mno-sse -mno-mmx -mno-sse2 -mno-3dnow -mno-avx
-+KBUILD_CFLAGS += -mno-sse -mno-mmx -mno-sse2 -mno-3dnow -mno-avx -mno-avx2
- KBUILD_RUSTFLAGS += --target=$(objtree)/scripts/target.json
- KBUILD_RUSTFLAGS += -Ctarget-feature=-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-avx,-avx2
- 
--- 
-2.45.2
-
 # Patch0135: 0135-initcall-only-print-non-zero-initcall-debug-to-speed.patch
 
 From 496f1bc8c53f359a2fe07204d3c5ffdba963994e Mon Sep 17 00:00:00 2001
@@ -1070,3 +1042,4 @@ index 54ca8dcbfb43..9adc51e8085b 100644
  #define SK_RMEM_MAX		(_SK_MEM_OVERHEAD * _SK_MEM_PACKETS)
 -- 
 2.44.0
+
