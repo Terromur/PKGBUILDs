@@ -291,11 +291,6 @@ prepare() {
   scripts/config -d ZSWAP_DEFAULT_ON -d ZSWAP_SHRINKER_DEFAULT_ON
   scripts/config -d ZSWAP_ZPOOL_DEFAULT_ZSMALLOC -d ZSMALLOC_STAT
 
-  # Отключение профилирования gcov
-  scripts/config -d GCOV_KERNEL
-  # Отключение профилирования gcov всего ядра
-  scripts/config -d GCOV_PROFILE_ALL
-
   # Отключение NUMA и связанных параметров
   scripts/config -d NUMA \
     -d AMD_NUMA \
