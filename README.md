@@ -12,7 +12,7 @@
 - Автоматический расчёт значений kernel.shmmax и kernel.shmall в cachyos-settings.install
 
 Был добавлен mesa-pure-git:
-- Всё как в mesa-pure, но на 3 патча меньше.
+- Все теже изменения, которые есть в mesa-pure, но на 3 патча меньше.
 - Была автоматизирована сборка применения патчей
 
 Был добавлен dxvk-gplasync-pure-git:
