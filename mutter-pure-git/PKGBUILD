@@ -1,5 +1,3 @@
-# Maintainer: Terromur <terromuroz@proton.me>
-
 # based on https://gitlab.archlinux.org/archlinux/packaging/packages/mutter/-/blob/3068cc4544c0a57ab5c5e447b2d219028698532b/PKGBUILD
 
 # -- Arch credits
@@ -9,6 +7,7 @@
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 # --
 
+# Maintainer: Terromur <terromuroz@proton.me>
 # Maintainer: Vitaly Ankh (vitalyr) <vitalyankh@gmail.com>
 # Contributor: jonathon <https://aur.archlinux.org/account/jonathon>
 # Contributor: Ignacy Kuchciński (ignapk) <ignacykuchcinski@gmail.com>
