@@ -1,4 +1,4 @@
-#Based on https://gitlab.archlinux.org/archlinux/packaging/packages/gnome-shell/-/raw/main/PKGBUILD
+# Based on https://gitlab.archlinux.org/archlinux/packaging/packages/gnome-shell/-/raw/main/PKGBUILD
 # Maintainer: Terromur <terromuroz@proton.me>
 # Maintainer: envolution
 # Contributor: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
