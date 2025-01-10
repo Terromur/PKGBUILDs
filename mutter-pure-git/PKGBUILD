@@ -123,6 +123,7 @@ build() {
     -Dfonts=true
     -Dprofiler=false
     -Dintrospection=true
+    -Db_pie=false
   )
 
   CFLAGS="${CFLAGS/-O2/-O3} -fno-semantic-interposition"
