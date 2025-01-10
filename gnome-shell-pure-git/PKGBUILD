@@ -110,6 +110,7 @@ build() {
     -Dcamera_monitor=false
     -Dman=false
     -Dpython.bytecompile=2
+    -Db_pie=false
   )
 
   CFLAGS="${CFLAGS/-O2/-O3} -fno-semantic-interposition"
