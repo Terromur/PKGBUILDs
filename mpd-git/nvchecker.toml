@@ -1,0 +1,4 @@
+[mpd]
+source = "git"
+git = "https://github.com/MusicPlayerDaemon/MPD.git"
+prefix = "v"
