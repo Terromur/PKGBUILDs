@@ -54,7 +54,6 @@ build() {
       -D errorlogs=false \
       -D python.bytecompile=2 \
       -D build.c_std=gnu2x \
-      -D b_lundef=false \
       -D b_lto=true \
       -D optimization=3 \
       -D debug=false
