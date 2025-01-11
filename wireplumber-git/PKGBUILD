@@ -42,7 +42,7 @@ build() {
   local meson_options=(
       -D b_ndebug=false \
       -D b_pie=false \
-      -D c_std=gnu2x \
+      -D c_std=gnu23 \
       -D cpp_std=gnu++23 \
       --buildtype=release \
       --wrap-mode=nofallback \
@@ -53,10 +53,13 @@ build() {
       -D dbus-tests=false \
       -D errorlogs=false \
       -D python.bytecompile=2 \
-      -D build.c_std=gnu2x \
+      -D build.c_std=gnu23 \
+      -D build.cpp_std=gnu+23 \
       -D b_lto=true \
       -D optimization=3 \
-      -D debug=false
+      -D debug=false \
+      -D strip=true \
+      -D stdsplit=false
   )
 
   arch-meson $pkgbase build "${meson_options[@]}"
