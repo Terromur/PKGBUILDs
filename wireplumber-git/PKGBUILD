@@ -48,15 +48,15 @@ build() {
       --wrap-mode=nofallback \
       -D doc=disabled \
       -D elogind=disabled \
-      -D system-lua=true
-      -D tests=false
-      -D dbus-tests=false
-      -D errorlogs=false
-      -D python.bytecompile=2
-      -D build.c_std=gnu2x
-      -D b_lundef=false
-      -D b_lto=true
-      -D optimization=3
+      -D system-lua=true \
+      -D tests=false \
+      -D dbus-tests=false \
+      -D errorlogs=false \
+      -D python.bytecompile=2 \
+      -D build.c_std=gnu2x \
+      -D b_lundef=false \
+      -D b_lto=true \
+      -D optimization=3 \
       -D debug=false
   )
 
