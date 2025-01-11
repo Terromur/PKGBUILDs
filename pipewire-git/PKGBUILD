@@ -108,7 +108,6 @@ build() {
     -D rlimits-rtprio=99
     -D rlimits-nice=-20
     -D python.bytecompile=2
-    -D b_pie=false
     -D b_lundef=false
     --buildtype=release
     --wrap-mode=nofallback
