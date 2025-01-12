@@ -1,0 +1,60 @@
+# Maintainer: Terromur <terromuroz@proton.me>
+# Maintainer: Daniel Bermond <dbermond@archlinux.org>
+# Contributor: Joel Teichroeb <joel@teichroeb.net>
+# Contributor: Scimmia
+
+pkgbase=wayland-git
+pkgname=('wayland-git')
+pkgver=1.23.0.24.gf246e61
+pkgrel=1
+pkgdesc='A computer display server protocol (git version)'
+arch=('x86_64')
+url='https://wayland.freedesktop.org/'
+license=('MIT')
+depends=('glibc' 'libffi' 'expat' 'libxml2')
+makedepends=('git' 'meson' 'ninja' 'libxslt' 'doxygen' 'xmlto' 'graphviz' 'docbook-xsl')
+source=('git+https://gitlab.freedesktop.org/wayland/wayland.git')
+sha256sums=('SKIP')
+
+pkgver() {
+  cd wayland
+
+  git describe --long --tags | sed 's/^v//;s/-/./g'
+}
+
+build() {
+    meson build wayland --prefix='/usr' \
+      -D b_ndebug=true \
+      -D b_pie=false \
+      -D tests=false \
+      -D documentation=false \
+      -D c_std=gnu23 \
+      -D build.c_std=gnu23 \
+      -D cpp_std=gnu++23 \
+      -D build.cpp_std=gnu+23 \
+      -D debug=false \
+      -D optimization=3 \
+      -D strip=true \
+      -D b_lto=true \
+      -D python.bytecompile=2 \
+      -D errorlogs=false \
+      -D stdsplit=false \
+      -D documentation=false \
+      -D tests=false \
+      --buildtype=release \
+      --wrap-mode=nofallback
+}
+
+check() {
+    ninja -C build test
+}
+
+package_wayland-git() {
+    provides=("wayland=${pkgver}")
+    conflicts=('wayland')
+    
+    DESTDIR="$pkgdir" ninja -C build install
+    mkdir -p docs/share
+    #mv "${pkgdir}/usr/share/"{doc,man} docs/share
+    install -D -m644 wayland/COPYING "$p{kgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
