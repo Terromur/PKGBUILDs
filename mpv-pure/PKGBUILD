@@ -32,6 +32,7 @@ sha256sums=('51e787dbff240d69227f306685fc962daae215c755689b9de4ef0432ddf4443b'
 build() {
   local _meson_options=(
     --auto-features auto
+    --buildtype=release
     -Dcaca=disabled
     -Dcdda=disabled
     -Dcuda-hwaccel=auto
@@ -56,6 +57,15 @@ build() {
     -Dvulkan=auto
     -Dx11=disabled
     -Dxv=disabled
+    -Doptimization=3
+    -Db_lto=true
+    -Dc_std=gnu23
+    -Dbuild.c_std=gnu23
+    -Dcpp_std=gnu++23
+    -Dbuild.cpp_std=gnu++23
+    -Dpython.bytecompile=2
+    -Derrorlogs=false
+    -Dstdsplit=false
   )
 
   arch-meson "${pkgname}" build "${_meson_options[@]}"
