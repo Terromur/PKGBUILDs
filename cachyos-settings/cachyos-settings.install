@@ -21,6 +21,17 @@ post_install() {
     echo "kernel.shmmax = $SHMMAX" > /usr/lib/sysctl.d/99-shm.conf
     echo "kernel.shmall = $SHMALL" >> /usr/lib/sysctl.d/99-shm.conf
 
+    # Настройка vm.min_free_kbytes
+    echo "Configuring vm.min_free_kbytes..."
+    TOTAL_RAM_KB=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+    MIN_FREE_KBYTES=$(echo "scale=2; sqrt($TOTAL_RAM_KB) * 16" | bc | awk '{print int($1)}')
+
+    # Применение параметра
+    sysctl -w vm.min_free_kbytes=$MIN_FREE_KBYTES
+
+    # Сохранение параметра для применения после перезагрузки
+    echo "vm.min_free_kbytes = $MIN_FREE_KBYTES" >> /usr/lib/sysctl.d/99-shm.conf
+
     echo "Kernel parameters configured successfully."
 }
 
@@ -50,6 +61,17 @@ post_upgrade() {
     # Сохранение параметров для применения после перезагрузки
     echo "kernel.shmmax = $SHMMAX" > /usr/lib/sysctl.d/99-shm.conf
     echo "kernel.shmall = $SHMALL" >> /usr/lib/sysctl.d/99-shm.conf
+
+    # Настройка vm.min_free_kbytes (повторно, на случай обновления)
+    echo "Reconfiguring vm.min_free_kbytes..."
+    TOTAL_RAM_KB=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+    MIN_FREE_KBYTES=$(echo "scale=2; sqrt($TOTAL_RAM_KB) * 16" | bc | awk '{print int($1)}')
+
+    # Применение параметра
+    sysctl -w vm.min_free_kbytes=$MIN_FREE_KBYTES
+
+    # Сохранение параметра для применения после перезагрузки
+    echo "vm.min_free_kbytes = $MIN_FREE_KBYTES" >> /usr/lib/sysctl.d/99-shm.conf
 
     echo "Kernel parameters reconfigured successfully."
 }
