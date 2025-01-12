@@ -120,10 +120,29 @@ build() {
     -D installed_tests=false
     -D docs=false
     -D tests=disabled
+    -Dx11=true
+    -Dsm=true
+    -Dremote_desktop=true
+    -Dsound_player=false
     -Dfonts=true
     -Dprofiler=false
     -Dintrospection=true
     -Db_pie=false
+    -D debug=false
+    -D optimization=3
+    -D strip=true
+    -D b_lto=true
+    -D c_std=gnu23
+    -D cpp_std=gnu++23
+    -D build.c_std=gnu23
+    -D build.cpp_std=gnu23
+    -D errorlogs=false
+    -D stdsplit=false
+    -D clutter_tests=false
+    -D cogl_tests=false
+    -D mutter_tests=false
+    -D libwacom=false
+    -D glx=false
   )
 
   CFLAGS="${CFLAGS/-O2/-O3} -fno-semantic-interposition"
