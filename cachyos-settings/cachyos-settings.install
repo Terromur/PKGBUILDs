@@ -1,5 +1,56 @@
 SERVICES=("ananicy-cpp" "systemd-resolved")
 
+# Функция для измерения RTT (в миллисекундах)
+measure_rtt() {
+    local target="8.8.8.8"  # Используем Google DNS для измерения RTT
+    local rtt=$(ping -c 4 -i 0.2 -q $target | grep rtt | awk '{print $4}' | cut -d '/' -f 2)
+    echo $rtt
+}
+
+# Функция для оценки скорости интернета (в Mbps)
+estimate_speed() {
+    local interface=$(ip route get 8.8.8.8 | awk '{print $5}' | head -n 1)
+    local max_speed=$(ethtool $interface 2>/dev/null | grep "Speed:" | awk '{print $2}' | sed 's/Mb\/s//')
+    echo $max_speed
+}
+
+# Функция для расчета размера буфера
+calculate_buffer_size() {
+    local speed_mbps=$1
+    local rtt_ms=$2
+
+    # Преобразуем скорость в биты в секунду
+    local speed_bps=$(echo "$speed_mbps * 1000000" | bc)
+
+    # Преобразуем RTT в секунды
+    local rtt_s=$(echo "scale=3; $rtt_ms / 1000" | bc)
+
+    # Рассчитываем BDP (Bandwidth-Delay Product) в байтах
+    local bdp_bytes=$(echo "scale=0; ($speed_bps * $rtt_s) / 8" | bc)
+
+    # Устанавливаем размер буфера в два раза больше BDP для учета буферов отправки и получения
+    local buffer_size=$(echo "$bdp_bytes * 2" | bc)
+
+    echo $buffer_size
+}
+
+# Функция для обновления настроек sysctl
+update_sysctl() {
+    local buffer_size=$1
+    local sysctl_file="/usr/lib/sysctl.d/99-shm.conf"
+
+    # Обновляем tcp_rmem и tcp_wmem
+    echo "net.ipv4.tcp_rmem = 4096 87380 $buffer_size" | sudo tee -a $sysctl_file
+    echo "net.ipv4.tcp_wmem = 4096 65536 $buffer_size" | sudo tee -a $sysctl_file
+
+    # Обновляем rmem_max и wmem_max
+    echo "net.core.rmem_max = $buffer_size" | sudo tee -a $sysctl_file
+    echo "net.core.wmem_max = $buffer_size" | sudo tee -a $sysctl_file
+
+    # Применяем новые настройки
+    sudo sysctl -p $sysctl_file
+}
+
 post_install() {
     echo "Enabling services..."
     for service in "${SERVICES[@]}"; do
@@ -31,6 +82,22 @@ post_install() {
 
     # Сохранение параметра для применения после перезагрузки
     echo "vm.min_free_kbytes = $MIN_FREE_KBYTES" >> /usr/lib/sysctl.d/99-shm.conf
+
+    # Настройка параметров сети
+    echo "Измерение RTT..."
+    RTT_MS=$(measure_rtt)
+    echo "Измеренный RTT: $RTT_MS мс"
+
+    echo "Оценка скорости интернета..."
+    LINK_SPEED_MBPS=$(estimate_speed)
+    echo "Предполагаемая скорость интернета: $LINK_SPEED_MBPS Mbps"
+
+    echo "Расчет размера буфера..."
+    BUFFER_SIZE=$(calculate_buffer_size $LINK_SPEED_MBPS $RTT_MS)
+    echo "Рассчитанный размер буфера: $BUFFER_SIZE байт"
+
+    echo "Обновление настроек sysctl..."
+    update_sysctl $BUFFER_SIZE
 
     echo "Kernel parameters configured successfully."
 }
@@ -72,6 +139,22 @@ post_upgrade() {
 
     # Сохранение параметра для применения после перезагрузки
     echo "vm.min_free_kbytes = $MIN_FREE_KBYTES" >> /usr/lib/sysctl.d/99-shm.conf
+
+    # Настройка параметров сети (повторно, на случай обновления)
+    echo "Измерение RTT..."
+    RTT_MS=$(measure_rtt)
+    echo "Измеренный RTT: $RTT_MS мс"
+
+    echo "Оценка скорости интернета..."
+    LINK_SPEED_MBPS=$(estimate_speed)
+    echo "Предполагаемая скорость интернета: $LINK_SPEED_MBPS Mbps"
+
+    echo "Расчет размера буфера..."
+    BUFFER_SIZE=$(calculate_buffer_size $LINK_SPEED_MBPS $RTT_MS)
+    echo "Рассчитанный размер буфера: $BUFFER_SIZE байт"
+
+    echo "Обновление настроек sysctl..."
+    update_sysctl $BUFFER_SIZE
 
     echo "Kernel parameters reconfigured successfully."
 }
