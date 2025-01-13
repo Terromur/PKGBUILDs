@@ -8,7 +8,7 @@
 Ссылка на официальный репозиторий CachyOS-Settings - https://github.com/CachyOS/CachyOS-Settings
 
 Был добавлен Cachyos-Settings с изменениями:
-- Оптимизация интернета, увеличение стабильности, улучшение работы прокси, улучшение безопасности, прочие дополнительные оптимизации
+- Оптимизация интернета, увеличение стабильности, улучшение работы прокси, улучшение безопасности, улучшение работы памяти ядра и прочие дополнительные оптимизации
 - Автоматический расчёт значений kernel.shmmax и kernel.shmall в cachyos-settings.install
 - Автоматический расчёт значения vm.min_free_kbytes в cachyos-settings.install
 - Автоматический расчёт значений net.ipv4.tcp_rmem, net.ipv4.tcp_wmem, net.core.rmem_max, net.core.wmem_max
