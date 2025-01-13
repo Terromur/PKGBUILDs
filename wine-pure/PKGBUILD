@@ -122,14 +122,20 @@ prepare() {
   patch -Np1 -i "${srcdir}/7064.patch"
 }
 
-build() {
-  # Doesn't compile without remove these flags as of 4.10
-  export CFLAGS="$CFLAGS -ffat-lto-objects"
 
-  # Apply flags for cross-compilation
-  export CROSSCFLAGS="-O3 -pipe -g -march=native"
-  export CROSSCXXFLAGS="-O3 -pipe -g -march=native"
-  export CROSSLDFLAGS="-Wl,-O1"
+# Флаги которые можно ещё добавить, но они экспериментальные.
+# Для CFLAGS можно добавить --functions=32 -Wl,-z,max-page-size=0x4000 -ftree-vectorize
+# Для CXXFLAGS можно добавить -falign-functions=32 для старых процессоров и -falign-functions=64 для современных
+# Для CROSSCFLAGS можно добавить -ftree-vectorize
+# -falign-functions=32 для старых процессоров. -falign-functions=64 и -ftree-vectorize зависит от того, используется более современный процессор, если слишком старый процессор и не имеет никаких инструкций, не стоит включать 
+# -Wl,-z,max-page-size=0x4000 для CFLAGS подойдёт для Intel процессоров
+build() {
+export CFLAGS="-O3 -march=native -mtune=native -fno-semantic-interposition -fcf-protection=none -fivopts -fdata-sections -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine -ffat-lto-objects -mcmodel=small"
+export CXXFLAGS="-O3 -march=native -mtune=native -fno-semantic-interposition -fcf-protection=none -fivopts -fdata-sections -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine -ffat-lto-objects -mcmodel=small"
+
+export CROSSCFLAGS="-O3 -march=native -mtune=native -fno-semantic-interposition -fcf-protection=none -fivopts -fdata-sections -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine"
+export CROSSCXXFLAGS="-O3 -march=native -mtune=native -fno-semantic-interposition -fcf-protection=none -fivopts -fdata-sections -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine"
+export CROSSLDFLAGS="-Wl,-O3,--sort-common,--as-needed,-lgomp,--file-alignment,4096"
 
   echo "Building Wine..."
   cd "$pkgname-build"
