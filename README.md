@@ -11,6 +11,7 @@
 - Оптимизация интернета, увеличение стабильности, улучшение работы прокси, улучшение безопасности, прочие дополнительные оптимизации
 - Автоматический расчёт значений kernel.shmmax и kernel.shmall в cachyos-settings.install
 - Автоматический расчёт значения vm.min_free_kbytes в cachyos-settings.install
+- Автоматический расчёт значений net.ipv4.tcp_rmem, net.ipv4.tcp_wmem, net.core.rmem_max, net.core.wmem_max
 
 Был добавлен mesa-pure-git:
 - Все теже изменения, которые есть в mesa-pure, но на 3 патча меньше (Для Zink не рекомендуется тестировать данный пакет)
