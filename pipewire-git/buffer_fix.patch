@@ -1,0 +1,13 @@
+diff -wru pipewire-1.3.0-orig/src/daemon/pipewire.conf.in pipewire-1.3.0/src/daemon/pipewire.conf.in
+--- pipewire-1.3.0-orig/src/daemon/pipewire.conf.in	2024-01-13 07:44:44.000000000 +0100
++++ pipewire-1.3.0/src/daemon/pipewire.conf.in	2024-01-13 07:45:55.992928371 +0100
+@@ -42,7 +42,7 @@
+     ## Properties for the DSP configuration.
+     #default.clock.rate          = 48000
+     #default.clock.allowed-rates = [ 48000 ]
+-    #default.clock.quantum       = 1024
++    default.clock.quantum       = 512
+-    #default.clock.min-quantum   = 32
++    default.clock.min-quantum   = 16
+     #default.clock.max-quantum   = 2048
+     #default.clock.quantum-limit = 8192
