@@ -76,8 +76,9 @@ checkdepends=(
 )
 source=(
   "git+https://gitlab.freedesktop.org/pipewire/pipewire.git"
+  "buffer_fix.patch"
 )
-b2sums=('SKIP')
+b2sums=('SKIP' 'SKIP')
 
 pkgver() {
   cd pipewire
@@ -88,6 +89,7 @@ pkgver() {
 
 prepare() {
   cd pipewire
+  patch -Np1 -i ../buffer_fix.patch
 }
 
 build() {
