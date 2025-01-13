@@ -95,10 +95,12 @@ source=(
   'git+https://gitlab.gnome.org/GNOME/mutter.git'
   'git+https://gitlab.gnome.org/GNOME/gvdb.git#commit=b54bc5da25127ef416858a3ad92e57159ff565b3'
   'mutter_increase_check_alive_timeout.patch'
+  'disable-xwayland-core.patch'
 )
 b2sums=(
   'SKIP'
   'f989bc2ceb52aad3c6a23c439df3bbc672bc11d561a247d19971d30cc85ed5d42295de40f8e55b13404ed32aa44f12307c9f5b470f2e288d1c9c8329255c43bf'
+  'SKIP'
   'SKIP'
 )
 
@@ -106,6 +108,8 @@ prepare() {
   cd mutter
   # Повышение стабильности работы mutter
   patch -Np1 -i ../mutter_increase_check_alive_timeout.patch
+  # Отключение лишней отладки по умолчанию, если нужно включить, можете использовать команду ulimit -c unlimited. Спасибо q66 <q66@chimera-linux.org>
+  patch -Np1 -i  ../disable-xwayland-core.patch
 }
 
 pkgver() {
