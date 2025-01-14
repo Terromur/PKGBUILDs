@@ -17,6 +17,7 @@ makedepends=(
   doxygen
   git
   glib2
+  glib2-devel
   gobject-introspection
   graphviz
   lua
