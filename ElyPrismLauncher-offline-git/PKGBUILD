@@ -80,6 +80,7 @@ build() {
     -DCMAKE_INSTALL_PREFIX='/usr' \
     -DLauncher_BUILD_PLATFORM="archlinux" \
     -DLauncher_APP_BINARY_NAME="${_pkgname}" \
+    -DENABLE_LTO=ON \
     -Wno-dev
   cmake --build build
 }
