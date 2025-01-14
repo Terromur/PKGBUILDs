@@ -18,7 +18,7 @@ pkgbase=mutter-pure-git
 pkgname=(
   mutter-pure-git
 )
-pkgver=47.0+r469+ge7ff05632
+pkgver=48.alpha
 pkgrel=1
 pkgdesc="Window manager and compositor for GNOME, git version"
 url="https://gitlab.gnome.org/GNOME/mutter"
