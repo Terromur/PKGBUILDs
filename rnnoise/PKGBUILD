@@ -1,0 +1,37 @@
+# Maintainer: Sven-Hendrik Haase <svenstaro@archlinux.org>
+# Contributor: robertfoster
+pkgname=rnnoise
+epoch=1
+pkgver=0.2
+pkgrel=1
+pkgdesc="A noise suppression library based on a recurrent neural network"
+arch=(x86_64)
+url="https://gitlab.xiph.org/xiph/rnnoise"
+license=('BSD-3-Clause')
+depends=('glibc')
+_model_version=0b50c45 # cat model_version
+source=("https://gitlab.xiph.org/xiph/rnnoise/-/archive/v${pkgver}/rnnoise-v${pkgver}.tar.gz"
+        "https://media.xiph.org/rnnoise/models/rnnoise_data-$_model_version.tar.gz"
+        "fix.patch")
+sha512sums=('930aa892299edbc1d512803df6b845ea6164eb498cacdab9970e5ae799bc6cf3c8c94d2b9576955fb9a2d8aa13a6d255e58fb99d0367a0d0ef842a1cb938e674'
+            'c15fef7c88d86264a29a3dab14d94bde769da68f255d131d135f6a40d94037b1ffe521f9e0a26339114750dbdd7cf774c3185ba40279c74200fb32732f57db8b'
+            'SKIP')
+
+prepare() {
+  mv src/* "rnnoise-v${pkgver}/src"
+  cd "rnnoise-v${pkgver}"
+  patch -Np1 -i  ../fix.patch  
+}
+
+build() {
+  cd "rnnoise-v${pkgver}"
+  autoreconf -isf
+  ./configure --prefix=/usr --enable-x86-rtcd
+  make
+}
+
+package() {
+  cd "rnnoise-v${pkgver}"
+  make DESTDIR="$pkgdir/" install
+  install -Dm644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/COPYING"
+}
