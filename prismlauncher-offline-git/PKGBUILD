@@ -8,7 +8,7 @@
 # Contributor: Cheru Berhanu <aur attt cheru doot dev>
 
 pkgname=prismlauncher-offline-git
-_pkgname=${pkgname%-offilne-git}
+_pkgname=${pkgname%-offline-git}
 pkgver=8.0.r1547.gf4f1d5f0d
 pkgrel=1
 pkgdesc='Minecraft launcher with ability to manage multiple instances with offline playing'
