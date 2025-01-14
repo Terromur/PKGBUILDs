@@ -15,6 +15,7 @@
 
 Был добавлен ElyPrismLauncher-offline-git:
 - Больше необязательно подключать аккаунт Microsoft или ely.by
+- Прочитать README.md в директории
 
 Был добавлен mesa-pure-git:
 - Все теже изменения, которые есть в mesa-pure, но на 3 патча меньше (Для Zink не рекомендуется тестировать данный пакет)
@@ -41,6 +42,7 @@
 
 Был добавлен dxvk-gplasync-pure-git:
 - Все теже изменения, которые есть в dxvk-pure-git
+- Прочитать README.md в директории
 
 Был добавлен dxvk-sarek-async-pure и dxvk-sarek-pure:
 - Все теже изменения, которые есть в dxvk-pure-git
