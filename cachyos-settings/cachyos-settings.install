@@ -32,22 +32,6 @@ post_install() {
     # Сохранение параметра для применения после перезагрузки
     echo "vm.min_free_kbytes = $MIN_FREE_KBYTES" >> /usr/lib/sysctl.d/99-shm.conf
 
-    # Настройка параметров сети
-    echo "Измерение RTT..."
-    RTT_MS=$(measure_rtt)
-    echo "Измеренный RTT: $RTT_MS мс"
-
-    echo "Оценка скорости интернета..."
-    LINK_SPEED_MBPS=$(estimate_speed)
-    echo "Предполагаемая скорость интернета: $LINK_SPEED_MBPS Mbps"
-
-    echo "Расчет размера буфера..."
-    BUFFER_SIZE=$(calculate_buffer_size $LINK_SPEED_MBPS $RTT_MS)
-    echo "Рассчитанный размер буфера: $BUFFER_SIZE байт"
-
-    echo "Обновление настроек sysctl..."
-    update_sysctl $BUFFER_SIZE
-
     echo "Kernel parameters configured successfully."
 }
 
