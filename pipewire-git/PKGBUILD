@@ -105,9 +105,9 @@ build() {
     -D selinux=disabled
     -D b_ndebug=false
     -D b_pie=false
-    -D c_std=gnu23
+    -D c_std=gnu18
     -D cpp_std=gnu++20
-    -D build.c_std=gnu23
+    -D build.c_std=gnu18
     -D build.cpp_std=gnu++20
     -D b_lto=true
     -D rlimits-rtprio=99
