@@ -238,9 +238,6 @@ prepare() {
 
   # Применение настроек Clear Linux для x86
   scripts/config -d IOMMU_DEFAULT_DMA_LAZY -e IOMMU_DEFAULT_PASSTHROUGH
-  scripts/config -d ACPI_TABLE_UPGRADE
-  scripts/config -d ACPI_PCI_SLOT
-  scripts/config -d ACPI_EXTLOG
   scripts/config -d BALLOON_COMPACTION
   scripts/config -d CMA
   scripts/config -d DAMON
