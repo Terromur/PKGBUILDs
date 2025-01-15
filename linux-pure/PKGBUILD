@@ -278,6 +278,10 @@ prepare() {
   scripts/config -d ZSWAP_DEFAULT_ON -d ZSWAP_SHRINKER_DEFAULT_ON
   scripts/config -d ZSWAP_ZPOOL_DEFAULT_ZSMALLOC -d ZSMALLOC_STAT
 
+  # Дополнительные отключения параметров
+  scripts/config -d INIT_STACK_ALL_ZERO -d INIT_ON_ALLOC_DEFAULT_ON
+  scripts/config -e INIT_STACK_NONE -e ZERO_CALL_USED_REGS
+
   # Отключение NUMA и связанных параметров
   scripts/config -d NUMA \
     -d AMD_NUMA \
