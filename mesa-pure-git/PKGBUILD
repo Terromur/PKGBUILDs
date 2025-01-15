@@ -92,8 +92,10 @@ source=(
   0001-Revert-c452a4d-https-gitlab.freedesktop.org-mesa-mes.patch
   gnome-shell-glthread-disable.patch
   001-fix-amd-crash.patch
+  valve.patch
 )
 sha256sums=(
+  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
