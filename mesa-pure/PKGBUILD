@@ -140,10 +140,6 @@ prepare() {
 build() {
   local meson_options=(
     -D b_lto=true
-    -D c_args="-O3 -march=native"
-    -D c_link_args="-O1"
-    -D cpp_args="-O3 -march=native"
-    -D cpp_link_args="-O1"
     -D llvm=disabled
     -D optimization=3
     -D amd-use-llvm=false
