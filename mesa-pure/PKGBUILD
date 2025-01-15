@@ -92,6 +92,7 @@ source=(
   0001-Revert-c452a4d-https-gitlab.freedesktop.org-mesa-mes.patch
   gnome-shell-glthread-disable.patch
   001-fix-amd-crash.patch
+  valve.patch
 )
 sha256sums=(
   'ad9f5f3a6d2169e4786254ee6eb5062f746d11b826739291205d360f1f3ff716'
@@ -129,6 +130,7 @@ prepare() {
   patch -Np1 -i ../0001-Revert-c452a4d-https-gitlab.freedesktop.org-mesa-mes.patch
   patch -Np1 -i ../gnome-shell-glthread-disable.patch
   patch -Np1 -i ../001-fix-amd-crash.patch
+  patch -Np1 -i ../valve.patch
 }
 
 # Так же вы можете добавить флаги -falign-functions=32 только для старых процессоров и -falign-functions=64 для современных. 
