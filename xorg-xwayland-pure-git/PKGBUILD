@@ -84,7 +84,7 @@ build() {
     -D xvfb=false \
     -D xnest=false \
     -D xdmcp=false \
-    -D xcsecurity=true \
+    -D xcsecurity=false \
     -D xorg=false \
     -D xephyr=false \
     -D xwayland=true \
