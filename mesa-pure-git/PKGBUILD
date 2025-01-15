@@ -201,7 +201,7 @@ build() {
   # Inject subproject packages
   export MESON_PACKAGE_CACHE_DIR="$srcdir"
 
-  arch-meson mesa-$pkgver build "${meson_options[@]}"
+  arch-meson mesa build "${meson_options[@]}"
   ninja $NINJAFLAGS -C build
 }
 
