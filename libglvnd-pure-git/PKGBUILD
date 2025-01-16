@@ -1,0 +1,60 @@
+# Maintainer: Terromur <terromuroz@proton.me>
+# Maintainer: Rafał Kozdrój <kozeid2@gmail.com>
+# Contributor: Felix Yan <felixonmars@archlinux.org>
+
+_pkgname=libglvnd
+pkgname=$_pkgname-pure-git
+pkgver=1.7.0.r12.g606f662
+pkgrel=1
+pkgdesc="The GL Vendor-Neutral Dispatch library"
+arch=('x86_64')
+url="https://github.com/NVIDIA/libglvnd"
+license=('custom:BSD-like')
+makedepends=('libxext' 'libx11' 'xorgproto' 'python' 'meson' 'git')
+provides=('libgl' 'libegl' 'libgles' "$_pkgname=$pkgver")
+conflicts=("$_pkgname")
+source=("git+https://gitlab.freedesktop.org/glvnd/libglvnd.git"
+        LICENSE
+        disable-glx-tests.patch)
+sha512sums=('SKIP'
+            'bf0f4a7e04220a407400f89226ecc1f798cc43035f2538cc8860e5088e1f84140baf0d4b0b28f66e4b802d4d6925769a1297c24e1ba39c1c093902b2931781a5'
+'SKIP')
+prepare() {
+  cd $_pkgname
+  patch -Np1 -i ../disable-glx-tests.patch
+}
+pkgver() {
+  cd $_pkgname
+  git describe --long --tags | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+build() {
+  arch-meson $_pkgname build \
+      -D b_ndebug=false \
+      -D b_pie=false \
+      -D asm=enabled \
+      -D c_std=gnu23 \
+      -D cpp_std=gnu++23 \
+      -D hgl=false \
+      -D errorlogs=false \
+      -D stdsplit=false \
+      -D strip=true \
+      -D optimization=3 \
+      -D debug=false \
+      -D python.bytecompile=2 \
+      -D b_lto=true \
+      --buildtype=release \
+      --wrap-mode=nofallback \
+      -D gles1=false
+
+  ninja -C build
+}
+
+package() {
+  # libglvnd needs mesa for indirect rendering
+  depends=('libxext' 'mesa' 'opengl-driver')
+
+  DESTDIR="$pkgdir" ninja -C build install
+  
+  install -Dm644 LICENSE "$pkgdir"/usr/share/licenses/$pkgname/LICENSE
+}
