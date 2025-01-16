@@ -10,7 +10,7 @@ pkgbase=gnome-shell-git
 pkgname=(
   gnome-shell-git
 )
-pkgver=47.3+r19307+gb426119a7
+pkgver=47.3+r19313+g2c5e96f96
 pkgrel=1
 pkgdesc="Next generation desktop shell - git latest"
 url="https://gitlab.gnome.org/GNOME/gnome-shell"
@@ -80,9 +80,19 @@ source=(
   "git+https://gitlab.gnome.org/GNOME/gnome-shell.git"
   "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git#commit=5f9768a2eac29c1ed56f1fbb449a77a3523683b6"
   "status-keyboard-Load-keyboard-from-system-settings-i.patch"
+  "disable-ibus-when-not-installed.patch"
+  "disable-offline-update-dialog.patch"
+  "exit-crash-workaround.patch"
+  "fix-cursor-on-hide-preedit.patch"
+  "Remove-sessionList-of-endSessionDialog.patch"
 )
 b2sums=('SKIP'
         'e31ae379039dfc345e8032f7b9803a59ded075fc52457ba1553276d3031e7025d9304a7f2167a01be2d54c5e121bae00a2824a9c5ccbf926865d0b24520bb053'
+        'SKIP'
+        'SKIP'
+        'SKIP'
+        'SKIP'
+        'SKIP'
         'SKIP')
 
 pkgver() {
@@ -100,6 +110,11 @@ prepare() {
   ln -s libgnome-volume-control gvc
   cd gnome-shell
   patch -Np1 -i ../status-keyboard-Load-keyboard-from-system-settings-i.patch
+  patch -Np1 -i ../disable-ibus-when-not-installed.patch
+  patch -Np1 -i ../disable-offline-update-dialog.patch
+  patch -Np1 -i ../exit-crash-workaround.patch
+  patch -Np1 -i ../fix-cursor-on-hide-preedit.patch
+  patch -Np1 -i ../Remove-sessionList-of-endSessionDialog.patch
 }
 
 build() {
