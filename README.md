@@ -26,7 +26,7 @@
 - Добавление патча на стабилизацию кадров
 - Добавлен патч на отключение лишней отладки
 
-Была добавлена директория GNOME с пакетами gnome-shell-pure-git, mutter-pure-git, gnome-session-pure-git, gsettings-desktop-schemas:
+Была добавлена директория GNOME с пакетами gnome-shell-pure-git, mutter-pure-git, gnome-session-pure-git, gsettings-desktop-schemas, gnome-settings-daemon-pure-git:
 - Прочитать README.md в директории GNOME
 
 Были добавлены pipewire-git и wireplumber-git:
