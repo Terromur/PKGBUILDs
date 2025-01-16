@@ -1,0 +1,180 @@
+# based on https://gitlab.archlinux.org/archlinux/packaging/packages/mutter/-/blob/3068cc4544c0a57ab5c5e447b2d219028698532b/PKGBUILD
+
+# -- Arch credits
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Maintainer: Fabian Bornschein <fabiscafe@archlinux.org>
+# Contributor: Ionut Biru <ibiru@archlinux.org>
+# Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
+# --
+
+# Maintainer: Terromur <terromuroz@proton.me>
+# Maintainer: Vitaly Ankh (vitalyr) <vitalyankh@gmail.com>
+# Contributor: jonathon <https://aur.archlinux.org/account/jonathon>
+# Contributor: Ignacy Kuchciński (ignapk) <ignacykuchcinski@gmail.com>
+# Contributor: Simon Gardling <titaniumtown@gmail.com>
+# Contributor: Ricardo Liang (rliang) <ricardoliang@gmail.com>
+
+pkgbase=mutter-pure-git
+pkgname=(
+  mutter-pure-git
+)
+pkgver=48.alpha
+pkgrel=1
+pkgdesc="Window manager and compositor for GNOME, git version"
+url="https://gitlab.gnome.org/GNOME/mutter"
+arch=(x86_64)
+license=(GPL-2.0-or-later)
+depends=(
+  at-spi2-core
+  cairo
+  colord
+  dconf
+  fontconfig
+  fribidi
+  gcc-libs
+  gdk-pixbuf2
+  glib2
+  glibc
+  gnome-desktop-4
+  gnome-settings-daemon
+  graphene
+  gsettings-desktop-schemas
+  gtk4
+  harfbuzz
+  iio-sensor-proxy
+  lcms2
+  libcanberra
+  libcolord
+  libdisplay-info
+  libdrm
+  libei
+  libglvnd
+  libgudev
+  libice
+  libinput
+  libpipewire
+  libsm
+  libsysprof-capture
+  libwacom
+  libx11
+  libxau
+  libxcb
+  libxcomposite
+  libxcursor
+  libxdamage
+  libxext
+  libxfixes
+  libxi
+  libxinerama
+  libxkbcommon
+  libxkbcommon-x11
+  libxkbfile
+  libxrandr
+  libxtst
+  mesa
+  pango
+  pipewire
+  pixman
+  python
+  startup-notification
+  systemd-libs
+  wayland
+  xorg-xwayland
+)
+makedepends=(
+  egl-wayland
+  gi-docgen
+  git
+  glib2-devel
+  gobject-introspection
+  meson
+  sysprof
+  wayland-protocols
+)
+source=(
+  'git+https://gitlab.gnome.org/GNOME/mutter.git'
+  'git+https://gitlab.gnome.org/GNOME/gvdb.git#commit=b54bc5da25127ef416858a3ad92e57159ff565b3'
+  'mutter_increase_check_alive_timeout.patch'
+  'disable-xwayland-core.patch'
+  '1441.patch'
+)
+b2sums=(
+  'SKIP'
+  'f989bc2ceb52aad3c6a23c439df3bbc672bc11d561a247d19971d30cc85ed5d42295de40f8e55b13404ed32aa44f12307c9f5b470f2e288d1c9c8329255c43bf'
+  'SKIP'
+  'SKIP'
+)
+
+prepare() {
+  cd mutter
+  # Повышение стабильности работы mutter
+  patch -Np1 -i ../mutter_increase_check_alive_timeout.patch
+  # Отключение лишней отладки по умолчанию, если нужно включить, можете использовать команду ulimit -c unlimited. Спасибо q66 <q66@chimera-linux.org>
+  patch -Np1 -i  ../disable-xwayland-core.patch
+  # Добавление тройной буферизации
+  patch -Np1 -i  ../1441.patch
+}
+
+pkgver() {
+  cd mutter
+  git describe --tags | sed 's/[^-]*-g/r&/;s/-/+/g'
+}
+
+build() {
+  local meson_options=(
+    --buildtype=release
+    -Dpython.bytecompile=2
+    -D installed_tests=false
+    -D docs=false
+    -D tests=disabled
+    -Dx11=true
+    -Dsm=true
+    -Dremote_desktop=true
+    -Dsound_player=false
+    -Dfonts=true
+    -Dprofiler=false
+    -Dintrospection=true
+    -Db_pie=false
+    -D debug=false
+    -D optimization=3
+    -D strip=true
+    -D b_lto=true
+    -D c_std=gnu23
+    -D cpp_std=gnu++23
+    -D build.c_std=gnu23
+    -D build.cpp_std=gnu23
+    -D errorlogs=false
+    -D stdsplit=false
+    -D clutter_tests=false
+    -D cogl_tests=false
+    -D mutter_tests=false
+    -D libwacom=false
+    -D glx=false
+  )
+
+  CFLAGS="${CFLAGS/-O2/-O3} -fno-semantic-interposition"
+  LDFLAGS+=" -Wl,-Bsymbolic-functions"
+
+  # Inject gvdb
+  export MESON_PACKAGE_CACHE_DIR="$srcdir"
+
+  arch-meson mutter build "${meson_options[@]}"
+  meson compile -C build
+}
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+package_mutter-git() {
+  provides=(mutter libmutter-16.so)
+  conflicts=(mutter)
+
+  meson install -C build --destdir "$pkgdir"
+}
