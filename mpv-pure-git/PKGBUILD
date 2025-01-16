@@ -24,9 +24,16 @@ conflicts=('libmpv.so' 'mpv')
 provides=('libmpv.so' 'mpv')
 options=('!emptydirs')
 source=("git+https://github.com/mpv-player/mpv.git"
-        "dynamically_generate_desktop_file_protocols.patch")
+        "dynamically_generate_desktop_file_protocols.patch"
+        "avoid-shader-cache-flushes.patch")
 sha256sums=('SKIP'
-            '88acf97cbc8e0fe745f09bd0bd7f65e0437adcb549dadf3588fd0724d01298e9')
+            '88acf97cbc8e0fe745f09bd0bd7f65e0437adcb549dadf3588fd0724d01298e9'
+            'SKIP')
+prepare() {
+  cd mpv-pure
+  patch -Np1 -i ../avoid-shader-cache-flushes.patch
+}
+
 pkgver() {
   cd mpv
 
