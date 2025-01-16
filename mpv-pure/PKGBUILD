@@ -25,9 +25,16 @@ conflicts=('libmpv.so' 'mpv')
 provides=('libmpv.so' 'mpv')
 options=('!emptydirs')
 source=("$pkgname::git+https://github.com/mpv-player/mpv.git#tag=v${pkgver}"
-        "dynamically_generate_desktop_file_protocols.patch")
+        "dynamically_generate_desktop_file_protocols.patch"
+        "avoid-shader-cache-flushes.patch")
 sha256sums=('51e787dbff240d69227f306685fc962daae215c755689b9de4ef0432ddf4443b'
-            '88acf97cbc8e0fe745f09bd0bd7f65e0437adcb549dadf3588fd0724d01298e9')
+            '88acf97cbc8e0fe745f09bd0bd7f65e0437adcb549dadf3588fd0724d01298e9'
+            'SKIP')
+
+prepare() {
+  cd mpv
+  patch -Np1 -i ../avoid-shader-cache-flushes.patch
+}
 
 build() {
   local _meson_options=(
@@ -52,7 +59,7 @@ build() {
     -Dsdl2-gamepad=disabled
     -Dsdl2-video=disabled
     -Duchardet=disabled
-    -Dvapoursynth=disabled
+    -Dvapoursynth=auto
     -Dvdpau=disabled
     -Dvulkan=auto
     -Dx11=disabled
