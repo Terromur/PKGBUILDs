@@ -79,7 +79,6 @@ source=(
   # GNOME Shell tags use SSH signatures which makepkg doesnt understand
   "git+https://gitlab.gnome.org/GNOME/gnome-shell.git"
   "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git#commit=5f9768a2eac29c1ed56f1fbb449a77a3523683b6"
-  "status-keyboard-Load-keyboard-from-system-settings-i.patch"
   "disable-offline-update-dialog.patch"
   "exit-crash-workaround.patch"
   "fix-cursor-on-hide-preedit.patch"
@@ -108,7 +107,6 @@ prepare() {
   # Inject gvc
   ln -s libgnome-volume-control gvc
   cd gnome-shell
-  patch -Np1 -i ../status-keyboard-Load-keyboard-from-system-settings-i.patch
   patch -Np1 -i ../disable-offline-update-dialog.patch
   patch -Np1 -i ../exit-crash-workaround.patch
   patch -Np1 -i ../fix-cursor-on-hide-preedit.patch
