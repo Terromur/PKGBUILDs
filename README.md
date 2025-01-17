@@ -25,6 +25,7 @@
 - Добавление патча на улучшение работы указателя
 - Добавление патча на стабилизацию кадров
 - Добавлен патч на отключение лишней отладки
+- Добавлен патч на оптимизацию
 
 Была добавлена директория GNOME с пакетами gnome-shell-pure-git, mutter-pure-git, gnome-session-pure-git, gsettings-desktop-schemas, gnome-settings-daemon-pure-git:
 - Прочитать README.md в директории GNOME
