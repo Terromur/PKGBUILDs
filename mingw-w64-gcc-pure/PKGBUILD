@@ -3,7 +3,7 @@
 ## Maintainers of original Arch Linux package:
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
-pkgname=mingw-w64-gcc-pure
+pkgname=mingw-w64-gcc
 pkgver=14.2.0
 pkgrel=1
 pkgdesc="Cross GCC for the MinGW-w64 cross-compiler"
@@ -16,7 +16,6 @@ provides=('mingw-w64-gcc')
 conflicts=('mingw-w64-gcc')
 options=('!strip' 'staticlibs' '!emptydirs' '!buildflags')
 source=("https://ftp.gnu.org/gnu/gcc/gcc-$pkgver/gcc-$pkgver.tar.xz"
-        '0200-add-m-no-align-vector-insn-option-for-i386.patch'
         '0020-libgomp-Don-t-hard-code-MS-printf-attributes.patch'
         'clearlinux.patch')
 sha512sums=(
@@ -33,7 +32,6 @@ prepare() {
   cd gcc
 
   # Adds performance boost for DXVK/Wine (maybe)
-  patch -Np1 -i "${srcdir}/0200-add-m-no-align-vector-insn-option-for-i386.patch"
   patch -Np1 -i "${srcdir}/0020-libgomp-Don-t-hard-code-MS-printf-attributes.patch"
   patch -Np1 -i "${srcdir}/clearlinux.patch"
   # mmapio.c:69:14: error: implicit declaration of function ‘getpagesize’
