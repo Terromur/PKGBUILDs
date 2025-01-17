@@ -82,7 +82,6 @@ options=(
 )
 source=(
   "mesa::git+https://gitlab.freedesktop.org/mesa/mesa.git#branch=main"
-  06ea60e4d820ecc058d565d25ff55c66fcc37d65.patch
   100.patch
   28973.patch
   30720.patch
@@ -93,8 +92,6 @@ source=(
   valve.patch
 )
 sha256sums=(
-  'SKIP'
-  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
