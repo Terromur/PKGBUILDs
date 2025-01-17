@@ -37,8 +37,10 @@ source=("xserver::git+https://gitlab.freedesktop.org/xorg/xserver.git"
 1567.patch
 xwayland-pointer-warp-fix.patch
 no-sighandler-segv-etc.patch
+allow-overflow-on-glamor_composite_clipped_region.patch
 )
 sha256sums=('SKIP'
+'SKIP'
 'SKIP'
 'SKIP'
 'SKIP')
