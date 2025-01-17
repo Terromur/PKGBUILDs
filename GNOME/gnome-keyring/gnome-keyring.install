@@ -1,0 +1,14 @@
+post_install() {
+  # Enable socket by default
+  systemctl --global enable gnome-keyring-daemon.socket
+}
+
+post_upgrade() {
+  if (( $(vercmp $2 1:42.0-1) < 0)); then
+    systemctl --global enable gnome-keyring-daemon.socket
+  fi
+}
+
+pre_remove() {
+  systemctl --global disable gnome-keyring-daemon.socket
+}
