@@ -1,0 +1,177 @@
+# Maintainer: Terromur <terromuroz@proton.me>
+# Maintainer: Fabian Bornschein <fabiscafe@archlinux.org>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=gnome-control-center
+pkgname=(
+  gnome-control-center
+  gnome-keybindings
+)
+pkgver=48alpha
+pkgrel=1
+pkgdesc="GNOME's main interface to configure various aspects of the desktop"
+url="https://apps.gnome.org/Settings/"
+license=(GPL-2.0-or-later)
+arch=(x86_64)
+depends=(
+  accountsservice
+  bolt
+  cairo
+  colord-gtk4
+  cups-pk-helper
+  dconf
+  fontconfig
+  gcc-libs
+  gcr-4
+  gdk-pixbuf2
+  glib2
+  glibc
+  gnome-bluetooth-3.0
+  gnome-color-manager
+  gnome-desktop-4
+  gnome-online-accounts
+  gnome-settings-daemon
+  gnome-shell
+  gnutls
+  graphene
+  gsettings-desktop-schemas
+  gsound
+  gst-plugins-good
+  gtk4
+  hicolor-icon-theme
+  json-glib
+  krb5
+  libadwaita
+  libcolord
+  libcups
+  libepoxy
+  libgoa
+  libgtop
+  libgudev
+  libibus
+  libmalcontent
+  libmm-glib
+  libnm
+  libnma-gtk4
+  libpulse
+  libpwquality
+  libsecret
+  libsoup3
+  libwacom
+  libx11
+  libxi
+  libxml2
+  pango
+  polkit
+  smbclient
+  sound-theme-freedesktop
+  tecla
+  udisks2
+  upower
+)
+makedepends=(
+  docbook-xsl
+  git
+  glib2-devel
+  meson
+  modemmanager
+)
+checkdepends=(
+  python-dbusmock
+  python-gobject
+  xorg-server-xvfb
+)
+source=(
+  "git+https://gitlab.gnome.org/GNOME/gnome-control-center.git#tag=${pkgver/[a-z]/.&}"
+  "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git"
+  "heimdal.patch"
+  "no-validate-appdata.patch"
+)
+b2sums=('SKIP'
+        'SKIP'
+        'SKIP'
+        'SKIP')
+
+prepare() {
+  cd $pkgbase
+  patch -Np1 -i ../heimdal.patch
+  patch -Np1 -i ../no-validate-appdata.patch
+  git submodule init subprojects/gvc
+  git submodule set-url subprojects/gvc "$srcdir/libgnome-volume-control"
+  git -c protocol.file.allow=always -c protocol.allow=never submodule update
+}
+
+
+build() {
+  local meson_options=(
+    -D documentation=false
+    -D location-services=enabled
+    -D malcontent=true
+    -D tests=false
+    --buildtype=release
+    -Dpython.bytecompile=2
+    -Db_pie=false
+    -D debug=false
+    -D optimization=3
+    -D strip=true
+    -D b_lto=true
+    -D c_std=gnu23
+    -D build.c_std=gnu23
+    -D cpp_std=gnu++23
+    -D build.cpp_std=gnu++23
+    -D errorlogs=false
+    -D stdsplit=false
+    -D snap=false
+  )
+
+  arch-meson $pkgbase build "${meson_options[@]}"
+  meson compile -C build
+}
+
+check() {
+  GTK_A11Y=none dbus-run-session xvfb-run -s '-nolisten local +iglx -noreset' \
+    meson test -C build --print-errorlogs
+}
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+package_gnome-control-center() {
+  depends+=(gnome-keybindings)
+  optdepends=(
+    'fwupd: device security panel'
+    'gnome-remote-desktop: screen sharing'
+    'gnome-user-share: WebDAV file sharing'
+    'malcontent: application permission control'
+    'networkmanager: network settings'
+    'openssh: remote login'
+    'power-profiles-daemon: power profiles'
+    'rygel: media sharing'
+    'system-config-printer: printer settings'
+  )
+  groups=(gnome)
+
+  meson install -C build --destdir "$pkgdir"
+
+  cd "$pkgdir"
+  _pick gkb usr/share/gettext/its/gnome-keybindings.*
+  _pick gkb usr/share/gnome-control-center/keybindings
+  _pick gkb usr/share/pkgconfig/gnome-keybindings.pc
+}
+
+package_gnome-keybindings() {
+  pkgdesc="Keybindings configuration for GNOME applications"
+  depends=()
+
+  mv gkb/* "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:
