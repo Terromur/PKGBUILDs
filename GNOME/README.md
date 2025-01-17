@@ -20,6 +20,17 @@
 Был добавлен gsettings-desktop-schemas:
 - Ничего не изменено, это зависимость для gnome-shell-pure-git
 
+Был добавлен gnome-control-center-pure:
+- Версия 48alpha
+- Оптимизация и отключение лишних параметров
+- Патч на исправления локалей
+- Патч на улучшение кода с кэшированием учётных записей
+- Необходимо сначала собрать libadwaita-pure, потом собирать gnome-control-center-pure
+
+Был добавлен libadwaita-pure:
+- Оптимизация и отключение лишних параметров
+- Зависимость gnome-control-center-pure
+
 Был добавлен gnome-settings-daemon-pure-git:
 - Оптимизация и отключение лишних параметров
 - Был отключён usb-protection (смотреть PKGBUILD)
