@@ -16,7 +16,6 @@ source=(
   ntsync-v7-10.0-rc1-staging.patch
   wineserver-enable-link-time-optimization.patch
   msvcrt_nativebuiltin.patch
-  6663.patch
   7064.patch
 )
 sha512sums=(
@@ -111,11 +110,6 @@ prepare() {
 
   # Use native Visual C++ DLLs
   patch -Np1 -i "${srcdir}/msvcrt_nativebuiltin.patch"
-
-  # Fix low GL performance when using new WoW64 mode
-  # Requires patches for Mesa Zink driver:
-  # https://gitlab.freedesktop.org/Guy1524/mesa/-/commits/placed_allocation
-  patch -Np1 -i "${srcdir}/6663.patch"
 
   # Fixes crashes in many games in new WoW64 mode
   # https://bugs.winehq.org/show_bug.cgi?id=57444
