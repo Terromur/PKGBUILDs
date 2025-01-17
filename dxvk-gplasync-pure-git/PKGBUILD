@@ -12,7 +12,7 @@ license=('zlib/libpng')
 depends=('vulkan-icd-loader')
 provides=('dxvk' 'd9vk' "dxvk=$pkgver")
 conflicts=('d9vk'  "dxvk" 'dxvk-bin')
-makedepends=('ninja' 'meson>=0.43' 'glslang' 'mingw-w64-gcc-pure' 'git')
+makedepends=('ninja' 'meson>=0.43' 'glslang' 'mingw-w64-gcc' 'git')
 options=(!strip !buildflags staticlibs)
 source=(
     "git+https://github.com/doitsujin/dxvk.git"
@@ -93,8 +93,8 @@ prepare() {
         -e "s|@CARGS@|\'${cross_cflags// /\',\'}\'|g" \
         -e "s|@CXXARGS@|\'${cross_cxxflags// /\',\'}\'|g" \
         -e "s|@LDARGS@|\'${cross_ldflags// /\',\'}\'|g"
-    local cross_cflags="$CFLAGS -mstackrealign"
-    local cross_cxxflags="$CXXFLAGS -mstackrealign"
+    local cross_cflags="$CFLAGS -mstackrealign -mpreferred-stack-boundary=2"
+    local cross_cxxflags="$CXXFLAGS -mstackrealign -mpreferred-stack-boundary=2"
     sed -i build-win32.txt \
         -e "s|@CARGS@|\'${cross_cflags// /\',\'}\'|g" \
         -e "s|@CXXARGS@|\'${cross_cxxflags// /\',\'}\'|g" \
