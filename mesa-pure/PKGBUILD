@@ -89,7 +89,6 @@ source=(
   31658.patch
   32726.patch
   32876.patch
-  0001-Revert-c452a4d-https-gitlab.freedesktop.org-mesa-mes.patch
   gnome-shell-glthread-disable.patch
   001-fix-amd-crash.patch
   valve.patch
@@ -127,7 +126,6 @@ prepare() {
   patch -Np1 -i ../31658.patch
   patch -Np1 -i ../32726.patch
   patch -Np1 -i ../32876.patch
-  patch -Np1 -i ../0001-Revert-c452a4d-https-gitlab.freedesktop.org-mesa-mes.patch
   patch -Np1 -i ../gnome-shell-glthread-disable.patch
   patch -Np1 -i ../001-fix-amd-crash.patch
   patch -Np1 -i ../valve.patch
