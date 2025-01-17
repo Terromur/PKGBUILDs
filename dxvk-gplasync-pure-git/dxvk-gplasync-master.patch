@@ -23,7 +23,7 @@ index a96bc801..a776e2d8 100644
  
  dxvk_version = vcs_tag(
 -  command: ['git', 'describe', '--dirty=+'],
-+  command: ['git', 'describe', '--dirty=-gplasync'],
++  command: ['git', 'describe', '--dirty=-${gpla}-gplasync'],
    input:  'version.h.in',
    output: 'version.h',
  )
