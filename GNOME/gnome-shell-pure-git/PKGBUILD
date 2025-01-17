@@ -84,9 +84,11 @@ source=(
   "fix-cursor-on-hide-preedit.patch"
   "Remove-sessionList-of-endSessionDialog.patch"
   "session-dialog-update-time-label-every-sec.patch"
+  "add-linkoption-dl.patch"
 )
 b2sums=('SKIP'
         'e31ae379039dfc345e8032f7b9803a59ded075fc52457ba1553276d3031e7025d9304a7f2167a01be2d54c5e121bae00a2824a9c5ccbf926865d0b24520bb053'
+        'SKIP'
         'SKIP'
         'SKIP'
         'SKIP'
@@ -112,6 +114,7 @@ prepare() {
   patch -Np1 -i ../fix-cursor-on-hide-preedit.patch
   patch -Np1 -i ../Remove-sessionList-of-endSessionDialog.patch
   patch -Np1 -i ../session-dialog-update-time-label-every-sec.patch
+  patch -Np1 -i ../add-linkoption-dl.patch
 }
 
 build() {
