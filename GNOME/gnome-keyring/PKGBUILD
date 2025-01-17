@@ -36,8 +36,10 @@ source=(
   "git+$url.git#tag=$pkgver"
   bsc932232-use-libgcrypt-allocators.patch
   bsc932232-use-non-fips-md5.patch
+  sys-select-h.patch
 )
 b2sums=('42253abd7684fc4f37ab644e0cabed0b4b4549e859f1a3cc81a0a97a0ddacb6dfa29dac0a926d0901be4fd2ad01352091aa19d1a2057a0116af062b8089b1ac7'
+        'SKIP'
         'SKIP'
         'SKIP')
 
@@ -46,6 +48,7 @@ prepare() {
 
   git apply -3 ../bsc932232-use-libgcrypt-allocators.patch
   git apply -3 ../bsc932232-use-non-fips-md5.patch
+  git apply -3 ../sys-select-h.patch
 
   NOCONFIGURE=1 ./autogen.sh
 }
