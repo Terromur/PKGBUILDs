@@ -1,0 +1,86 @@
+# Maintainer: Terromur <terromuroz@proton.me>
+# Maintainer: Vasiliy Stelmachenok <ventureo@yandex.ru>
+## Maintainers of original Arch Linux package:
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+
+pkgname=mingw-w64-gcc
+pkgver=14.2.0
+pkgrel=1
+pkgdesc="Cross GCC for the MinGW-w64 cross-compiler"
+arch=('x86_64' 'aarch64')
+url="https://gcc.gnu.org"
+license=('GPL' 'LGPL' 'FDL' 'custom')
+groups=('mingw-w64-toolchain' 'mingw-w64')
+depends=('zlib' 'libisl' 'libmpc' 'mingw-w64-crt' 'mingw-w64-binutils' 'mingw-w64-winpthreads' 'mingw-w64-headers')
+provides=('mingw-w64-gcc')
+conflicts=('mingw-w64-gcc')
+options=('!strip' 'staticlibs' '!emptydirs' '!buildflags')
+source=("https://ftp.gnu.org/gnu/gcc/gcc-$pkgver/gcc-$pkgver.tar.xz"
+        '0020-libgomp-Don-t-hard-code-MS-printf-attributes.patch'
+        'clearlinux.patch')
+sha512sums=(
+    'SKIP'
+    '6008e7589d8520d9b4627d72134b2a1f8a1f1fd43e858c6bab9091bc9d1b741b809f0b26d5c25d44601eac1a982c9a152ea1be22d1f9bc6a9f212e53c506e72b'
+    'SKIP'
+    'SKIP')
+
+_architectures="i686-w64-mingw32 x86_64-w64-mingw32"
+
+prepare() {
+  ln -sf gcc-${pkgver/+/-} gcc
+
+  cd gcc
+
+  # Adds performance boost for DXVK/Wine (maybe)
+  patch -Np1 -i "${srcdir}/0020-libgomp-Don-t-hard-code-MS-printf-attributes.patch"
+  patch -Np1 -i "${srcdir}/clearlinux.patch"
+  # mmapio.c:69:14: error: implicit declaration of function ‘getpagesize’
+  sed -i 's|\-Werror||g' libbacktrace/configure
+}
+
+build() {
+  for _arch in ${_architectures}; do
+    mkdir -p "$srcdir/build-${_arch}" && cd "$srcdir/build-${_arch}"
+    "$srcdir"/gcc/configure --prefix=/usr --libexecdir=/usr/lib \
+        --target="${_arch}" \
+        --enable-languages=c,c++,lto,objc,obj-c++ \
+        --enable-shared --enable-static \
+        --enable-threads=posix --enable-fully-dynamic-string \
+        --enable-libstdcxx-time=yes --enable-libstdcxx-filesystem-ts=yes \
+        --with-system-zlib --enable-cloog-backend=isl \
+        --enable-lto --enable-libgomp \
+        --disable-multilib --enable-checking=release \
+        --disable-sjlj-exceptions --with-dwarf2
+
+	make -O \
+          BOOT_CFLAGS="$CFLAGS" \
+          BOOT_CXXFLAGS="$CXXFLAGS" \
+          BOOT_LDFLAGS="$LDFLAGS" \
+          BOOT_ASFLAGS="$ASFLAGS" \
+          CFLAGS_FOR_TARGET="$CFLAGS" \
+          CXXFLAGS_FOR_TARGET="$CXXFLAGS" \
+          LDFLAGS_FOR_TARGET="$LDFLAGS" \
+          ASFLAGS_FOR_TARGET="$ASFLAGS"; done
+}
+
+package() {
+  for _arch in ${_architectures}; do
+    cd "$srcdir/build-${_arch}"
+    make DESTDIR="$pkgdir" install
+
+    "${_arch}"-strip "$pkgdir/usr/${_arch}/lib"/*.dll
+    strip "$pkgdir"/usr/bin/"${_arch}"-*
+    strip "$pkgdir/usr/lib/gcc/${_arch}/${pkgver}"/{cc1*,collect2,lto*}
+    ln -s ${_arch}-gcc "$pkgdir"/usr/bin/${_arch}-cc
+
+    # mv dlls
+    mkdir -p "$pkgdir"/usr/"${_arch}"/bin/
+    mv "$pkgdir/usr/${_arch}/lib"/*.dll "$pkgdir/usr/${_arch}/bin/"
+  done
+
+  strip "$pkgdir"/usr/bin/*
+
+  # remove unnecessary files
+  rm -r "$pkgdir"/usr/share
+  rm "$pkgdir"/usr/lib/libcc1.*
+}
