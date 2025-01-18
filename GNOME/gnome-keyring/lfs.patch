@@ -1,0 +1,12 @@
+--- gnome-keyring-3.10.1/configure.ac.lfs	2013-10-17 13:59:58.586284301 +0400
++++ gnome-keyring-3.10.1/configure.ac	2013-10-17 14:01:48.668267833 +0400
+@@ -34,6 +34,9 @@
+ AC_TYPE_SIZE_T
+ AC_TYPE_UID_T
+ 
++# check for large file support
++AC_SYS_LARGEFILE
++
+ DISTCHECK_CONFIGURE_FLAGS="--enable-doc"
+ AC_SUBST(DISTCHECK_CONFIGURE_FLAGS)
+ 
