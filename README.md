@@ -7,6 +7,8 @@
 
 Ссылка на официальный репозиторий CachyOS-Settings - https://github.com/CachyOS/CachyOS-Settings
 
+Так же рекомендую свой репозиторий makepkg.conf для сборки пакетов с более агрессивными флагами оптимизации: https://github.com/Terromur/makepkg.conf
+
 Был добавлен Cachyos-Settings с изменениями:
 - Оптимизация интернета, увеличение стабильности, улучшение работы прокси, улучшение безопасности, улучшение работы памяти ядра и прочие дополнительные оптимизации
 - Автоматический расчёт значений kernel.shmmax и kernel.shmall в cachyos-settings.install
