@@ -84,7 +84,6 @@ source=(
   20275.patch
   28973.patch
   30720.patch
-  31658.patch
   32726.patch
   32876.patch
   gnome-shell-glthread-disable.patch
@@ -113,7 +112,6 @@ prepare() {
   patch -Np1 -i ../20275.patch
   patch -Np1 -i ../28973.patch
   patch -Np1 -i ../30720.patch
-  patch -Np1 -i ../31658.patch
   patch -Np1 -i ../32726.patch
   patch -Np1 -i ../32876.patch
   patch -Np1 -i ../gnome-shell-glthread-disable.patch
