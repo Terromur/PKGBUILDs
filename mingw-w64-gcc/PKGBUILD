@@ -20,7 +20,6 @@ source=("https://ftp.gnu.org/gnu/gcc/gcc-$pkgver/gcc-$pkgver.tar.xz"
         'clearlinux.patch')
 sha512sums=(
     'SKIP'
-    '6008e7589d8520d9b4627d72134b2a1f8a1f1fd43e858c6bab9091bc9d1b741b809f0b26d5c25d44601eac1a982c9a152ea1be22d1f9bc6a9f212e53c506e72b'
     'SKIP'
     'SKIP')
 
