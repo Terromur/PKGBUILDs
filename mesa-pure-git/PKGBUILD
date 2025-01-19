@@ -158,7 +158,7 @@ build() {
     -D b_pch=false
     --buildtype=release
     -D b_ndebug=true
-    -D gallium-drivers=radeonsi,zink
+    -D gallium-drivers=radeonsi
     -D gallium-extra-hud=false
     -D gallium-nine=false
     -D gallium-opencl=disabled
