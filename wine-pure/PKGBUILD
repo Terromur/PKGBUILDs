@@ -123,12 +123,16 @@ prepare() {
 # -falign-functions=32 для старых процессоров. -falign-functions=64 и -ftree-vectorize зависит от того, используется более современный процессор, если слишком старый процессор и не имеет никаких инструкций, не стоит включать 
 # -Wl,-z,max-page-size=0x4000 для CFLAGS подойдёт для Intel процессоров
 build() {
-export CFLAGS="-O3 -march=native -mtune=native -fno-semantic-interposition -fcf-protection=none -fivopts -fdata-sections -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine -mharden-sls=none -ffat-lto-objects -mcmodel=small"
-export CXXFLAGS="-O3 -march=native -mtune=native -fno-semantic-interposition -fcf-protection=none -fivopts -fdata-sections -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine -mharden-sls=none -ffat-lto-objects -mcmodel=small -Wp,-U_GLIBCXX_ASSERTIONS"
+  export CFLAGS="-O3 -march=native -mtune=native -fipa-pta -fno-math-errno -flive-range-shrinkage -fno-trapping-math -mtls-dialect=gnu2 -feliminate-unused-debug-types -floop-nest-optimize -fgraphite-identity -fdata-sections -ffunction-sections -fdevirtualize-at-ltrans -fcf-protection=none -fno-semantic-interposition -mharden-sls=none -fivopts -fmodulo-sched"
+  export CXXFLAGS="$CFLAGS -Wp,-U_GLIBCXX_ASSERTIONS"
+  export LDFLAGS="-Wl,-O3,--as-needed,-Bsymbolic-functions,--sort-common,-flto=auto -Wl,--gc-sections"
 
-export CROSSCFLAGS="-O3 -march=native -mtune=native -fno-semantic-interposition -fcf-protection=none -fivopts -fdata-sections -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine"
-export CROSSCXXFLAGS="-O3 -march=native -mtune=native -fno-semantic-interposition -fcf-protection=none -fivopts -fdata-sections -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine"
-export CROSSLDFLAGS="-Wl,-O3,--sort-common,--as-needed,-lgomp,--file-alignment,4096"
+  CFLAGS+=" -std=gnu2x"
+  CXXFLAGS+=" -std=gnu++2a"
+
+  export CROSSCFLAGS="$CFLAGS"
+  export CROSSCXXFLAGS="$CXXFLAGS"
+  export CROSSLDFLAGS="-Wl,-O3,--as-needed,-Bsymbolic-functions,--sort-common,-flto=auto -Wl,--file-alignment,4096"
 
   echo "Building Wine..."
   cd "$pkgname-build"
