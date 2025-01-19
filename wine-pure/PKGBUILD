@@ -117,10 +117,7 @@ prepare() {
 
 
 # Флаги которые можно ещё добавить, но они экспериментальные.
-# Для CFLAGS можно добавить --functions=32 -Wl,-z,max-page-size=0x4000 -ftree-vectorize
-# Для CXXFLAGS можно добавить -falign-functions=32 для старых процессоров и -falign-functions=64 для современных
-# Для CROSSCFLAGS можно добавить -ftree-vectorize
-# -falign-functions=32 для старых процессоров. -falign-functions=64 и -ftree-vectorize зависит от того, используется более современный процессор, если слишком старый процессор и не имеет никаких инструкций, не стоит включать 
+# Для CFLAGS можно добавить -Wl,-z,max-page-size=0x4000 -ftree-vectorize
 # -Wl,-z,max-page-size=0x4000 для CFLAGS подойдёт для Intel процессоров
 # Так же вы можете добавить в CFLAGS флаг -D_WIN32_WINNT=0xA00. Он используется тогда, когда вам ничего не нужно, кроме совместимости Windows 10
 build() {
