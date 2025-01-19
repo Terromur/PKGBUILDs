@@ -85,7 +85,6 @@ source=(
   100.patch
   28973.patch
   30720.patch
-  31658.patch
   32726.patch
   gnome-shell-glthread-disable.patch
   001-fix-amd-crash.patch
