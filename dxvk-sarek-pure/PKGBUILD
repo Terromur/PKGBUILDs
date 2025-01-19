@@ -33,7 +33,7 @@ prepare() {
     # Thanks for flags ms178 https://github.com/ms178/archpkgbuilds/blob/main/packages/dxvk-mingw-git/PKGBUILD
 
     # Так же вы можете добавить в CFLAGS флаг -D_WIN32_WINNT=0xA00. Он используется тогда, когда вам ничего не нужно, кроме совместимости Windows 10
-    # Так же вы можете добавить в CFLAGS флаг -mprefer-avx128. Он нужен в том случае, когда возникают проблемы с запуском игр. Если вы собрали mingw-w64-gcc-pure - вам этот флаг не нужен.
+    # Так же вы можете добавить в CFLAGS флаг -mprefer-avx128. Он нужен в том случае, когда возникают проблемы с запуском игр. Если вы собрали мой mingw-w64-gcc - вам этот флаг не нужен.
     export CFLAGS="-O3 -march=native -mtune=native -fipa-pta -flive-range-shrinkage -fno-math-errno -fno-trapping-math -mtls-dialect=gnu2 -feliminate-unused-debug-types -floop-nest-optimize -fgraphite-identity -flto=auto -fdata-sections -ffunction-sections -fdevirtualize-at-ltrans -fcf-protection=none -fno-semantic-interposition -mharden-sls=none -fivopts -fmodulo-sched"
     export CXXFLAGS="$CFLAGS -Wp,-U_GLIBCXX_ASSERTIONS"
     export LDFLAGS="-Wl,-O3,--as-needed,-Bsymbolic-functions,--sort-common,-flto=auto -Wl,--gc-sections"
