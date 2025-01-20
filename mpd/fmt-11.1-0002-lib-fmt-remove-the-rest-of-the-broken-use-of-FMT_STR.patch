@@ -1,0 +1,57 @@
+From 5de0909ae5576b6070a7ba4085ddaed67de808fd Mon Sep 17 00:00:00 2001
+From: Alfred Wingate <parona@protonmail.com>
+Date: Sat, 18 Jan 2025 03:29:14 +0200
+Subject: [PATCH] lib/fmt: remove the rest of the broken use of FMT_STRING
+
+Fixes: 9db7144d0fa4512335070a984690f3f5034210a5
+Signed-off-by: Alfred Wingate <parona@protonmail.com>
+---
+ src/command/FingerprintCommands.cxx         | 2 +-
+ src/command/NeighborCommands.cxx            | 4 ++--
+ src/output/plugins/PipeWireOutputPlugin.cxx | 2 +-
+ 3 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/src/command/FingerprintCommands.cxx b/src/command/FingerprintCommands.cxx
+index ff91f6f57..f73e676fb 100644
+--- a/src/command/FingerprintCommands.cxx
++++ b/src/command/FingerprintCommands.cxx
+@@ -62,7 +62,7 @@ protected:
+ 	void Run() override;
+ 
+ 	void SendResponse(Response &r) noexcept override {
+-		r.Fmt(FMT_STRING("chromaprint: {}\n"),
++		r.Fmt("chromaprint: {}\n",
+ 		      GetFingerprint());
+ 	}
+ 
+diff --git a/src/command/NeighborCommands.cxx b/src/command/NeighborCommands.cxx
+index f67bb1a11..72bb88500 100644
+--- a/src/command/NeighborCommands.cxx
++++ b/src/command/NeighborCommands.cxx
+@@ -46,8 +46,8 @@ handle_listneighbors(Client &client, [[maybe_unused]] Request args, Response &r)
+ 	}
+ 
+ 	for (const auto &i : neighbors->GetList())
+-		r.Fmt(FMT_STRING("neighbor: {}\n"
+-				 "name: {}\n"),
++		r.Fmt("neighbor: {}\n"
++		      "name: {}\n",
+ 		      i.uri,
+ 		      i.display_name);
+ 	return CommandResult::OK;
+diff --git a/src/output/plugins/PipeWireOutputPlugin.cxx b/src/output/plugins/PipeWireOutputPlugin.cxx
+index a97052f14..fea4adf0b 100644
+--- a/src/output/plugins/PipeWireOutputPlugin.cxx
++++ b/src/output/plugins/PipeWireOutputPlugin.cxx
+@@ -685,7 +685,7 @@ PipeWireOutput::ParamChanged([[maybe_unused]] uint32_t id,
+ 				::SetVolume(*stream, channels, volume);
+ 			} catch (...) {
+ 				FmtError(pipewire_output_domain,
+-					 FMT_STRING("Failed to restore volume: {}"),
++					 "Failed to restore volume: {}",
+ 					 std::current_exception());
+ 			}
+ 		}
+-- 
+2.48.1
+
