@@ -97,7 +97,7 @@ source=(
   'mutter_increase_check_alive_timeout.patch'
   'disable-xwayland-core.patch'
   '1441.patch'
- '3797.patch'
+  '3797.patch'
 )
 b2sums=(
   'SKIP'
