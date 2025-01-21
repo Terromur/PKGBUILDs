@@ -48,6 +48,8 @@ prepare() {
     # Uncomment to enable extra optimizations
     # Patch crossfiles with extra optimizations from makepkg.conf
     patch -p1 -i "$srcdir"/dxvk-extraopts.patch
+
+    # Патч для внедрения поддержки кросс-компиляции llvm
     patch -p1 -i "$srcdir"/llvm.patch
 
     # By default export FLAGS used by proton and ignore makepkg
