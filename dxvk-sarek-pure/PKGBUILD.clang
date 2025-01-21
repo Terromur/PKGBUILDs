@@ -14,8 +14,10 @@ source=(
     "git+https://github.com/pythonlover02/DXVK-Sarek.git#branch=1.10.x-Proton-Sarek"
     "dxvk-extraopts.patch"
     "llvm.patch"
+    "fixLockRectd3d9.patch"
 )
 sha256sums=(
+    "SKIP"
     "SKIP"
     "SKIP"
     "SKIP"
@@ -37,6 +39,9 @@ prepare() {
 
     # Патч для внедрения поддержки кросс-компиляции llvm
     patch -p1 -i "$srcdir"/llvm.patch
+
+    # Исправление back buffers для d3d9
+    patch -p1 -i "$srcdir"/fixLockRectd3d9.patch
 
     # By default export FLAGS used by proton and ignore makepkg
     # This overrides FLAGS from makepkg.conf, if you comment these you are on your own
