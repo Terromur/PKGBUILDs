@@ -21,6 +21,7 @@ source=(
     "git+https://github.com/KhronosGroup/Vulkan-Headers.git"
     "git+https://github.com/KhronosGroup/SPIRV-Headers.git"
     "dxvk-extraopts.patch"
+    "fixLockRectd3d9.patch"
 )
 sha256sums=(
     "SKIP"
@@ -28,6 +29,7 @@ sha256sums=(
     "SKIP"
     "SKIP"
     "bcc15521e4c7f966a0192a1dabb7fb4935b33db39344ab5b861f9d81486f1362"
+    "SKIP"
 )
 
 
@@ -44,6 +46,9 @@ prepare() {
 
     # Patch to passthrough compiler flags (thanks @loathingkernel)
     patch -p1 -i "$srcdir"/dxvk-extraopts.patch
+
+    # Исправление back buffers для d3d9
+    patch -p1 -i "$srcdir"/fixLockRectd3d9.patch
 
     # By default export FLAGS used by proton and ignore makepkg
     # This overrides FLAGS from makepkg.conf, if you comment these you are on your own
