@@ -13,8 +13,10 @@ makedepends=('ninja' 'meson>=0.43' 'glslang' 'mingw-w64-gcc' 'git')
 source=(
     "git+https://github.com/pythonlover02/DXVK-Sarek.git#branch=1.10.x-Proton-Sarek-Async"
     "dxvk-extraopts.patch"
+    "fixLockRectd3d9.patch"
 )
 md5sums=(
+    'SKIP'
     'SKIP'
     'SKIP'
 )
@@ -26,6 +28,9 @@ prepare() {
     # Patch to passthrough compiler flags (thanks @loathingkernel)
     patch -p1 -i "$srcdir/dxvk-extraopts.patch"
     
+    # Исправление back buffers для d3d9
+    patch -p1 -i "$srcdir"/fixLockRectd3d9.patch
+
     # By default export FLAGS used by proton and ignore makepkg
     # This overrides FLAGS from makepkg.conf, if you comment these you are on your own
     # If you want the "best" possible optimizations for your system you can use
