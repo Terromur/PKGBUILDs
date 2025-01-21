@@ -4,7 +4,7 @@
 pkgname=llvm-mingw-w64-toolchain-msvcrt-bin
 pkgver=20250114
 pkgrel=1
-pkgdesc="LLVM/Clang/LLD based mingw-w64 toolchain (UCRT) targeting i686, x86-64, armv7, and aarch64"
+pkgdesc="LLVM/Clang/LLD based mingw-w64 toolchain (MSVCRT) targeting i686, x86-64, armv7, and aarch64"
 _crt=msvcrt
 arch=('aarch64' 'x86_64')
 url="https://github.com/mstorsjo/llvm-mingw"
