@@ -47,8 +47,8 @@ prepare() {
     # Patch to passthrough compiler flags (thanks @loathingkernel)
     patch -p1 -i "$srcdir"/dxvk-extraopts.patch
 
-    # Исправление back buffers для d3d9
-    patch -p1 -i "$srcdir"/fixLockRectd3d9.patch
+    # Исправление back buffers для d3d9 (Экспериментально, подойдёт для игры только под xwayland, могут быть проблемы с играми в нативном wayland)
+    # patch -p1 -i "$srcdir"/fixLockRectd3d9.patch
 
     # By default export FLAGS used by proton and ignore makepkg
     # This overrides FLAGS from makepkg.conf, if you comment these you are on your own
