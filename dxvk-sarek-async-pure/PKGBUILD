@@ -44,8 +44,8 @@ prepare() {
     export LDFLAGS="-Wl,-O3,--as-needed,-Bsymbolic-functions,--sort-common,-flto=auto -Wl,--gc-sections"
 
     # These flags are taken from Proton
-    CFLAGS+=" -mfpmath=sse -fwrapv -fno-strict-aliasing -std=gnu2x"
-    CXXFLAGS+=" -mfpmath=sse -fwrapv -fno-strict-aliasing -std=gnu++2a"
+    CFLAGS+=" -mfpmath=sse -fwrapv -fno-strict-aliasing -std=gnu23"
+    CXXFLAGS+=" -mfpmath=sse -fwrapv -fno-strict-aliasing -std=gnu++23"
     LDFLAGS+=" -Wl,--file-alignment,4096"
 
     local cross_ldflags="$LDFLAGS"
