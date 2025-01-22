@@ -70,8 +70,8 @@ prepare() {
     export LDFLAGS="-Wl,-O3,--as-needed -flto -fwhole-program-vtables -fuse-ld=lld -Wl,--gc-sections"
 
     # These flags are taken from Proton
-    CFLAGS+=" -mfpmath=sse -fwrapv -fno-strict-aliasing -std=gnu2x"
-    CXXFLAGS+=" -mfpmath=sse -fwrapv -fno-strict-aliasing -std=gnu++2a"
+    CFLAGS+=" -mfpmath=sse -fwrapv -fno-strict-aliasing -std=gnu23"
+    CXXFLAGS+=" -mfpmath=sse -fwrapv -fno-strict-aliasing -std=gnu++23"
     LDFLAGS+=" -Wl,--file-alignment,4096"
 
     # If using -march=native and the CPU supports AVX, launching a d3d9
