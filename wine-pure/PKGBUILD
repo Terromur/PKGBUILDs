@@ -125,8 +125,8 @@ build() {
   export CXXFLAGS="$CFLAGS -Wp,-U_GLIBCXX_ASSERTIONS"
   export LDFLAGS="-Wl,-O3,--as-needed,-Bsymbolic-functions,--sort-common,-flto=auto -Wl,--gc-sections"
 
-  CFLAGS+=" -std=gnu2x"
-  CXXFLAGS+=" -std=gnu++2a"
+  CFLAGS+=" -std=gnu23"
+  CXXFLAGS+=" -std=gnu++23"
 
   export CROSSCFLAGS="$CFLAGS"
   export CROSSCXXFLAGS="$CXXFLAGS"
