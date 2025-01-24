@@ -18,7 +18,7 @@ pkgbase=mutter-git
 pkgname=(
   mutter-git
 )
-pkgver=48.alpha+r57+ga211ed553b
+pkgver=48.alpha+r60+g87cc6633a
 pkgrel=1
 pkgdesc="Window manager and compositor for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
@@ -96,7 +96,6 @@ source=(
   'git+https://gitlab.gnome.org/GNOME/gvdb.git#commit=b54bc5da25127ef416858a3ad92e57159ff565b3'
   'mutter_increase_check_alive_timeout.patch'
   'disable-xwayland-core.patch'
-  '1441.patch'
   '3797.patch'
 )
 b2sums=(
@@ -105,7 +104,6 @@ b2sums=(
   'SKIP'
   'SKIP'
   'SKIP'
- 'SKIP'
 )
 
 prepare() {
@@ -113,10 +111,6 @@ prepare() {
   
   patch -Np1 -i ../mutter_increase_check_alive_timeout.patch
   patch -Np1 -i ../disable-xwayland-core.patch
-
-# Включение тройной буферизации
-  patch -Np1 -i ../1441.patch
-
 # Включение поддержки тиринга (экспериментально, расскоментируйте, если хотите попробовать)
 # patch -Np1 -i ../3797.patch
 }
