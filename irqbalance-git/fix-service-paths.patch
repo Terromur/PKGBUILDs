@@ -1,0 +1,15 @@
+diff --git i/irqbalance/misc/irqbalance.service w/irqbalance/misc/irqbalance.service
+index 87e19c1..ed2522d 100644
+--- i/irqbalance/misc/irqbalance.service
++++ w/irqbalance/misc/irqbalance.service
+@@ -7,8 +7,8 @@
+ 
+ [Service]
+ EnvironmentFile=-/usr/lib/irqbalance/defaults.env
+-EnvironmentFile=-/path/to/irqbalance.env
+-ExecStart=/usr/sbin/irqbalance $IRQBALANCE_ARGS
++EnvironmentFile=-/etc/irqbalance.env
++ExecStart=/usr/bin/irqbalance $IRQBALANCE_ARGS
+ CapabilityBoundingSet=CAP_SETPCAP
+ NoNewPrivileges=yes
+ ProtectSystem=strict
