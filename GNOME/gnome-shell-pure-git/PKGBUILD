@@ -109,6 +109,8 @@ prepare() {
   # Inject gvc
   ln -s libgnome-volume-control gvc
   cd gnome-shell
+  git reset --hard
+  git cherry-pick --abort || true
   patch -Np1 -i ../disable-offline-update-dialog.patch
   patch -Np1 -i ../exit-crash-workaround.patch
   patch -Np1 -i ../fix-cursor-on-hide-preedit.patch
