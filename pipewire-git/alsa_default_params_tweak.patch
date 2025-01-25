@@ -1,0 +1,194 @@
+diff --git a/pipewire-alsa/alsa-plugins/pcm_pipewire.c b/pipewire-alsa/alsa-plugins/pcm_pipewire.c
+index 4ba25ee..8a61402 100644
+--- a/pipewire-alsa/alsa-plugins/pcm_pipewire.c
++++ b/pipewire-alsa/alsa-plugins/pcm_pipewire.c
+@@ -33,15 +33,15 @@ PW_LOG_TOPIC_STATIC(alsa_log_topic, "alsa.pcm");
+ #define MAX_BUFFERS	64u
+ 
+ #define MAX_CHANNELS	64
+-#define MAX_RATE	(48000*8)
++#define MAX_RATE	(48000*16)
+ 
+-#define MIN_PERIOD	64
++#define MIN_PERIOD	32
+ 
+-#define MIN_PERIOD_BYTES	(128)
+-#define MAX_PERIOD_BYTES	(2*1024*1024)
++#define MIN_PERIOD_BYTES	(96)
++#define MAX_PERIOD_BYTES	(2304)
+ 
+-#define MIN_BUFFER_BYTES	(2*MIN_PERIOD_BYTES)
+-#define MAX_BUFFER_BYTES	(2*MAX_PERIOD_BYTES)
++#define MIN_BUFFER_BYTES	(288)
++#define MAX_BUFFER_BYTES	(12288)
+ 
+ typedef struct {
+ 	snd_pcm_ioplug_t io;
+@@ -1001,7 +1001,7 @@ struct param_info infos[] = {
+ 	{ "alsa.period-bytes", SND_PCM_IOPLUG_HW_PERIOD_BYTES, TYPE_MIN_MAX,
+ 		{ MIN_PERIOD_BYTES, MAX_PERIOD_BYTES }, 2, collect_int },
+ 	{ "alsa.periods", SND_PCM_IOPLUG_HW_PERIODS, TYPE_MIN_MAX,
+-		{ MIN_BUFFERS, 1024 }, 2, collect_int },
++		{ MIN_BUFFERS, MAX_BUFFERS }, 2, collect_int },
+ };
+ 
+ static struct param_info *param_info_by_key(int key)
+diff --git a/spa/plugins/alsa/acp/acp.c b/spa/plugins/alsa/acp/acp.c
+index 505681d..c21f09d 100644
+--- a/spa/plugins/alsa/acp/acp.c
++++ b/spa/plugins/alsa/acp/acp.c
+@@ -378,8 +378,8 @@ static int add_pro_profile(pa_card *impl, uint32_t index)
+ 			m->description = pa_xstrdup(desc);
+ 			m->device_strings = pa_split_spaces_strv(devstr);
+ 
+-			try_period_size = 1024;
+-			try_buffer_size = 1024 * 64;
++			try_period_size = 128;
++			try_buffer_size = 128 * 64;
+ 			m->sample_spec = ss;
+ 
+ 			if ((m->output_pcm = pa_alsa_open_by_template(m->device_strings,
+@@ -410,8 +410,8 @@ static int add_pro_profile(pa_card *impl, uint32_t index)
+ 			m->description = pa_xstrdup(desc);
+ 			m->device_strings = pa_split_spaces_strv(devstr);
+ 
+-			try_period_size = 1024;
+-			try_buffer_size = 1024 * 64;
++			try_period_size = 128;
++			try_buffer_size = 128 * 64;
+ 			m->sample_spec = ss;
+ 
+ 			if ((m->input_pcm = pa_alsa_open_by_template(m->device_strings,
+diff --git a/spa/plugins/alsa/alsa-pcm.c b/spa/plugins/alsa/alsa-pcm.c
+index b078979..5fff726 100644
+--- a/spa/plugins/alsa/alsa-pcm.c
++++ b/spa/plugins/alsa/alsa-pcm.c
+@@ -312,7 +312,7 @@ struct spa_pod *spa_alsa_enum_propinfo(struct state *state,
+ 			SPA_TYPE_OBJECT_PropInfo, SPA_PARAM_PropInfo,
+ 			SPA_PROP_INFO_name, SPA_POD_String("api.alsa.period-size"),
+ 			SPA_PROP_INFO_description, SPA_POD_String("Period Size"),
+-			SPA_PROP_INFO_type, SPA_POD_CHOICE_RANGE_Int(state->default_period_size, 0, 8192),
++			SPA_PROP_INFO_type, SPA_POD_CHOICE_RANGE_Int(state->default_period_size, 96, 2304),
+ 			SPA_PROP_INFO_params, SPA_POD_Bool(true));
+ 		break;
+ 	case 6:
+@@ -320,7 +320,7 @@ struct spa_pod *spa_alsa_enum_propinfo(struct state *state,
+ 			SPA_TYPE_OBJECT_PropInfo, SPA_PARAM_PropInfo,
+ 			SPA_PROP_INFO_name, SPA_POD_String("api.alsa.period-num"),
+ 			SPA_PROP_INFO_description, SPA_POD_String("Number of Periods"),
+-			SPA_PROP_INFO_type, SPA_POD_CHOICE_RANGE_Int(state->default_period_num, 0, 1024),
++			SPA_PROP_INFO_type, SPA_POD_CHOICE_RANGE_Int(state->default_period_num, 3, 128),
+ 			SPA_PROP_INFO_params, SPA_POD_Bool(true));
+ 		break;
+ 	case 7:
+@@ -328,7 +328,7 @@ struct spa_pod *spa_alsa_enum_propinfo(struct state *state,
+ 			SPA_TYPE_OBJECT_PropInfo, SPA_PARAM_PropInfo,
+ 			SPA_PROP_INFO_name, SPA_POD_String("api.alsa.headroom"),
+ 			SPA_PROP_INFO_description, SPA_POD_String("Headroom"),
+-			SPA_PROP_INFO_type, SPA_POD_CHOICE_RANGE_Int(state->default_headroom, 0, 8192),
++			SPA_PROP_INFO_type, SPA_POD_CHOICE_RANGE_Int(state->default_headroom, 288, 6912),
+ 			SPA_PROP_INFO_params, SPA_POD_Bool(true));
+ 		break;
+ 	case 8:
+diff --git a/spa/plugins/alsa/alsa-pcm.h b/spa/plugins/alsa/alsa-pcm.h
+index 3dc1ec9..014b15a 100644
+--- a/spa/plugins/alsa/alsa-pcm.h
++++ b/spa/plugins/alsa/alsa-pcm.h
+@@ -37,7 +37,7 @@ extern "C" {
+ 
+ #define MAX_RATES	16
+ 
+-#define DEFAULT_PERIOD		1024u
++#define DEFAULT_PERIOD		128u
+ #define DEFAULT_RATE		48000u
+ #define DEFAULT_CHANNELS	2u
+ /* CHMAP defaults to true when using UCM */
+@@ -52,7 +52,7 @@ struct props {
+ 	bool use_chmap;
+ };
+ 
+-#define MAX_BUFFERS 32
++#define MAX_BUFFERS 64
+ #define MAX_POLL 16
+ 
+ struct buffer {
+diff --git a/src/modules/module-ffado-driver.c b/src/modules/module-ffado-driver.c
+index 26e281e..c4697ce 100644
+--- a/src/modules/module-ffado-driver.c
++++ b/src/modules/module-ffado-driver.c
+@@ -44,7 +44,7 @@
+  *
+  * - `driver.mode`: the driver mode, sink|source|duplex, default duplex
+  * - `ffado.devices`: array of devices to open, default "hw:0"
+- * - `ffado.period-size`: period size,default 1024. A value of 0 will use the graph duration.
++ * - `ffado.period-size`: period size,default 256. A value of 0 will use the graph duration.
+  * - `ffado.period-num`: period number,default 3
+  * - `ffado.sample-rate`: sample-rate, default 48000. A value of 0 will use the graph rate.
+  * - `ffado.slave-mode`: slave mode
+@@ -82,7 +82,7 @@
+  *     args = {
+  *         #driver.mode       = duplex
+  *         #ffado.devices     = [ "hw:0" ]
+- *         #ffado.period-size = 1024
++ *         #ffado.period-size = 256
+  *         #ffado.period-num  = 3
+  *         #ffado.sample-rate = 48000
+  *         #ffado.slave-mode  = false
+@@ -114,7 +114,7 @@ PW_LOG_TOPIC_STATIC(mod_topic, "mod." NAME);
+ #define FFADO_RT_PRIORITY_PACKETIZER_RELATIVE   5
+ 
+ #define DEFAULT_DEVICES		"[ \"hw:0\" ]"
+-#define DEFAULT_PERIOD_SIZE	1024
++#define DEFAULT_PERIOD_SIZE	256
+ #define DEFAULT_PERIOD_NUM	3
+ #define DEFAULT_SAMPLE_RATE	48000
+ #define DEFAULT_SLAVE_MODE	false
+@@ -129,7 +129,7 @@ PW_LOG_TOPIC_STATIC(mod_topic, "mod." NAME);
+ #define MODULE_USAGE	"( remote.name=<remote> ) "					\
+ 			"( driver.mode=<sink|source|duplex, default duplex> ) "		\
+ 			"( ffado.devices=<devices array, default "DEFAULT_DEVICES"> ) "	\
+-			"( ffado.period-size=<period size, default 1024> ) "		\
++			"( ffado.period-size=<period size, default 256> ) "		\
+ 			"( ffado.period-num=<period num, default 3> ) "			\
+ 			"( ffado.sample-rate=<sampe rate, default 48000> ) "		\
+ 			"( ffado.slave-mode=<slave mode, default false> ) "		\
+diff --git a/src/modules/module-netjack2-manager.c b/src/modules/module-netjack2-manager.c
+index 4217fbc..d00141a 100644
+--- a/src/modules/module-netjack2-manager.c
++++ b/src/modules/module-netjack2-manager.c
+@@ -63,7 +63,7 @@
+  * - `netjack2.connect`: if jack ports should be connected automatically. Can also be
+  *                   placed per stream.
+  * - `netjack2.sample-rate`: the sample rate to use, default 48000
+- * - `netjack2.period-size`: the buffer size to use, default 1024
++ * - `netjack2.period-size`: the buffer size to use, default 256
+  * - `netjack2.encoding`: the encoding, float|opus|int, default float
+  * - `netjack2.kbps`: the number of kilobits per second when encoding, default 64
+  * - `audio.channels`: the number of audio ports. Can also be added to the stream props.
+@@ -95,7 +95,7 @@
+  *     args = {
+  *         #netjack2.connect     = true
+  *         #netjack2.sample-rate = 48000
+- *         #netjack2.period-size = 1024
++ *         #netjack2.period-size = 256
+  *         #netjack2.encoding    = float # float|opus
+  *         #netjack2.kbps        = 64
+  *         #midi.ports           = 0
+@@ -132,7 +132,7 @@ PW_LOG_TOPIC_STATIC(mod_topic, "mod." NAME);
+ #define NETWORK_MAX_LATENCY	30
+ 
+ #define DEFAULT_SAMPLE_RATE	48000
+-#define DEFAULT_PERIOD_SIZE	1024
++#define DEFAULT_PERIOD_SIZE	256
+ #define DEFAULT_ENCODING	"float"
+ #define DEFAULT_KBPS		64
+ #define DEFAULT_CHANNELS	2
+@@ -148,7 +148,7 @@ PW_LOG_TOPIC_STATIC(mod_topic, "mod." NAME);
+ 			"( net.loop=<loopback, default false> ) "		\
+ 			"( netjack2.connect=<bool, autoconnect ports> ) "	\
+ 			"( netjack2.sample-rate=<sampl erate, default 48000> ) "\
+-			"( netjack2.period-size=<period size, default 1024> ) "	\
++			"( netjack2.period-size=<period size, default 256> ) "	\
+ 			"( midi.ports=<number of midi ports> ) "		\
+ 			"( audio.channels=<number of channels> ) "		\
+ 			"( audio.position=<channel map> ) "			\

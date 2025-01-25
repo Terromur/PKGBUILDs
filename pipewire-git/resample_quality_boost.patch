@@ -1,0 +1,26 @@
+diff --git a/spa/plugins/audioconvert/audioconvert.c b/spa/plugins/audioconvert/audioconvert.c
+index b3aeb9d82..3a893b1dd 100644
+--- a/spa/plugins/audioconvert/audioconvert.c
++++ b/spa/plugins/audioconvert/audioconvert.c
+@@ -679,7 +679,7 @@ static int impl_node_enum_params(void *object, int seq,
+ 				SPA_PROP_INFO_id, SPA_POD_Id(SPA_PROP_quality),
+ 				SPA_PROP_INFO_name, SPA_POD_String("resample.quality"),
+ 				SPA_PROP_INFO_description, SPA_POD_String("Resample Quality"),
+-				SPA_PROP_INFO_type, SPA_POD_CHOICE_RANGE_Int(p->resample_quality, 0, 14),
++				SPA_PROP_INFO_type, SPA_POD_CHOICE_RANGE_Int(p->resample_quality, 6, 14),
+ 				SPA_PROP_INFO_params, SPA_POD_Bool(true));
+ 			break;
+ 		case 23:
+diff --git a/spa/plugins/audioconvert/resample.h b/spa/plugins/audioconvert/resample.h
+index a07b559c7..b28871abe 100644
+--- a/spa/plugins/audioconvert/resample.h
++++ b/spa/plugins/audioconvert/resample.h
+@@ -8,7 +8,7 @@
+ #include <spa/support/cpu.h>
+ #include <spa/support/log.h>
+ 
+-#define RESAMPLE_DEFAULT_QUALITY	4
++#define RESAMPLE_DEFAULT_QUALITY	14
+ 
+ struct resample {
+ 	struct spa_log *log;
