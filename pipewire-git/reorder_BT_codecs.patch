@@ -1,34 +1,21 @@
 diff --git a/spa/plugins/bluez5/codec-loader.c b/spa/plugins/bluez5/codec-loader.c
-index 6fd1d0430..2df467d08 100644
+index 2df467d08..a1b2c3f0a 100644
 --- a/spa/plugins/bluez5/codec-loader.c
 +++ b/spa/plugins/bluez5/codec-loader.c
-@@ -31,26 +31,26 @@ struct impl {
+@@ -31,27 +31,33 @@
  static int codec_order(const struct media_codec *c)
  {
  	static const enum spa_bluetooth_audio_codec order[] = {
-+		SPA_BLUETOOTH_AUDIO_CODEC_OPUS_05_DUPLEX,
-+		SPA_BLUETOOTH_AUDIO_CODEC_OPUS_05_PRO,
-+		SPA_BLUETOOTH_AUDIO_CODEC_OPUS_05,
-+		SPA_BLUETOOTH_AUDIO_CODEC_OPUS_05_51,
-+		SPA_BLUETOOTH_AUDIO_CODEC_OPUS_05_71,
-+		SPA_BLUETOOTH_AUDIO_CODEC_OPUS_G,
-+		SPA_BLUETOOTH_AUDIO_CODEC_LC3PLUS_HR,
-+		SPA_BLUETOOTH_AUDIO_CODEC_AAC_ELD,
- 		SPA_BLUETOOTH_AUDIO_CODEC_LC3,
- 		SPA_BLUETOOTH_AUDIO_CODEC_LDAC,
-++		SPA_BLUETOOTH_AUDIO_CODEC_AAC,
- 		SPA_BLUETOOTH_AUDIO_CODEC_APTX_HD,
-++		SPA_BLUETOOTH_AUDIO_CODEC_APTX_LL_DUPLEX,
-++		SPA_BLUETOOTH_AUDIO_CODEC_APTX_LL,
- 		SPA_BLUETOOTH_AUDIO_CODEC_APTX,
+-		SPA_BLUETOOTH_AUDIO_CODEC_LC3,
+-		SPA_BLUETOOTH_AUDIO_CODEC_LDAC,
+-		SPA_BLUETOOTH_AUDIO_CODEC_APTX_HD,
+-		SPA_BLUETOOTH_AUDIO_CODEC_APTX,
 -		SPA_BLUETOOTH_AUDIO_CODEC_AAC,
 -		SPA_BLUETOOTH_AUDIO_CODEC_OPUS_G,
 -		SPA_BLUETOOTH_AUDIO_CODEC_LC3PLUS_HR,
-++		SPA_BLUETOOTH_AUDIO_CODEC_FASTSTREAM_DUPLEX,
-++		SPA_BLUETOOTH_AUDIO_CODEC_FASTSTREAM,
- 		SPA_BLUETOOTH_AUDIO_CODEC_MPEG,
+-		SPA_BLUETOOTH_AUDIO_CODEC_MPEG,
 -		SPA_BLUETOOTH_AUDIO_CODEC_SBC,
- 		SPA_BLUETOOTH_AUDIO_CODEC_SBC_XQ,
+-		SPA_BLUETOOTH_AUDIO_CODEC_SBC_XQ,
 -		SPA_BLUETOOTH_AUDIO_CODEC_APTX_LL,
 -		SPA_BLUETOOTH_AUDIO_CODEC_APTX_LL_DUPLEX,
 -		SPA_BLUETOOTH_AUDIO_CODEC_FASTSTREAM,
@@ -39,28 +26,34 @@ index 6fd1d0430..2df467d08 100644
 -		SPA_BLUETOOTH_AUDIO_CODEC_OPUS_05_DUPLEX,
 -		SPA_BLUETOOTH_AUDIO_CODEC_OPUS_05_PRO,
 -		SPA_BLUETOOTH_AUDIO_CODEC_AAC_ELD,
-+		SPA_BLUETOOTH_AUDIO_CODEC_SBC,
- 		SPA_BLUETOOTH_AUDIO_CODEC_G722,
+-		SPA_BLUETOOTH_AUDIO_CODEC_G722,
++                // Lossless/High-Bitrate Codecs
++                SPA_BLUETOOTH_AUDIO_CODEC_LDAC,             // 990 кбит/с, 24-bit/96 kHz (Sony, lossy, но максимальный битрейт)
++                SPA_BLUETOOTH_AUDIO_CODEC_LC3PLUS_HR,       // 625 кбит/с, 24-bit/96 kHz (LE Audio, lossy, но перспективный)
++                SPA_BLUETOOTH_AUDIO_CODEC_SBC_XQ,           // До 730 кбит/с
++                SPA_BLUETOOTH_AUDIO_CODEC_APTX_HD,          // 576 кбит/с, 24-bit/48 kHz (Qualcomm, lossy)
++
++                // Adaptive Codecs (VBR/низкая задержка)
++                SPA_BLUETOOTH_AUDIO_CODEC_OPUS_05_PRO,      // VBR до 112 кбит/с, 24-bit/48 kHz
++                SPA_BLUETOOTH_AUDIO_CODEC_OPUS_05_DUPLEX,   // Дуплексная связь, низкая задержка
++                SPA_BLUETOOTH_AUDIO_CODEC_OPUS_G,           // Оптимизирован для игр/видео
++
++                // Совместимые кодеки (Apple/Android)
++                SPA_BLUETOOTH_AUDIO_CODEC_AAC_ELD,          // 144 кбит/с, низкая задержка (iOS)
++                SPA_BLUETOOTH_AUDIO_CODEC_AAC,              // 256 кбит/с, эффективное сжатие
++                SPA_BLUETOOTH_AUDIO_CODEC_APTX,             // 352 кбит/с, базовый aptX
++
++                // LE Audio и Legacy
++                SPA_BLUETOOTH_AUDIO_CODEC_LC3,              // LE Audio (до 320 кбит/с)
++                SPA_BLUETOOTH_AUDIO_CODEC_G722,             // Для голосовой связи (широкополосный)
++
++                // Устаревшие/низкозадержные
++                SPA_BLUETOOTH_AUDIO_CODEC_FASTSTREAM_DUPLEX,
++                SPA_BLUETOOTH_AUDIO_CODEC_FASTSTREAM,
++                SPA_BLUETOOTH_AUDIO_CODEC_APTX_LL_DUPLEX,   // Устаревший (низкая задержка)
++                SPA_BLUETOOTH_AUDIO_CODEC_APTX_LL,
++                SPA_BLUETOOTH_AUDIO_CODEC_MPEG,
++                SPA_BLUETOOTH_AUDIO_CODEC_SBC,              // Базовый SBC (328 кбит/с)
  	};
  	size_t i;
-@@ -165,15 +165,15 @@ const struct media_codec * const *load_media_codecs(struct spa_plugin_loader *lo
- 	const struct { const char *factory; const char *lib; } plugins[] = {
- #define MEDIA_CODEC_FACTORY_LIB(basename) \
- 		{ MEDIA_CODEC_FACTORY_NAME(basename), MEDIA_CODEC_LIB_BASE basename }
-+		MEDIA_CODEC_FACTORY_LIB("opus"),
-+		MEDIA_CODEC_FACTORY_LIB("opus-g"),
-+		MEDIA_CODEC_FACTORY_LIB("lc3plus"),
-+		MEDIA_CODEC_FACTORY_LIB("lc3"),
-+		MEDIA_CODEC_FACTORY_LIB("ldac"),
- 		MEDIA_CODEC_FACTORY_LIB("aac"),
- 		MEDIA_CODEC_FACTORY_LIB("aptx"),
- 		MEDIA_CODEC_FACTORY_LIB("faststream"),
--		MEDIA_CODEC_FACTORY_LIB("ldac"),
- 		MEDIA_CODEC_FACTORY_LIB("sbc"),
--		MEDIA_CODEC_FACTORY_LIB("lc3plus"),
--		MEDIA_CODEC_FACTORY_LIB("opus"),
--		MEDIA_CODEC_FACTORY_LIB("opus-g"),
--		MEDIA_CODEC_FACTORY_LIB("lc3"),
- 		MEDIA_CODEC_FACTORY_LIB("g722")
- #undef MEDIA_CODEC_FACTORY_LIB
- 	};
+ 	for (i = 0; i < SPA_N_ELEMENTS(order); ++i)
