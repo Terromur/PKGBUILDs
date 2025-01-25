@@ -30,7 +30,7 @@ index 2df467d08..a1b2c3f0a 100644
 +                // Lossless/High-Bitrate Codecs
 +                SPA_BLUETOOTH_AUDIO_CODEC_LDAC,             // 990 кбит/с, 24-bit/96 kHz (Sony)
 +                SPA_BLUETOOTH_AUDIO_CODEC_LC3PLUS_HR,       // 625 кбит/с, 24-bit/96 kHz (LE Audio)
-+                SPA_BLUETOOTH_AUDIO_CODEC_SBC_XQ,           // До 730 кбит/с
++                SPA_BLUETOOTH_AUDIO_CODEC_SBC_XQ,           // До 730 кбит/с, 16-bit/48 kHz
 +                SPA_BLUETOOTH_AUDIO_CODEC_APTX_HD,          // 576 кбит/с, 24-bit/48 kHz (Qualcomm)
 +
 +                // Adaptive Codecs (VBR/низкая задержка)
