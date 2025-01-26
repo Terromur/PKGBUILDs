@@ -65,7 +65,7 @@ prepare() {
 
     # Так же вы можете добавить в CFLAGS флаг -D_WIN32_WINNT=0xA00. Он используется тогда, когда вам ничего не нужно, кроме совместимости Windows 10
     # Так же вы можете добавить в CFLAGS флаг -mprefer-avx128. Он нужен в том случае, когда возникают проблемы с запуском игр. Если вы собрали мой mingw-w64-gcc - вам этот флаг не нужен.
-    export CFLAGS="-O3 -march=native -mtune=native -falign-functions=64 -fno-math-errno -fno-trapping-math -fcf-protection=none -mharden-sls=none -funroll-loops -fomit-frame-pointer -mprefer-vector-width=256 -fdata-sections -ffunction-sections -flto -fwhole-program-vtables -fsplit-lto-unit -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement -mllvm -enable-gvn-hoist -mllvm -enable-dfa-jump-thread -ffp-contract=fast -fno-unique-section-names -fgnuc-version=14.2.0 -fuse-ld=lld -fno-plt -w"
+    export CFLAGS="-O3 -march=native -mtune=native -falign-functions=64 -fno-math-errno -fno-trapping-math -fcf-protection=none -mharden-sls=none -funroll-loops -fomit-frame-pointer -mprefer-vector-width=256 -fdata-sections -ffunction-sections -flto -fwhole-program-vtables -fsplit-lto-unit -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement -mllvm -enable-gvn-hoist -mllvm -enable-dfa-jump-thread -mllvm -inline-threshold=1500 -mllvm -enable-nontrivial-unswitch -ffp-contract=fast -fno-unique-section-names -fgnuc-version=14.2.0 -fuse-ld=lld -fno-plt -w"
     export CXXFLAGS="$CFLAGS -Wp,-U_GLIBCXX_ASSERTIONS"
     export LDFLAGS="-Wl,-O3,--as-needed -flto -fwhole-program-vtables -fuse-ld=lld -Wl,--gc-sections"
 
