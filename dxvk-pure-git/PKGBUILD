@@ -22,6 +22,7 @@ source=(
     "git+https://github.com/KhronosGroup/SPIRV-Headers.git"
     "dxvk-extraopts.patch"
     "fixLockRectd3d9.patch"
+    "global-dxvk.conf.patch"
 )
 sha256sums=(
     "SKIP"
@@ -29,6 +30,7 @@ sha256sums=(
     "SKIP"
     "SKIP"
     "bcc15521e4c7f966a0192a1dabb7fb4935b33db39344ab5b861f9d81486f1362"
+    "SKIP"
     "SKIP"
 )
 
@@ -49,6 +51,9 @@ prepare() {
 
     # Исправление back buffers для d3d9
     patch -p1 -i "$srcdir"/fixLockRectd3d9.patch
+
+    # Работа с dxvk.conf в пользовательской директории
+    patch -p1 -i "$srcdir"/global-dxvk.conf.patch
 
     # By default export FLAGS used by proton and ignore makepkg
     # This overrides FLAGS from makepkg.conf, if you comment these you are on your own
