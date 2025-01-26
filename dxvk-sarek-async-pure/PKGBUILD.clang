@@ -14,7 +14,7 @@ source=(
     "git+https://github.com/pythonlover02/DXVK-Sarek.git#branch=1.10.x-Proton-Sarek-Async"
     "dxvk-extraopts.patch"
     "llvm.patch"
-    "fixLockRectd3d9"
+    "fixLockRectd3d9.patch"
     "global-dxvk.conf.patch"
 )
 sha256sums=(
