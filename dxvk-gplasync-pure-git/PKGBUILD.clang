@@ -25,7 +25,6 @@ source=(
     "global-dxvk.conf.patch"
     "llvm.patch"
     "fixLockRectd3d9.patch"
-)
 sha256sums=(
     "SKIP"
     "SKIP"
@@ -35,8 +34,8 @@ sha256sums=(
     "SKIP"
     "SKIP"
     "SKIP"
+    "SKIP"
 )
-
 
 pkgver() {
     cd dxvk
