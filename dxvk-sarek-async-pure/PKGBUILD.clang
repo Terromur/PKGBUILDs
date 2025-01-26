@@ -15,8 +15,10 @@ source=(
     "dxvk-extraopts.patch"
     "llvm.patch"
     "fixLockRectd3d9"
+    "global-dxvk.conf.patch"
 )
 sha256sums=(
+    "SKIP"
     "SKIP"
     "SKIP"
     "SKIP"
