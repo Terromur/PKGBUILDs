@@ -80,11 +80,6 @@
 Был добавлен wayland-git:
 - Оптимизация и отключение лишних параметров
 
-Был добавлен dxvk-gplasync-pure-git:
-- Все теже изменения, которые есть в dxvk-pure-git
-- Прочитать README.md в директории
-- Сборка только с gcc! 
-
 Был добавлен dxvk-sarek-async-pure и dxvk-sarek-pure:
 - Все теже изменения, которые есть в dxvk-pure-git
 - Сборка только с gcc! 
