@@ -43,6 +43,9 @@ prepare() {
     # Исправление back buffers для d3d9
     patch -p1 -i "$srcdir"/fixLockRectd3d9.patch
 
+    # Работа с dxvk.conf в пользовательской директории
+    patch -p1 -i "$srcdir"/global-dxvk.conf.patch
+
     # By default export FLAGS used by proton and ignore makepkg
     # This overrides FLAGS from makepkg.conf, if you comment these you are on your own
     # If you want the "best" possible optimizations for your system you can use
