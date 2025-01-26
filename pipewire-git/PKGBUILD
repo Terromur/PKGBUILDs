@@ -123,7 +123,7 @@ build() {
     -D b_pie=false
     -D b_lundef=false
     -D optimization=3
-    -D audiomixer=enabled
+    -D audiomixer=disabled
     -D tests=disabled
     -D errorlogs=false
     -D stdsplit=false
