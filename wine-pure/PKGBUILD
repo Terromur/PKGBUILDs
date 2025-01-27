@@ -19,8 +19,10 @@ source=(
   wineserver-enable-link-time-optimization.patch
   msvcrt_nativebuiltin.patch
   7064.patch
+  explorer-prefer-wayland-over-x11-by-default.patch
 )
 sha512sums=(
+  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -117,6 +119,9 @@ prepare() {
   # Fixes crashes in many games in new WoW64 mode
   # https://bugs.winehq.org/show_bug.cgi?id=57444
   patch -Np1 -i "${srcdir}/7064.patch"
+
+  # Prefer Wayland over X11 by default
+  patch -Np1 -i "${srcdir}/explorer-prefer-wayland-over-x11-by-default.patch"
   
 local osu_patches_dir="${srcdir}/wine-osu-patches"
 if [ -d "${osu_patches_dir}" ]; then
