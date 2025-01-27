@@ -1,2 +1,2 @@
-- Здесь включён gplasync, можете ознакомиться здесь: https://gitlab.com/Ph42oN/dxvk-gplasync
+- Здесь добавлен патч на gplasync, можете ознакомиться здесь: https://gitlab.com/Ph42oN/dxvk-gplasync
 - А так же я предоставил dxvk.conf, если хотите ознакомиться с параметрами, которые вы можете раскомментировать и переместить в путь ~/.config/dxvk.conf
