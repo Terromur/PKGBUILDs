@@ -1,0 +1,54 @@
+Subject: [PATCH] Add disable-suspension.conf to wireplumber configuration
+---
+ src/config/wireplumber.conf.d/disable-suspension.conf | 27 +++++++++++++++++++
+ 1 file changed, 27 insertions(+)
+ create mode 100644 src/config/wireplumber.conf.d/disable-suspension.conf
+
+diff --git a/src/config/wireplumber.conf.d/disable-suspension.conf b/src/config/wireplumber.conf.d/disable-suspension.conf
+new file mode 100644
+index 0000000..abcdef1
+--- /dev/null
++++ b/src/config/wireplumber.conf.d/disable-suspension.conf
+@@ -0,0 +1,27 @@
++monitor.alsa.rules = [
++  {
++    matches = [
++      {
++        # Matches all sources
++        node.name = "~alsa_input.*"
++      },
++      {
++        # Matches all sinks
++        node.name = "~alsa_output.*"
++      }
++    ]
++    actions = {
++      update-props = {
++        session.suspend-timeout-seconds = 0
++      }
++    }
++  }
++]
++
++# bluetooth devices
++monitor.bluez.rules = [
++  {
++    matches = [
++      {
++        # Matches all sources
++        node.name = "~bluez_input.*"
++      },
++      {
++        # Matches all sinks
++        node.name = "~bluez_output.*"
++      }
++    ]
++    actions = {
++      update-props = {
++        session.suspend-timeout-seconds = 0
++      }
++    }
++  }
++]
+--
+2.30.2
