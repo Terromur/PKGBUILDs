@@ -126,10 +126,12 @@ if [ -d "${osu_patches_dir}" ]; then
     -type f \
     -name "*.patch" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/*" \
+    -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/*" \
     -not -path "${osu_patches_dir}/0006-proton-esync-fsync/*" \
     -not -path "${osu_patches_dir}/0007-ntsync/*" \
     -not -path "${osu_patches_dir}/0013-server-optimization/*" \
     -not -path "${osu_patches_dir}/9000-misc-additions/gecko-mono-skip-default-envvar.patch" \
+    -not -path "${osu_patches_dir}/9999-nowow64/*" \
     -print0 | sort -z)
 fi
 }
