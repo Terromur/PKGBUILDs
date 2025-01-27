@@ -6,11 +6,12 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-staging-ntsync-pure-git
-pkgver=10.0rc5.r0.gf6bf4993448
+pkgver=10.0.r127.g1f23d893483
 pkgrel=1
 source=(
   "git+https://gitlab.winehq.org/wine/wine.git"
   "git+https://gitlab.winehq.org/wine/wine-staging.git"
+  "git+https://github.com/whrvt/wine-osu-patches.git#tag=01-21-2025-b0738596-d0d5fef5"
   30-win32-aliases.conf
   wine-binfmt.conf
   ntsync-v7-10.0-rc1-staging.patch
@@ -19,6 +20,7 @@ source=(
   7064.patch
 )
 sha512sums=(
+  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -113,6 +115,19 @@ prepare() {
   # Fixes crashes in many games in new WoW64 mode
   # https://bugs.winehq.org/show_bug.cgi?id=57444
   patch -Np1 -i "${srcdir}/7064.patch"
+  
+  local osu_patches_dir="${srcdir}/wine-osu-patches"
+  if [ -d "${osu_patches_dir}" ]; then
+    while IFS= read -r -d '' patch; do
+      msg2 "Applying osu! patch: ${patch#${osu_patches_dir}/}"
+      patch -Np1 < "$patch"
+    done < <(find "${osu_patches_dir}" \
+      -type f \
+      -name "*.patch" \
+      -not -patch "*/6933-wined3d-FFP-HLSL-shaders-part-3-3/0001-wined3d-Feed-WINED3D-RS-POINTSIZE-through-a-push-constant-buffer.patch" \ 
+      -not -patch "*/6933-wined3d-FFP-HLSL-shaders-part-3-3/0002-wined3d-Implement-point-size-in-the-HLSL-FFP-pipeline.patch" \
+      -print0 | sort -z)
+  fi
 }
 
 
