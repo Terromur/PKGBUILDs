@@ -27,8 +27,9 @@ makedepends=(
   systemd
 )
 checkdepends=(pipewire-audio)
-source=("git+https://gitlab.freedesktop.org/pipewire/$pkgbase.git")
-b2sums=('SKIP')
+source=("git+https://gitlab.freedesktop.org/pipewire/$pkgbase.git"
+disable-suspension.patch)
+b2sums=('SKIP' 'SKIP')
 
 pkgver() {
   cd $pkgbase
@@ -37,6 +38,9 @@ pkgver() {
 
 prepare() {
   cd $pkgbase
+
+  # Отключение времени ожидания
+  patch -p1 -i "$srcdir"/disable-suspension.patch
 }
 
 build() {
