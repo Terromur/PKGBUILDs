@@ -117,18 +117,21 @@ prepare() {
   # https://bugs.winehq.org/show_bug.cgi?id=57444
   patch -Np1 -i "${srcdir}/7064.patch"
   
-  local osu_patches_dir="${srcdir}/wine-osu-patches"
-  if [ -d "${osu_patches_dir}" ]; then
-    while IFS= read -r -d '' patch; do
-      msg2 "Applying osu! patch: ${patch#${osu_patches_dir}/}"
-      patch -Np1 < "$patch"
-    done < <(find "${osu_patches_dir}" \
-      -type f \
-      -name "*.patch" \
-      -not -patch "*/6933-wined3d-FFP-HLSL-shaders-part-3-3/0001-wined3d-Feed-WINED3D-RS-POINTSIZE-through-a-push-constant-buffer.patch" \ 
-      -not -patch "*/6933-wined3d-FFP-HLSL-shaders-part-3-3/0002-wined3d-Implement-point-size-in-the-HLSL-FFP-pipeline.patch" \
-      -print0 | sort -z)
-  fi
+local osu_patches_dir="${srcdir}/wine-osu-patches"
+if [ -d "${osu_patches_dir}" ]; then
+  while IFS= read -r -d '' patch; do
+    msg2 "Applying wine-osu-patches: ${patch#${osu_patches_dir}/}"
+    patch -Np1 < "$patch"
+  done < <(find "${osu_patches_dir}" \
+    -type f \
+    -name "*.patch" \
+    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/*" \
+    -not -path "${osu_patches_dir}/0006-proton-esync-fsync/*" \
+    -not -path "${osu_patches_dir}/0007-ntsync/*" \
+    -not -path "${osu_patches_dir}/0013-server-optimization/*" \
+    -not -path "${osu_patches_dir}/9000-misc-additions/gecko-mono-skip-default-envvar.patch" \
+    -print0 | sort -z)
+fi
 }
 
 
