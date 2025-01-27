@@ -132,7 +132,7 @@ if [ -d "${osu_patches_dir}" ]; then
     -type f \
     -name "*.patch" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/*" \
-    -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/*" \
+    -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/ps0250-p0003-server-Allow-skipping-debug-handle-retrieval.patch" \
     -not -path "${osu_patches_dir}/0006-proton-esync-fsync/*" \
     -not -path "${osu_patches_dir}/0007-ntsync/*" \
     -not -path "${osu_patches_dir}/0009-windowing-system-integration/*" \
