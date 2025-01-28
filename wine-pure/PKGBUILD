@@ -7,7 +7,7 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-staging-ntsync-pure-git
-pkgver=10.0.r127.g1f23d893483
+pkgver=10.0.r186.g534d696803f
 pkgrel=2
 source=(
   "git+https://gitlab.winehq.org/wine/wine.git"
