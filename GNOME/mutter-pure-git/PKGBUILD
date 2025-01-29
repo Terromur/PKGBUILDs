@@ -93,14 +93,14 @@ makedepends=(
 )
 source=(
   'git+https://gitlab.gnome.org/GNOME/mutter.git'
-  'git+https://gitlab.gnome.org/GNOME/gvdb.git#commit=b54bc5da25127ef416858a3ad92e57159ff565b3'
+  'git+https://gitlab.gnome.org/GNOME/gvdb.git#commit=2b42fc75f09dbe1cd1057580b5782b08f2dcb400'
   'mutter_increase_check_alive_timeout.patch'
   'disable-xwayland-core.patch'
   '3797.patch'
 )
 b2sums=(
   'SKIP'
-  'f989bc2ceb52aad3c6a23c439df3bbc672bc11d561a247d19971d30cc85ed5d42295de40f8e55b13404ed32aa44f12307c9f5b470f2e288d1c9c8329255c43bf'
+  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
