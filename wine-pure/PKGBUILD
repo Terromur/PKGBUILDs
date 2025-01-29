@@ -136,6 +136,7 @@ if [ -d "${osu_patches_dir}" ]; then
     -not -path "${osu_patches_dir}/0006-proton-esync-fsync/*" \
     -not -path "${osu_patches_dir}/0007-ntsync/*" \
     -not -path "${osu_patches_dir}/0009-windowing-system-integration/0004-proton/0014-winex11.drv-Pass-XEvent-instead-of-XClientMessageEve.patch" \
+    -not -path "${osu_patches_dir}/0009-windowing-system-integration/0001-misc/bossbug.patch" \
     -not -path "${osu_patches_dir}/0012-audio/0006-alsa-pulse-mmdevapi-Support-custom-period-and-buffer-sizes.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/*" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/1001-ntdll-Add-__wine_get_tsc_calibration-internal-functi.patch" \
