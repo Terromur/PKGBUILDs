@@ -1,0 +1,63 @@
+diff --git a/include/config/rcxml.h b/include/config/rcxml.h
+index 84757386..b0740c7a 100644
+--- a/include/config/rcxml.h
++++ b/include/config/rcxml.h
+@@ -37,6 +37,7 @@ enum tearing_mode {
+ 	LAB_TEARING_ENABLED,
+ 	LAB_TEARING_FULLSCREEN,
+ 	LAB_TEARING_FULLSCREEN_FORCED,
++	LAB_TEARING_ALWAYS,
+ };
+ 
+ enum tiling_events_mode {
+diff --git a/src/config/rcxml.c b/src/config/rcxml.c
+index f3f04db8..d0832140 100644
+--- a/src/config/rcxml.c
++++ b/src/config/rcxml.c
+@@ -960,6 +960,8 @@ set_tearing_mode(const char *str, enum tearing_mode *variable)
+ 		*variable = LAB_TEARING_FULLSCREEN;
+ 	} else if (!strcasecmp(str, "fullscreenForced")) {
+ 		*variable = LAB_TEARING_FULLSCREEN_FORCED;
++	} else if (!strcasecmp(str, "always")) {
++                *variable = LAB_TEARING_ALWAYS;
+ 	} else if (parse_bool(str, -1) == 1) {
+ 		*variable = LAB_TEARING_ENABLED;
+ 	} else {
+@@ -1468,7 +1470,7 @@ rcxml_init(void)
+ 
+ 	rc.gap = 0;
+ 	rc.adaptive_sync = LAB_ADAPTIVE_SYNC_DISABLED;
+-	rc.allow_tearing = false;
++	rc.allow_tearing = LAB_TEARING_DISABLED;
+ 	rc.auto_enable_outputs = true;
+ 	rc.reuse_output_mode = false;
+ 
+diff --git a/src/output.c b/src/output.c
+index 22105254..56a3d6af 100644
+--- a/src/output.c
++++ b/src/output.c
+@@ -51,7 +51,7 @@ output_get_tearing_allowance(struct output *output)
+ 	}
+ 
+ 	/* allow tearing for any window when requested or forced */
+-	if (rc.allow_tearing == LAB_TEARING_ENABLED) {
++	if (rc.allow_tearing == LAB_TEARING_ENABLED || rc.allow_tearing == LAB_TEARING_ALWAYS) {
+ 		if (view->force_tearing == LAB_STATE_UNSPECIFIED) {
+ 			return view->tearing_hint;
+ 		} else {
+diff --git a/src/view.c b/src/view.c
+index 344bc05b..fd95f057 100644
+--- a/src/view.c
++++ b/src/view.c
+@@ -2493,6 +2493,10 @@ view_init(struct view *view)
+ 	wl_signal_init(&view->events.minimized);
+ 	wl_signal_init(&view->events.fullscreened);
+ 	wl_signal_init(&view->events.activated);
++
++        if (rc.allow_tearing == LAB_TEARING_ALWAYS) {
++               view->force_tearing = LAB_STATE_ENABLED;
++       }
+ }
+ 
+ void
+
