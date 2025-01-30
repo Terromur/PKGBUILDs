@@ -56,7 +56,6 @@ build() {
           -D stdsplit=false \
           -D bluez=disabled \
           -D build-docs=disabled \
-          -D pulse=disabled
           )
 	arch-meson build "${meson_options[@]}"
   meson compile -C build 
