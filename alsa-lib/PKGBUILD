@@ -1,0 +1,55 @@
+# Maintainer: Terromur <terromuroz@proton.me>
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: judd <jvinet@zeroflux.org>
+
+pkgname=alsa-lib
+pkgver=1.2.13
+pkgrel=3.1
+pkgdesc="An alternative implementation of Linux sound support"
+arch=(x86_64)
+url="https://www.alsa-project.org"
+license=(LGPL2.1)
+depends=(
+  alsa-topology-conf
+  alsa-ucm-conf
+  glibc
+)
+provides=(
+  libasound.so
+  libatopology.so
+)
+install=$pkgname.install
+source=(https://www.alsa-project.org/files/pub/lib/$pkgname-$pkgver.tar.bz2
+alsa-lib-1.2.3.1-config.patch
+alsa-lib-1.2.10-glibc-open.patch
+alsa-git.patch)
+sha512sums=('SKIP' 'SKIP' 'SKIP' 'SKIP')
+b2sums=('SKIP' 'SKIP' 'SKIP' 'SKIP')
+
+prepare() {
+  cd $pkgname-$pkgver
+  autoreconf -fiv
+  patch -Np1 -i ../alsa-lib-1.2.3.1-config.patch
+  patch -Np1 -i ../alsa-lib-1.2.10-glibc-open.patch
+  patch -Np1 -i ../alsa-git.patch
+}
+
+build() {
+  # -flto=auto is not supported: https://github.com/alsa-project/alsa-lib/issues/110
+  #CFLAGS+=" -flto-partition=none"
+  cd $pkgname-$pkgver
+  ./configure --prefix=/usr --without-debug
+  # prevent excessive overlinking due to libtool
+  #sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+check() {
+  export LD_LIBRARY_PATH="$pkgname-$pkgver/src/.libs/:$LD_LIBRARY_PATH"
+  make -k check -C $pkgname-$pkgver
+}
+
+package() {
+  make DESTDIR="$pkgdir" install -C $pkgname-$pkgver
+  install -vDm 644 $pkgname-$pkgver/{MEMORY-LEAK,TODO,NOTES,ChangeLog,doc/asoundrc.txt} -t "$pkgdir/usr/share/doc/$pkgname/"
+}
