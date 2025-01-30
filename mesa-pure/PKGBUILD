@@ -8,8 +8,8 @@
 # Contributor: Andreas Radke <andyrtr@archlinux.org>
 
 pkgname=mesa-pure
-pkgver=24.3.3
-pkgrel=3
+pkgver=24.3.4
+pkgrel=1
 epoch=1
 pkgdesc="A purely personal Mesa build"
 url="https://www.mesa3d.org/"
@@ -91,7 +91,7 @@ source=(
   valve.patch
 )
 sha256sums=(
-  'ad9f5f3a6d2169e4786254ee6eb5062f746d11b826739291205d360f1f3ff716'
+  'e641ae27191d387599219694560d221b7feaa91c900bcec46bf444218ed66025'
   'SKIP'
   'SKIP'
   'SKIP'
