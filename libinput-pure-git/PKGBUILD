@@ -1,0 +1,71 @@
+# Maintainer: Terromur <terromuroz@proton.me>
+# Maintainer: Vincent Grande <shoober420@gmail.com>
+# Contributor: Andreas Radke <andyrtr@archlinux.org>
+# Contributor: Jan de Groot
+
+pkgname=libinput-git
+pkgver=1.27.1.r35.g3f4abaf7
+pkgrel=1
+pkgdesc="Input device management and event handling library"
+url="https://www.freedesktop.org/wiki/Software/libinput/"
+arch=(x86_64)
+license=(MIT)
+depends=('mtdev' 'systemd' 'libevdev' 'libwacom' 'systemd-libs' 'glibc')
+# upstream doesn't recommend building docs
+makedepends=('gtk4' 'meson' 'wayland-protocols' 'check')
+provides=('libinput')
+conflicts=('libinput')
+checkdepends=('python-pytest')
+optdepends=('gtk4: libinput debug-gui'
+            'python-pyudev: libinput measure'
+            'python-libevdev: libinput measure'
+            'python-yaml: used by various tools')
+source=(git+https://gitlab.freedesktop.org/libinput/libinput
+kill-env.diff)
+sha512sums=('SKIP' 'SKIP')
+validpgpkeys=('SKIP') # Peter Hutterer (Who-T) <office@who-t.net>
+
+pkgver() {
+	cd libinput
+	git describe --long | sed -r 's/([^-]*-g)/r\1/;s/-/./g'
+}
+
+prepare() {
+  cd libinput
+  
+  patch -Np1 -i ../kill-env.diff
+}
+
+build() {
+  arch-meson libinput build \
+    -Dudev-dir=/usr/lib/udev \
+    -Dtests=false \
+    -D b_ndebug=true \
+    -D b_pie=false \
+    -D c_std=gnu23 \
+    -D build.c_std=gnu23 \
+    -D build.cpp_std=gnu++23 \
+    -D cpp_std=gnu++23 \
+    -D python.bytecompile=2 \
+    -D errorlogs=false \
+    -D stdsplit=false \
+    -D debug-gui=false \
+    -D optimization=3 \
+    -D strip=true \
+    -D b_lto=true \
+    --buildtype=release \
+    --wrap-mode=nofallback \
+    -Ddocumentation=false
+  ninja $NINJAFLAGS -C build
+}
+
+#check() {
+#  meson test -C build --print-errorlogs
+#}
+
+package() {
+  DESTDIR="$pkgdir" ninja $NINJAFLAGS -C build install
+
+  install -Dvm644 libinput/COPYING \
+    "$pkgdir/usr/share/licenses/libinput/LICENSE"
+}
