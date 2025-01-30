@@ -1,0 +1,68 @@
+#Maintainer: Terromur <terromuroz@proton.me>
+
+pkgname=sfwbar-git
+_pkgname=sfwbar
+pkgver=r1802.3896035
+pkgrel=1
+
+pkgdesc='S* Floating Window taskBar, git version'
+arch=('x86_64' 'aarch64')
+url='https://github.com/LBCrion/sfwbar'
+license=('GPL3')
+depends=(
+    'wayland'
+    'gtk3'
+    'json-c'
+    'gtk-layer-shell'
+    'wayland-protocols'
+    )
+optdepends=(
+    'alsa-lib: ALSA audio volume control',
+    'libpulse: pulse audio volume control',
+    'libmpdclient: music player daemon control',
+    'libxkbcommon: xkb layout conversion support'
+    )
+makedepends=(
+    'meson'
+    'git'
+    )
+conflicts=('sfwbar')
+provides=('sfwbar')
+
+source=("${pkgname%-*}::git+https://github.com/LBCrion/sfwbar.git")
+md5sums=('SKIP')
+sha512sums=('SKIP')
+
+pkgver() {
+    cd "$_pkgname"
+    printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+build() {
+	cd "$_pkgname"
+    local meson_options=(
+	  --prefix=/usr \
+          --buildtype=release \
+          -D optimization=3 \
+          -D strip=true \
+          -D b_lto=true \
+          -D b_ndebug=true \
+          -D c_std=gnu23 \
+          -D build.c_std=gnu23 \
+          -D cpp_std=gnu++23 \
+          -D build.cpp_std=gnu++23 \
+          -D python.bytecompile=2 \
+          -D errorlogs=false \
+          -D stdsplit=false \
+          -D bluez=disabled \
+          -D build-docs=disabled \
+          -D pulse=disabled
+          )
+	arch-meson build "${meson_options[@]}"
+  meson compile -C build 
+}
+
+package() {
+    cd "$_pkgname"
+    DESTDIR="$pkgdir" ninja -C build install
+}
