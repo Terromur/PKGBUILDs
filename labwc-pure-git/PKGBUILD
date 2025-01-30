@@ -26,7 +26,8 @@ pkgver() {
 
 prepare() {
   cd "$_pkgname"
-  patch -Np1 -i ../always_tear.patch
+  #Включение тиринга(раскомментировать)
+  #patch -Np1 -i ../always_tear.patch
 }
 
 build() {
