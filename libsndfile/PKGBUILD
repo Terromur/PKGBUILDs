@@ -24,11 +24,13 @@ optdepends=('alsa-lib: for sndfile-play')
 provides=(libsndfile.so)
 source=(https://github.com/$pkgname/$pkgname/releases/download/$pkgver/$pkgname-$pkgver.tar.xz
         1.2.2-CVE-2022-33065.patch
-        CVE-2024-50612.patch)
-b2sums=('SKIP' 'SKIP' 'SKIP')
+        CVE-2024-50612.patch
+        libsndfile-1.2.2-stdbool.patch)
+b2sums=('SKIP' 'SKIP' 'SKIP' 'SKIP')
 prepare() {
   patch -d $pkgname-$pkgver -Np1 -i ../1.2.2-CVE-2022-33065.patch
   patch -d $pkgname-$pkgver -Np1 -i ../CVE-2024-50612.patch
+  patch -d $pkgname-$pkgver -Np1 -i ../libsndfile-1.2.2-stdbool.patch
 }
 
 build() {
