@@ -1,0 +1,185 @@
+# Maintainer: Terromur <terromuroz@proton.me>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Maintainer: Fabian Bornschein <fabiscafe@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+
+pkgbase=glib2
+pkgname=(
+  glib2
+  glib2-devel
+)
+pkgver=2.82.4
+pkgrel=3.1
+pkgdesc="Low level core library"
+url="https://gitlab.gnome.org/GNOME/glib"
+license=(LGPL-2.1-or-later)
+arch=(x86_64)
+depends=(
+  bash
+  glibc
+  libffi
+  libsysprof-capture
+  pcre2
+  util-linux-libs
+  zlib
+)
+makedepends=(
+  dbus
+  dconf
+  gettext
+  gi-docgen
+  git
+  gobject-introspection
+  libelf
+  meson
+  python
+  python-docutils
+  python-packaging
+  shared-mime-info
+  util-linux
+)
+checkdepends=(
+  desktop-file-utils
+  glib2
+)
+source=(
+  "git+https://gitlab.gnome.org/GNOME/glib.git#tag=$pkgver"
+  "git+https://gitlab.gnome.org/GNOME/gvdb.git"
+  0001-glib-compile-schemas-Remove-noisy-deprecation-warnin.patch
+  gio-querymodules.hook
+  glib-compile-schemas.hook
+  gdbus-codegen-version.patch
+)
+b2sums=('SKIP'
+        'SKIP'
+        'SKIP'
+        'SKIP'
+        'SKIP'
+        'SKIP')
+
+prepare() {
+  cd glib
+
+  # Drop dep on libatomic
+  # https://gitlab.archlinux.org/archlinux/packaging/packages/qemu/-/issues/6
+  git revert -n 4e6dc4dee0e1c6407113597180d9616b4f275f94
+
+  # Suppress noise from glib-compile-schemas.hook
+  git apply -3 ../0001-glib-compile-schemas-Remove-noisy-deprecation-warnin.patch
+  git apply -3 ../gdbus-codegen-version.patch
+  git submodule init
+  git submodule set-url subprojects/gvdb "$srcdir/gvdb"
+  git -c protocol.file.allow=always -c protocol.allow=never submodule update
+}
+
+
+build() {
+  local meson_options=(
+    --default-library both
+    -D glib_debug=disabled
+    -D dtrace=disabled
+    -D systemtap=disabled
+    -D glib_assert=false
+    -D glib_checks=false
+    -D documentation=false
+    -D introspection=enabled
+    -D man-pages=disabled
+    -D selinux=disabled
+    -D sysprof=enabled
+    -D man=false
+    -D gtk_doc=false
+    -D python.bytecompile=2
+    -D b_ndebug=true
+    -D b_pie=false
+    -D tests=false
+    -D b_ndebug=true
+    -D errorlogs=false
+    -D stdsplit=false
+    -D optimization=3
+    -D strip=true
+    -D b_lto=true
+    -D c_std=gnu23
+    -D build.c_std=gnu23
+    -D cpp_std=gnu++23
+    -D build.cpp_std=gnu++23
+    --buildtype=release
+  )
+
+  # Produce more debug info: GLib has a lot of useful macros
+  #CFLAGS+=" -g3"
+  #CXXFLAGS+=" -g3"
+
+  # use fat LTO objects for static libraries
+  #CFLAGS+=" -ffat-lto-objects"
+  #CXXFLAGS+=" -ffat-lto-objects"
+
+  arch-meson glib build "${meson_options[@]}"
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --no-suite flaky --no-suite slow --print-errorlogs
+}
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+package_glib2() {
+  depends+=(
+    libffi.so
+    libmount.so
+  )
+  provides+=(libg{lib,io,irepository,module,object,thread}-2.0.so)
+  optdepends=(
+    'dconf: GSettings storage backend'
+    'glib2-devel: development tools'
+    'gvfs: most gio functionality'
+  )
+  options=(staticlibs)
+
+  meson install -C build --destdir "$pkgdir"
+
+  install -Dt "$pkgdir/usr/share/libalpm/hooks" -m644 *.hook
+  touch "$pkgdir/usr/lib/gio/modules/.keep"
+
+  python -m compileall -d /usr/share/glib-2.0/codegen \
+    "$pkgdir/usr/share/glib-2.0/codegen"
+  python -O -m compileall -d /usr/share/glib-2.0/codegen \
+    "$pkgdir/usr/share/glib-2.0/codegen"
+
+  cd "$pkgdir"
+
+  # Split devel
+  _pick devel usr/bin/gdbus-codegen
+  _pick devel usr/bin/glib-{mkenums,genmarshal}
+  _pick devel usr/bin/gresource
+  _pick devel usr/bin/gtester{,-report}
+
+  _pick devel usr/share/gdb/
+  _pick devel usr/share/glib-2.0/gdb/
+  _pick devel usr/share/glib-2.0/codegen/
+
+  _pick devel usr/share/bash-completion/completions/gresource
+
+}
+
+package_glib2-devel() {
+  pkgdesc+=" - development files"
+  depends=(
+    glib2
+    glibc
+    libelf
+    python
+    python-packaging
+  )
+  mv devel/* "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:
