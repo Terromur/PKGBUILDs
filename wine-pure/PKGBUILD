@@ -148,7 +148,7 @@ if [ -d "${osu_patches_dir}" ]; then
     -not -path "${osu_patches_dir}/0013-server-optimization/0005-writewatches/0004-ntdll-HACK-Add-WINE_RAM_REPORTING_BIAS-option.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0007-priority/0002-server-Fallback-to-RTKIT-for-thread-priorities.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0008-shm-opts/ps3000-win32u-Avoid-calling-server-in-NtUserGetKeyState.patch" \
-    -not -path "${osu_patches_dir}/0015-bernhard-asan/0034-kernel32-tests-locale-lstrlenW-wcsnlen-wine_dbgstr_w.patch" \
+    -not -path "${osu_patches_dir}/0015-bernhard-asan/*" \
     -not -path "${osu_patches_dir}/9000-misc-additions/gecko-mono-skip-default-envvar.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/wineserver-debug_level-unlikely.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/winebus-Fake-load-driver-if-EnableWinebus-isn-t-set-.patch" \
