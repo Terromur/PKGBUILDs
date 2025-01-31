@@ -67,6 +67,7 @@ makedepends=(autoconf bison perl flex mingw-w64-gcc git
   vulkan-headers
   vulkan-icd-loader
   ntsync-header
+  nasm
 )
 optdepends=(
   alsa-lib
