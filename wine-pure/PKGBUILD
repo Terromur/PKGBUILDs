@@ -123,6 +123,9 @@ prepare() {
 
   # Prefer Wayland over X11 by default
   patch -Np1 -i "${srcdir}/explorer-prefer-wayland-over-x11-by-default.patch"
+
+  # Если вам не нужен opengl рендер, вы можете добавить ещё одну строку выше 9000-misc-additions
+  # -not -path "${osu_patches_dir}/0015-bernhard-asan/0034-kernel32-tests-locale-lstrlenW-wcsnlen-wine_dbgstr_w.patch" \
   
 local osu_patches_dir="${srcdir}/wine-osu-patches"
 if [ -d "${osu_patches_dir}" ]; then
