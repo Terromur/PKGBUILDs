@@ -34,6 +34,7 @@ makedepends=(
   git
   jdk17-openjdk
   scdoc
+  ninja
 )
 optdepends=(
   'glfw: to use system GLFW libraries'
