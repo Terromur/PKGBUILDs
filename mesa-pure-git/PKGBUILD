@@ -83,7 +83,6 @@ options=(
 source=(
   "mesa::git+https://gitlab.freedesktop.org/mesa/mesa.git#branch=main"
   100.patch
-  28973.patch
   30720.patch
   32726.patch
   gnome-shell-glthread-disable.patch
@@ -91,7 +90,6 @@ source=(
   valve.patch
 )
 sha256sums=(
-  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
