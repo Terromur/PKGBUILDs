@@ -173,7 +173,6 @@ build() {
     -D video-codecs=all
     -D vulkan-drivers=amd
     -D vulkan-layers=device-select,overlay
-    -D llvm=disabled
     -D vulkan-beta=true
     -D python.bytecompile=2
     -D strip=true
