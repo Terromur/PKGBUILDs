@@ -146,7 +146,7 @@ build() {
     -D b_pch=false
     --buildtype=release
     -D b_ndebug=true
-    -D gallium-drivers=radeonsi,zink
+    -D gallium-drivers=radeonsi
     -D gallium-extra-hud=false
     -D gallium-nine=false
     -D gallium-opencl=disabled
@@ -165,7 +165,6 @@ build() {
     -D video-codecs=all
     -D vulkan-drivers=amd
     -D vulkan-layers=device-select,overlay
-    -D llvm=disabled
     -D vulkan-beta=true
     -D python.bytecompile=2
     -D strip=true
