@@ -7,7 +7,7 @@
 # Contributor: Andreas Radke <andyrtr@archlinux.org>
 
 pkgname=mesa-pure-git
-pkgver=25.1.0_devel.201553.c5cad407f8d.7090c94
+pkgver=25.1.0_devel.201565.6b2b74a894d.a5d22b0
 pkgrel=1
 pkgdesc="A purely personal Mesa build, git version"
 url="https://www.mesa3d.org/"
@@ -89,8 +89,20 @@ source=(
   gnome-shell-glthread-disable.patch
   001-fix-amd-crash.patch
   valve.patch
+  intel_anv_fix_wayland.patch
+  fix-mpeg1_2-decode-mesa-20.2.patch
+  intel-genxml-add.patch
+  lavapipe.patch
+  drirc-disable-rgb10-for-chromium-on-amd.patch
+  no_error_int_conversion.patch
 )
 sha256sums=(
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
