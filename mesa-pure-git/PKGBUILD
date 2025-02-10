@@ -7,7 +7,7 @@
 # Contributor: Andreas Radke <andyrtr@archlinux.org>
 
 pkgname=mesa-pure-git
-pkgver=25.0.0_devel.199925.f09f31d0932.b79bfb4
+pkgver=25.1.0_devel.201553.c5cad407f8d.7090c94
 pkgrel=1
 pkgdesc="A purely personal Mesa build, git version"
 url="https://www.mesa3d.org/"
@@ -82,14 +82,16 @@ options=(
 )
 source=(
   "mesa::git+https://gitlab.freedesktop.org/mesa/mesa.git#branch=main"
-  100.patch
   30720.patch
-  32726.patch
+  31658.patch
+  33415.patch
+  33455.patch
   gnome-shell-glthread-disable.patch
   001-fix-amd-crash.patch
   valve.patch
 )
 sha256sums=(
+  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
