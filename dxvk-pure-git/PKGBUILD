@@ -121,7 +121,8 @@ build() {
         --prefix "/usr/share/dxvk/x64" \
         --bindir "" --libdir "" \
         --buildtype "release" \
-        --strip
+        --strip \
+        -Db_lto=true
     ninja -C "build/x64" -v
 
     meson setup dxvk "build/x32" \
@@ -129,7 +130,8 @@ build() {
         --prefix "/usr/share/dxvk/x32" \
         --bindir "" --libdir "" \
         --buildtype "release" \
-        --strip
+        --strip \
+        -Db_lto=true
     ninja -C "build/x32" -v
 }
 
