@@ -30,7 +30,7 @@ sha256sums=('SKIP'
             '88acf97cbc8e0fe745f09bd0bd7f65e0437adcb549dadf3588fd0724d01298e9'
             'SKIP')
 prepare() {
-  cd mpv-pure
+  cd mpv
   patch -Np1 -i ../avoid-shader-cache-flushes.patch
 }
 
