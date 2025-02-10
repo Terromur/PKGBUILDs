@@ -10,8 +10,8 @@
 # Contributor: Ben <ben@benmazer.net>
 
 pkgname=mpd
-pkgver=0.23.16
-pkgrel=4
+pkgver=0.23.17
+pkgrel=2
 pkgdesc="Flexible, powerful, server-side application for playing music"
 arch=(x86_64)
 url="https://www.musicpd.org/"
@@ -30,7 +30,7 @@ depends=(
   libmms
   libmodplug
   libmpcdec
-  libnfs
+  # libnfs
   libshout
   libsidplayfp
   libsoxr
@@ -89,48 +89,27 @@ source=(
   $pkgname.sysusers
   $pkgname.tmpfiles
   $pkgname.service.override
-  fmt-11-a42da90042e5b9d956dbdd4145176524057c8e4b.patch
-  fmt-11.1-0001-lib-fmt-drop-use-of-FMT_STRING.patch
-  fmt-11.1-0002-lib-fmt-remove-the-rest-of-the-broken-use-of-FMT_STR.patch
-  0.23.16-libnfs-6.patch
   sndfile.patch
 )
-sha512sums=('87189e476a562e4e9f28596b221151260c9c42d6abc7198fce0eb2f7e670bd346282609bd196e4dd8179d1216e2c7ea5cf4d50b1eef459d54782089dec5c9888'
+sha512sums=('6c156fd543f426dd7927dac4871d0fc00c3766e55447a800c1987a9a0652384bfddad56aaff8c5a4c3c9ac5e537492dbc67b64a7f493f9b85c17145f901f5c1c'
             '25a823740d92da8e186916701413114142eb6ad91a172c592e68b569c8e4f50fa99580e555ccf6cd31fc4f55a09bfe0278efa46e4e76ee0fe02846292fadf3c1'
             'd66c1d771160ee1781a05e57f383acc466babb29924c07d83ac0e763c14380dd1f279ba7b4aec508dc70245370d9732b4bc6287df1a2e06a920f3b73551d3032'
             'db473db27cd68994c3ee26e78e0fb34d13126301d8861563dcc12a22d62ecb14c4ffb1e0798c6aaccdff34e73bae3fbeeff7b42606c901a2d35e278865cdf35d'
             'c1782b82f9db1d30aece43a07230c5d57370f2494a16e108af03815d83968805472f10f53ea5495cf0e08ff8f245430c3c3bc44025af43aaf9ecd12fcd6afc6c'
-            '776e462e3b67a75455819b1db003bb1ac409201185f09658aa8134451574eb13e566c26c960a5d28efede0200a4568a05043255242af20a7cdd8b22bfc4e9e57'
-            'e77b49680c052ed3963987933f9f3211f85078f543e7ee8b812cf46fd9ce5a58261543238e2c9452d4179f0fb49b02cfbfbbd916f942c790b7bd45644df3757c'
-            '35408ae49b2b8c114e2085cfd019662124797faf1b498a01fab28f0744f55daf7d79ae32aac4b51c035d3419452af8fedca2b425b0fa8bfe9ab0ca8a31949fef'
-            '55fda5b9840883779c051c78d02c8510a26fd631d7e360422c4a63c21be524493d8fc4ea6a88bd5a2f12beddbfb1e0f3a655242373e7f04e676ebe8692553be6'
             'SKIP')
-b2sums=('4bd65dfc3ee06377330c6364cf51dfc5c4d470153d6d297afcf297ce3c487fd07e8bbfeb0d4f3530021897ee4accbdb7906d96712cd9a09ac47efcb9d27258c4'
+b2sums=('25365047cd8238fbcd2adc0cf4ae28c1403810b55939bf106f0139e75341c065c788f288eebfffe515264150ba5410bf25cf98ae03514f0d3038ae95fb451e83'
         '0969a3c477b6a3f34b44e067e515d7f306414dd14e0163584417b9d071e3cc825898219f7ff66ead7905b15429b8411304052d3b2b14a72e560bfabf9bf0adcf'
         '814c2314de6040e895657a8c8d62f11bc38c224a3c0ef5cbf280c0e141c80f04b0ac5026be06fd5dc4a4b764f3d91ab46f365da0a7bd466abc3aed02b0612165'
         'd7b587c25dd5830c27af475a8fdd8102139d7c8fdd6f04fe23b36be030e4411582e289f575c299255ff8183096f7d47247327276f9a24641cbd032d9675b837a'
         '753664445d7d5cc0b36f51ac66549beea403b9731cbcb81b0a782974a0a73d90559ba93e6afcaa470b6f2f5a844c09ef695bdf3b1e6dfee97aa080f41b7fe513'
-        '062a43808decd5351b4ec8af5cdc7ec97e50e681587170323106fce2c2188f4b7d1ca6b155d41374a44c002cd4071afb4c125e2429ced5124e6ef99307cf1b3d'
-        'ed2634b1a33769006f323f1bde4f395ddb16102e03f55d4c561c4f872e41c60ef1d41fcfaea5b0fad036d1b89cf120a2e0137d851b35196a1fdb85849374cd8a'
-        '7bb3e3e099e1c9eb3624691d3dcbbdc22727a327fc45991a2401616a875cf98dffdea80cd1529b9d85ed36accd6ec8d0b0b208992c6ce1f03492e652457eff78'
-        '63f11916a396bbe9c98f556b348e382bc93e458d180f22ec76b054ec6151ff8ead78ee2f9ae5e4b9715e6bcd68e1ab4a2d75349a7b52131957e405f244b4ee34'
         'SKIP')
 validpgpkeys=('0392335A78083894A4301C43236E8A58C6DB4512') # Max Kellermann <max@blarg.de>
 
 
 
+
 prepare() {
   cd $pkgname
-
-  # fmt 11 changes
-  git apply -3 ../fmt-11-a42da90042e5b9d956dbdd4145176524057c8e4b.patch
-  # Support fmt 11.1
-  # https://github.com/MusicPlayerDaemon/MPD/pull/2181
-  git apply -3 ../fmt-11.1-0001-lib-fmt-drop-use-of-FMT_STRING.patch
-  git apply -3 ../fmt-11.1-0002-lib-fmt-remove-the-rest-of-the-broken-use-of-FMT_STR.patch
-  # libnfs 6 patch from homebrew
-  # https://github.com/Homebrew/homebrew-core/pull/200785
-  git apply -3 ../0.23.16-libnfs-6.patch
   patch -Np1 -i ../sndfile.patch
 }
 
@@ -144,6 +123,7 @@ build() {
     -D audiofile=disabled
     -D sndio=disabled
     -D shine=disabled
+    -D nfs=disabled
     -D tremor=disabled
     -D openmpt=disabled
     -D b_ndebug=false
