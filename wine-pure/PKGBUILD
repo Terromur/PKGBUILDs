@@ -176,7 +176,7 @@ if [ -d "${osu_patches_dir}" ]; then
     -not -path "${osu_patches_dir}/0009-windowing-system-integration/0004-proton/0018-HACK-winex11.drv-Let-the-WM-focus-our-windows-by-def.patch" \
     -not -path "${osu_patches_dir}/0009-windowing-system-integration/0004-proton/0020-winex11.drv-Recognize-the-keyboard-in-a-locale-indep.patch" \
     -not -path "${osu_patches_dir}/0009-windowing-system-integration/0004-proton/0014-winex11.drv-Pass-XEvent-instead-of-XClientMessageEve.patch" \
-    -not -path "${osu_patches_dir}/0012-audio/0005-alsa-pulse-mmdevapi-Support-custom-period-and-buffer-sizes.patch" \
+    -not -path "${osu_patches_dir}/0012-audio/0006-alsa-pulse-mmdevapi-Support-custom-period-and-buffer-sizes.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/*" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/1001-ntdll-Add-__wine_get_tsc_calibration-internal-functi.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/1002-wineboot-Use-__wine_get_tsc_calibration-for-TSC-cali.patch" \
@@ -184,7 +184,8 @@ if [ -d "${osu_patches_dir}" ]; then
     -not -path "${osu_patches_dir}/0013-server-optimization/0004-time-wait/0100-fsync-Remove-clock_gettime-v-syscall-from-get_wait_e.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0005-writewatches/0004-ntdll-HACK-Add-WINE_RAM_REPORTING_BIAS-option.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0007-priority/*" \
-    -not -path "${osu_patches_dir}/0015-bernhard-asan/*" \
+    -not -path "${osu_patches_dir}/0015-bernhard-asan/0082-winhttp-Do-not-overrun-buffer.patch" \
+    -not -path "${osu_patches_dir}/0015-bernhard-asan/0080-wined3d-Avoid-threads-for-now-still-fails.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/Avoid-winemenubuilder-to-startup-explorer.exe.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/wineserver-debug_level-unlikely.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/win32u-gdi32-Semi-stub-NtGdiGetDCDpiScaleValue.patch" \
