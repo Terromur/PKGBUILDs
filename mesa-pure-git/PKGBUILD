@@ -93,11 +93,9 @@ source=(
   fix-mpeg1_2-decode-mesa-20.2.patch
   intel-genxml-add.patch
   lavapipe.patch
-  drirc-disable-rgb10-for-chromium-on-amd.patch
   no_error_int_conversion.patch
 )
 sha256sums=(
-  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
