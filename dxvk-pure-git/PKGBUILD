@@ -25,6 +25,7 @@ source=(
     "global-dxvk.conf.patch"
     "be_less_picky.patch"
     "dxvk-gplasync-master.patch"
+    "update-spirv-version-to-1.6.patch"
 )
 sha256sums=(
     "SKIP"
@@ -32,6 +33,7 @@ sha256sums=(
     "SKIP"
     "SKIP"
     "bcc15521e4c7f966a0192a1dabb7fb4935b33db39344ab5b861f9d81486f1362"
+    "SKIP"
     "SKIP"
     "SKIP"
     "SKIP"
@@ -64,6 +66,9 @@ prepare() {
 
     # Добавление gplasync
     patch -p1 -i "$srcdir"/dxvk-gplasync-master.patch
+
+    # Обновление spirv
+    patch -p1 -i "$srcdir"/update-spirv-version-to-1.6.patch
 
     # By default export FLAGS used by proton and ignore makepkg
     # This overrides FLAGS from makepkg.conf, if you comment these you are on your own
