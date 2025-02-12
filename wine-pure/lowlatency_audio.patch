@@ -1,0 +1,35 @@
+diff --git a/dlls/winealsa.drv/alsa.c b/dlls/winealsa.drv/alsa.c
+index 046b447..c396c5e 100644
+--- a/dlls/winealsa.drv/alsa.c
++++ b/dlls/winealsa.drv/alsa.c
+@@ -82,10 +82,10 @@ struct alsa_stream
+     pthread_mutex_t lock;
+ };
+ 
+-#define EXTRA_SAFE_RT 40000
++#define EXTRA_SAFE_RT 4000
+ 
+-static const REFERENCE_TIME def_period = 100000;
+-static const REFERENCE_TIME min_period = 50000;
++static const REFERENCE_TIME def_period = 12000;
++static const REFERENCE_TIME min_period = 8000;
+ 
+ static const WCHAR drv_keyW[] = {'S','o','f','t','w','a','r','e','\\',
+     'W','i','n','e','\\','D','r','i','v','e','r','s','\\',
+@@ -2086,7 +2086,15 @@ static NTSTATUS alsa_get_mix_format(void *args)
+         goto exit;
+     }
+ 
+-    if(max_rate >= 48000)
++    if(max_rate >= 192000)
++        fmt->Format.nSamplesPerSec = 192000;
++    else if(max_rate >= 176400)
++        fmt->Format.nSamplesPerSec = 176400;
++    else if(max_rate >= 96000)
++        fmt->Format.nSamplesPerSec = 96000;
++    else if(max_rate >= 88200)
++        fmt->Format.nSamplesPerSec = 88200;
++    else if(max_rate >= 48000)
+         fmt->Format.nSamplesPerSec = 48000;
+     else if(max_rate >= 44100)
+         fmt->Format.nSamplesPerSec = 44100;
