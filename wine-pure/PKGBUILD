@@ -157,7 +157,6 @@ prepare() {
   ./dlls/winevulkan/make_vulkan
   ./tools/make_requests
   ./tools/make_specfiles
-  # Если вам не нужен opengl, то замените строку bernhard-asan на вот это -not -path "${osu_patches_dir}/0015-bernhard-asan/0082-winhttp-Do-not-overrun-buffer.patch" \
   local osu_patches_dir="${srcdir}/wine-osu-patches"
 if [ -d "${osu_patches_dir}" ]; then
   while IFS= read -r -d '' patch; do
