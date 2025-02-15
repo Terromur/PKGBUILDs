@@ -9,7 +9,7 @@ url="https://github.com/v3kt0r-87/Clang-Stable"
 license=('custom')
 depends=()
 provides=('llvm-mingw-w64-toolchain' 'mingw-w64-binutils' 'mingw-w64-crt' 'mingw-w64-gcc' 'mingw-w64-headers' 'mingw-w64-winpthreads')
-source=("https://github.com/v3kt0r-87/Clang-Stable/releases/download/llvm-mingw-20.0.1.0-RC1/llvm-migw-20.0.1.0-RC1.zip")
+source=("https://github.com/v3kt0r-87/Clang-Stable/releases/download/llvm-mingw-20.0.1.0-RC2/llvm-mingw-20.0.1.0-RC2.zip")
 sha256sums=('SKIP')
 options=(!strip)
 package() {
