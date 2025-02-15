@@ -129,8 +129,7 @@ prepare() {
   # apply wine-staging patchset (no Esync to prevent conflicts with NTSync)
   ../wine-staging/staging/patchinstall.py --backend=git-apply --all \
     -W server-Signal_Thread \
-    -W eventfd_synchronization \
-    -W ntdll-Syscall_Emulation
+    -W eventfd_synchronization
 
   # NTSync for Wine 10.1
   patch -Np1 -i "${srcdir}/ntsync-10.1-staging.patch"
@@ -204,6 +203,7 @@ if [ -d "${osu_patches_dir}" ]; then
     -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0322-p0011-loader-Switch-stack-if-the-old-stack-address.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0322-p0012-loader-Enable-dumping-additional-vectors-in-.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0322-p0013-loader-Enable-all-remap-logic-by-default.patch" \
+    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0741-flushprocesswritebuffers-luke1337.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/1001-ntdll-Add-__wine_get_tsc_calibration-internal-functi.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/9300-qpc-support-hardcode-with-old-kernel-check.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/1002-wineboot-Use-__wine_get_tsc_calibration-for-TSC-cali.patch" \
@@ -212,6 +212,7 @@ if [ -d "${osu_patches_dir}" ]; then
     -not -path "${osu_patches_dir}/0013-server-optimization/0007-priority/*" \
     -not -path "${osu_patches_dir}/0015-bernhard-asan/0080-wined3d-Avoid-threads-for-now-still-fails.patch" \
     -not -path "${osu_patches_dir}/0015-bernhard-asan/0082-winhttp-Do-not-overrun-buffer.patch" \
+    -not -path "${osu_patches_dir}/0015-bernhard-asan/0068-msi-Avoid-buffer-underflow-in-verify_format.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/600hz-default.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/Avoid-winemenubuilder-to-startup-explorer.exe.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/wineserver-debug_level-unlikely.patch" \
