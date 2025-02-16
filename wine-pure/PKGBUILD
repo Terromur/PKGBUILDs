@@ -32,7 +32,7 @@ source=(
   lowlatency_audio.patch
   wineusb-Partial-implementation-for-BusQueryContainer.patch
   wmiutils-Add-IClassFactory2-implementation.patch
-  include-use-ntsync.h-v7-module-header-as-an-in-tree-header.patch
+  0001-Revert-server-Check-for-zero-access-in-alloc_handle.patch
 )
 sha512sums=(
   'SKIP'
@@ -94,6 +94,7 @@ makedepends=(
   sdl2
   vulkan-headers
   vulkan-icd-loader
+  ntsync-header
 )
 optdepends=(
   alsa-lib
@@ -134,7 +135,7 @@ prepare() {
 
   # NTSync for Wine 10.1
   patch -Np1 -i "${srcdir}/ntsync-10.1-staging.patch"
-  patch -Np1 -i "${srcdir}/include-use-ntsync.h-v7-module-header-as-an-in-tree-header.patch"
+  patch -Np1 -i "${srcdir}/0001-Revert-server-Check-for-zero-access-in-alloc_handle.patch"
 
   # Use native Visual C++ DLLs, fix Windows product version
   patch -Np1 -i "${srcdir}/0001-HACK-wine.inf-Add-native-builtin-overrides-for-msvcr.patch"
