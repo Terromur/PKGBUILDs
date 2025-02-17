@@ -18,8 +18,18 @@ conflicts=('mingw-w64-gcc')
 options=('!strip' 'staticlibs' '!emptydirs' '!buildflags')
 source=("https://ftp.gnu.org/gnu/gcc/gcc-$pkgver/gcc-$pkgver.tar.xz"
         '0020-libgomp-Don-t-hard-code-MS-printf-attributes.patch'
-        'clearlinux.patch')
+        'clearlinux.patch'
+        '0140-gcc-diagnostic-color.patch'
+        '0014-gcc-9-branch-clone_function_name_1-Retain-any-stdcall-suffix.patch'
+        '0008-Prettify-linking-no-undefined.patch'
+        '0021-PR14940-Allow-a-PCH-to-be-mapped-to-a-different-addr.patch'
+        'gcc_include-stdlib.patch')
 sha512sums=(
+    'SKIP'
+    'SKIP'
+    'SKIP'
+    'SKIP'
+    'SKIP'
     'SKIP'
     'SKIP'
     'SKIP')
@@ -34,6 +44,11 @@ prepare() {
   # Adds performance boost for DXVK/Wine (maybe)
   patch -Np1 -i "${srcdir}/0020-libgomp-Don-t-hard-code-MS-printf-attributes.patch"
   patch -Np1 -i "${srcdir}/clearlinux.patch"
+  patch -Np1 -i "${srcdir}/0140-gcc-diagnostic-color.patch"
+  patch -Np1 -i "${srcdir}/0014-gcc-9-branch-clone_function_name_1-Retain-any-stdcall-suffix.patch"
+  patch -Np1 -i "${srcdir}/0008-Prettify-linking-no-undefined.patch"
+  patch -Np1 -i "${srcdir}/0021-PR14940-Allow-a-PCH-to-be-mapped-to-a-different-addr.patch"
+  patch -Np1 -i "${srcdir}/gcc_include-stdlib.patch"
   # mmapio.c:69:14: error: implicit declaration of function ‘getpagesize’
   sed -i 's|\-Werror||g' libbacktrace/configure
 }
