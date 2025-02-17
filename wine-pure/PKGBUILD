@@ -32,6 +32,7 @@ source=(
   lowlatency_audio.patch
   wineusb-Partial-implementation-for-BusQueryContainer.patch
   wmiutils-Add-IClassFactory2-implementation.patch
+  include-use-ntsync.h-v7-module-header-as-an-in-tree-header.patch
 )
 sha512sums=(
   'SKIP'
