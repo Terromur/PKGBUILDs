@@ -12,7 +12,7 @@ pkgrel=1
 source=(
   "git+https://gitlab.winehq.org/wine/wine.git"
   "git+https://gitlab.winehq.org/wine/wine-staging.git"
-  "git+https://github.com/whrvt/wine-osu-patches.git#tag=02-06-2025-7b57598d-7f5729fc"
+  "git+https://github.com/whrvt/wine-osu-patches.git#tag=02-15-2025-4de56399-735225db"
   30-win32-aliases.conf
   wine-binfmt.conf
   ntsync-10.1-staging.patch
@@ -172,23 +172,17 @@ if [ -d "${osu_patches_dir}" ]; then
     -type f \
     -name "*.patch" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/*" \
-    -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/2000-configure.ac-Omit-frame-pointers-on-x86_64-leaf-fram.patch" \
     -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/5500-include-Prefer-builtin-atomics-unless-they-re-known-.patch" \
     -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/ps0250-p0003-server-Allow-skipping-debug-handle-retrieval.patch" \
+    -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/0001-ntdll-msvcrt-Use-runtime-dispatched-per-architecture.patch" \
     -not -path "${osu_patches_dir}/0006-proton-esync-fsync/*" \
     -not -path "${osu_patches_dir}/0007-ntsync/*" \
-    -not -path "${osu_patches_dir}/0009-windowing-system-integration/0001-misc/0015-winewayland-Round-display-refresh-rate.patch" \
     -not -path "${osu_patches_dir}/0009-windowing-system-integration/0001-misc/0001-proton-focusin-focusout-workarounds.patch" \
     -not -path "${osu_patches_dir}/0009-windowing-system-integration/0004-proton/0018-HACK-winex11.drv-Let-the-WM-focus-our-windows-by-def.patch" \
     -not -path "${osu_patches_dir}/0009-windowing-system-integration/0004-proton/0020-winex11.drv-Recognize-the-keyboard-in-a-locale-indep.patch" \
     -not -path "${osu_patches_dir}/0009-windowing-system-integration/0004-proton/0014-winex11.drv-Pass-XEvent-instead-of-XClientMessageEve.patch" \
     -not -path "${osu_patches_dir}/0012-audio/0005-alsa-pulse-mmdevapi-Support-custom-period-and-buffer-sizes.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0344-p0002-server-Relax-memory-order-constraints-in-ato.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0341-appwiz.cpl-Try-getting-the-cache-directory-from-an.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps3504-p0002-ntdll-An-implementation-of-SRWLOCK-that-closer-.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0248-ntdll-server-Write-system-handle-info-directly-to-.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0377-server-Use-a-free-list-for-unallocated-object-hand.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0427-ntdll-loader-add-support-for-overriding-IMAGE_FILE_L.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0322-p0001-loader-Use-long-instead-of-int-for-syscall-r.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0322-p0002-loader-Remove-GCC-4.x-EBX-register-spilling-.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0322-p0003-loader-Refactor-argv-envp-auxv-management.patch" \
@@ -201,22 +195,19 @@ if [ -d "${osu_patches_dir}" ]; then
     -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0322-p0011-loader-Switch-stack-if-the-old-stack-address.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0322-p0012-loader-Enable-dumping-additional-vectors-in-.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0322-p0013-loader-Enable-all-remap-logic-by-default.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0741-flushprocesswritebuffers-luke1337.patch" \
+    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0377-server-Use-a-free-list-for-unallocated-object-hand.patch" \
+    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0344-p0002-server-Relax-memory-order-constraints-in-ato.patch" \
+    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps3504-p0002-ntdll-An-implementation-of-SRWLOCK-that-closer-.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/1001-ntdll-Add-__wine_get_tsc_calibration-internal-functi.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/9300-qpc-support-hardcode-with-old-kernel-check.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/1002-wineboot-Use-__wine_get_tsc_calibration-for-TSC-cali.patch" \
+    -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/9300-qpc-support-hardcode-with-old-kernel-check.patch" \
+    -not -path "${osu_patches_dir}/0013-server-optimization/0004-time-wait/0016-HACK-ntdll-Do-a-non-alertable-wait-for-small-1ms-sle.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0004-time-wait/0100-fsync-Remove-clock_gettime-v-syscall-from-get_wait_e.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0005-writewatches/0004-ntdll-HACK-Add-WINE_RAM_REPORTING_BIAS-option.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0007-priority/*" \
-    -not -path "${osu_patches_dir}/0015-bernhard-asan/0080-wined3d-Avoid-threads-for-now-still-fails.patch" \
-    -not -path "${osu_patches_dir}/0015-bernhard-asan/0082-winhttp-Do-not-overrun-buffer.patch" \
-    -not -path "${osu_patches_dir}/0015-bernhard-asan/0068-msi-Avoid-buffer-underflow-in-verify_format.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/600hz-default.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/Avoid-winemenubuilder-to-startup-explorer.exe.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/wineserver-debug_level-unlikely.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/win32u-gdi32-Semi-stub-NtGdiGetDCDpiScaleValue.patch" \
-    -not -path "${osu_patches_dir}/9000-misc-additions/winebus-Fake-load-driver-if-EnableWinebus-isn-t-set-.patch" \
-    -not -path "${osu_patches_dir}/9000-misc-additions/gecko-mono-skip-default-envvar.patch" \
     -not -path "${osu_patches_dir}/9990-nowow64/*" \
     -print0 | sort -z)
 fi
