@@ -96,6 +96,7 @@ makedepends=(
   sdl2
   vulkan-headers
   vulkan-icd-loader
+  mingw-w64-gcc
 )
 optdepends=(
   alsa-lib
