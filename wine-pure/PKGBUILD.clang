@@ -180,6 +180,7 @@ if [ -d "${osu_patches_dir}" ]; then
     -name "*.patch" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/*" \
     -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/5500-include-Prefer-builtin-atomics-unless-they-re-known-.patch" \
+    -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/5500-include-Prefer-builtin-atomics-unless-they-re-known-.patch" \
     -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/ps0250-p0003-server-Allow-skipping-debug-handle-retrieval.patch" \
     -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/0001-ntdll-msvcrt-Use-runtime-dispatched-per-architecture.patch" \
     -not -path "${osu_patches_dir}/0006-proton-esync-fsync/*" \
@@ -189,23 +190,7 @@ if [ -d "${osu_patches_dir}" ]; then
     -not -path "${osu_patches_dir}/0009-windowing-system-integration/0004-proton/0020-winex11.drv-Recognize-the-keyboard-in-a-locale-indep.patch" \
     -not -path "${osu_patches_dir}/0009-windowing-system-integration/0004-proton/0014-winex11.drv-Pass-XEvent-instead-of-XClientMessageEve.patch" \
     -not -path "${osu_patches_dir}/0012-audio/0005-alsa-pulse-mmdevapi-Support-custom-period-and-buffer-sizes.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0248-ntdll-server-Write-system-handle-info-directly-to-.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0322-p0001-loader-Use-long-instead-of-int-for-syscall-r.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0322-p0002-loader-Remove-GCC-4.x-EBX-register-spilling-.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0322-p0003-loader-Refactor-argv-envp-auxv-management.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0322-p0004-loader-Refactor-number-parsing-to-own-functi.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0322-p0005-loader-Generalise-is_addr_reserved-to-find-o.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0322-p0006-loader-Explicitly-munmap-the-preloader-s-ELF.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0322-p0007-loader-Don-t-clobber-existing-memory-mapping.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0322-p0009-loader-Relocate-vDSO-on-conflict-with-reserv.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0322-p0010-loader-Relocate-sigpage-on-conflict-with-res.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0322-p0011-loader-Switch-stack-if-the-old-stack-address.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0322-p0012-loader-Enable-dumping-additional-vectors-in-.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0322-p0013-loader-Enable-all-remap-logic-by-default.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0377-server-Use-a-free-list-for-unallocated-object-hand.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0344-p0002-server-Relax-memory-order-constraints-in-ato.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps3504-p0002-ntdll-An-implementation-of-SRWLOCK-that-closer-.patch" \
-    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/ps0427-ntdll-loader-add-support-for-overriding-IMAGE_FILE_L.patch" \
+    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/*" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/1001-ntdll-Add-__wine_get_tsc_calibration-internal-functi.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/1002-wineboot-Use-__wine_get_tsc_calibration-for-TSC-cali.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/9300-qpc-support-hardcode-with-old-kernel-check.patch" \
@@ -216,6 +201,7 @@ if [ -d "${osu_patches_dir}" ]; then
     -not -path "${osu_patches_dir}/9000-misc-additions/Avoid-winemenubuilder-to-startup-explorer.exe.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/wineserver-debug_level-unlikely.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/win32u-gdi32-Semi-stub-NtGdiGetDCDpiScaleValue.patch" \
+    -not -path "${osu_patches_dir}/9000-misc-additions/gecko-mono-skip-default-envvar.patch" \
     -not -path "${osu_patches_dir}/9990-nowow64/*" \
     -print0 | sort -z)
 fi
