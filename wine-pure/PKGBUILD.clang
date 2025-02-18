@@ -156,6 +156,11 @@ prepare() {
   # Fixes losing input focus after Alt-Tab in Unity games
   patch -Np1 -i "${srcdir}/HACK-winex11.drv-Let-the-WM-focus-our-windows-by-def.patch"
 
+  # Clang fixes
+  patch -Np1 -i "${srcdir}/0001-clang-fixup-lto.patch"
+  patch -Np1 -i "${srcdir}/0002-makedep-add-per-source-cflags-and-per-program-ldflag.patch"
+  patch -Np1 -i "${srcdir}/0003-configure-Enforce-4-byte-stack-alignment-on-clang-fo.patch"
+
   # Fixes "The explorer process failed to start" issue
   patch -Np1 -i "${srcdir}/Avoid-winemenubuilder-to-startup-explorer.exe.patch"
   ./dlls/winevulkan/make_vulkan
