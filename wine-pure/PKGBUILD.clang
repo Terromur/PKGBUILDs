@@ -216,8 +216,8 @@ if [ -d "${osu_patches_dir}" ]; then
     -not -path "${osu_patches_dir}/9000-misc-additions/wineserver-debug_level-unlikely.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/win32u-gdi32-Semi-stub-NtGdiGetDCDpiScaleValue.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/winebus-Fake-load-driver-if-EnableWinebus-isn-t-set-.patch" \
-    -not -path "${osu_patches_dir}/9000-misc-additions/gecko-mono-skip-default-envvar.patch" 
-    -not -path "${osu_patches_dir}/9990-nowow64/*" \
+    -not -path "${osu_patches_dir}/9000-misc-additions/gecko-mono-skip-default-envvar.patch" \
+    -not -path "${osu_patches_dir}/9990-nowow64/*" 
     -print0 | sort -z)
 fi
   autoreconf -f
