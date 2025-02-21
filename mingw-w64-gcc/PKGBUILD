@@ -15,7 +15,7 @@ groups=('mingw-w64-toolchain' 'mingw-w64')
 depends=('zlib' 'libisl' 'libmpc' 'mingw-w64-crt' 'mingw-w64-binutils' 'mingw-w64-winpthreads' 'mingw-w64-headers')
 provides=('mingw-w64-gcc')
 conflicts=('mingw-w64-gcc')
-options=('!strip' 'staticlibs' '!emptydirs' '!buildflags')
+options=('!strip' 'staticlibs' '!emptydirs')
 source=("https://ftp.gnu.org/gnu/gcc/gcc-$pkgver/gcc-$pkgver.tar.xz"
         '0020-libgomp-Don-t-hard-code-MS-printf-attributes.patch'
         'clearlinux.patch'
