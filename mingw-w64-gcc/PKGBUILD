@@ -54,7 +54,7 @@ prepare() {
 }
 
 build() {
-
+# Добавлено для уверенности стабильной работы для lgomp
 export lt_cv_deplibs_check_method='pass_all'
 
   for _arch in ${_architectures}; do
@@ -76,7 +76,7 @@ export lt_cv_deplibs_check_method='pass_all'
         --with-boot-ldflags="-static-libstdc++" \
         --with-stage1-ldflags="-static-libstdc++" 
         
-	# Добавлено для уверенности работы -fopenmp
+	# Добавлено для уверенности стабильной работы -fopenmp
         sed -i 's,^STRIP = .*$,STRIP = true,g'                   Makefile
         sed -i 's,^STRIP_FOR_TARGET=.*$,STRIP_FOR_TARGET=true,g' Makefile
 
