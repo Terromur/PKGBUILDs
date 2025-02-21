@@ -54,6 +54,9 @@ prepare() {
 }
 
 build() {
+
+export lt_cv_deplibs_check_method='pass_all'
+
   for _arch in ${_architectures}; do
     mkdir -p "$srcdir/build-${_arch}" && cd "$srcdir/build-${_arch}"
     "$srcdir"/gcc/configure --prefix=/usr --libexecdir=/usr/lib \
@@ -63,11 +66,21 @@ build() {
         --enable-threads=posix --enable-fully-dynamic-string \
         --enable-libstdcxx-time=yes --enable-libstdcxx-filesystem-ts=yes \
         --with-system-zlib --enable-cloog-backend=isl \
+        --enable-bootstrap \
         --enable-lto --enable-libgomp \
         --disable-multilib --enable-checking=release \
-        --disable-sjlj-exceptions --with-dwarf2
+        --disable-sjlj-exceptions --with-dwarf2 \
+        --disable-libstdcxx-debug \
+        --enable-plugin \
+        --with-boot-ldflags="-static-libstdc++" \
+        --with-stage1-ldflags="-static-libstdc++" 
+        
+	# Добавлено для уверенности работы -fopenmp
+        sed -i 's,^STRIP = .*$,STRIP = true,g'                   Makefile
+        sed -i 's,^STRIP_FOR_TARGET=.*$,STRIP_FOR_TARGET=true,g' Makefile
 
-	make -O \
+	  make -O STAGE1_CFLAGS="-O3" \
+          profiledbootstrap \
           BOOT_CFLAGS="$CFLAGS" \
           BOOT_CXXFLAGS="$CXXFLAGS" \
           BOOT_LDFLAGS="$LDFLAGS" \
@@ -76,6 +89,7 @@ build() {
           CXXFLAGS_FOR_TARGET="$CXXFLAGS" \
           LDFLAGS_FOR_TARGET="$LDFLAGS" \
           ASFLAGS_FOR_TARGET="$ASFLAGS"; done
+          
 }
 
 package() {
