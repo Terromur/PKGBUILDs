@@ -70,6 +70,7 @@ export lt_cv_deplibs_check_method='pass_all'
         --disable-multilib --enable-checking=release \
         --disable-sjlj-exceptions --with-dwarf2 \
         --disable-libstdcxx-debug \
+	--enable-graphite \
         --enable-plugin \
         --with-boot-ldflags="-static-libstdc++" \
         --with-stage1-ldflags="-static-libstdc++" 
