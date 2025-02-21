@@ -67,11 +67,12 @@ export lt_cv_deplibs_check_method='pass_all'
         --enable-libstdcxx-time=yes --enable-libstdcxx-filesystem-ts=yes \
         --with-system-zlib --enable-cloog-backend=isl \
         --enable-lto --enable-libgomp \
+        --enable-graphite \
+        --enable-plugin \
         --disable-multilib --enable-checking=release \
         --disable-sjlj-exceptions --with-dwarf2 \
         --disable-libstdcxx-debug \
-	--enable-graphite \
-        --enable-plugin \
+	--disable-ssp \
         --with-boot-ldflags="-static-libstdc++" \
         --with-stage1-ldflags="-static-libstdc++" 
         
