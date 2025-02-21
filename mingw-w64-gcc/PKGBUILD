@@ -79,7 +79,7 @@ export lt_cv_deplibs_check_method='pass_all'
         sed -i 's,^STRIP = .*$,STRIP = true,g'                   Makefile
         sed -i 's,^STRIP_FOR_TARGET=.*$,STRIP_FOR_TARGET=true,g' Makefile
 
-	  make -O STAGE1_CFLAGS="-O3" \
+	  make -O STAGE1_CFLAGS="-O2" \
           profiledbootstrap \
           BOOT_CFLAGS="$CFLAGS" \
           BOOT_CXXFLAGS="$CXXFLAGS" \
