@@ -73,9 +73,7 @@ export lt_cv_deplibs_check_method='pass_all'
         --disable-sjlj-exceptions --with-dwarf2 \
         --disable-libstdcxx-debug \
 	--disable-ssp \
-        --disable-win32-registry \
-        --with-boot-ldflags="-static-libstdc++" \
-        --with-stage1-ldflags="-static-libstdc++" 
+        --disable-win32-registry
         
 	# Добавлено для уверенности стабильной работы -fopenmp
         sed -i 's,^STRIP = .*$,STRIP = true,g'                   Makefile
