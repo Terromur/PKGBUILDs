@@ -10,7 +10,7 @@ pkgname=wine-staging-ntsync-pure-git
 pkgver=10.1.r156.g59720e7d1b8
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=41abefccebf2729a70be9ec7bdb1c6226a56e369"
   "git+https://gitlab.winehq.org/wine/wine-staging.git"
   "git+https://github.com/whrvt/wine-osu-patches.git#tag=02-15-2025-4de56399-735225db"
   30-win32-aliases.conf
@@ -189,6 +189,7 @@ if [ -d "${osu_patches_dir}" ]; then
     -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/5500-include-Prefer-builtin-atomics-unless-they-re-known-.patch" \
     -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/ps0250-p0003-server-Allow-skipping-debug-handle-retrieval.patch" \
     -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/0001-ntdll-msvcrt-Use-runtime-dispatched-per-architecture.patch" \
+    -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/2000-configure.ac-Omit-frame-pointers-except-on-llvm-i386.patch" \
     -not -path "${osu_patches_dir}/0006-proton-esync-fsync/*" \
     -not -path "${osu_patches_dir}/0007-ntsync/*" \
     -not -path "${osu_patches_dir}/0009-windowing-system-integration/0001-misc/0001-proton-focusin-focusout-workarounds.patch" \
