@@ -237,6 +237,8 @@ build() {
     --without-sane \
     --without-v4l2 \
     --without-cups \
+    --without-capi \
+    --without-coreaudio \
     --without-gphoto \
     --without-xinerama \
     --without-pcsclite \
