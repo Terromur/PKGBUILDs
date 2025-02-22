@@ -242,6 +242,8 @@ build() {
     --without-cups \
     --without-gphoto \
     --without-xinerama \
+    --without-capi \
+    --without-coreaudio \
     --without-pcsclite \
     --without-xxf86vm \
     --without-pcap \
