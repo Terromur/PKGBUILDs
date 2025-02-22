@@ -64,9 +64,9 @@ build() {
 export lt_cv_deplibs_check_method='pass_all'
 # In addition adaint.c does `#include <accctrl.h>` which pulls in msxml.h, hacky hack:
 CPPFLAGS+=" -DCOM_NO_WINDOWS_H"
-export CFLAGS="-march=native -mtune=native -O2 -fno-stack-protector -fcf-protection=none -mharden-sls=none -fomit-frame-pointer -fno-unwind-tables"
+export CFLAGS="-march=x86-64-v3 -O2 -fdata-sections -funsafe-math-optimizations -fno-ident -pthread -fopenmp -falign-functions=64 -fno-math-errno -fno-trapping-math -fPIC -fno-semantic-interposition -fivopts -ffunction-sections -fprofile-correction -floop-nest-optimize -fgraphite-identity -floop-strip-mine -fmodulo-sched -flive-range-shrinkage -fno-stack-protector -fcf-protection=none -mharden-sls=none -fomit-frame-pointer -fno-unwind-tables"
 export CXXFLAGS="$CFLAGS -Wp,-U_GLIBCXX_ASSERTIONS"
-export LDFLAGS="-Wl,-O1 -Wl,--sort-common,--as-needed,--strip-all"
+export LDFLAGS="-Wl,-O3 -Wl,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -lpthread -Wl,--gc-sections"
   for _arch in ${_architectures}; do
     mkdir -p "$srcdir/build-${_arch}" && cd "$srcdir/build-${_arch}"
     "$srcdir"/gcc/configure --prefix=/usr --libexecdir=/usr/lib \
