@@ -10,7 +10,7 @@ pkgname=wine-staging-ntsync-pure-git
 pkgver=10.1.r156.g59720e7d1b8
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=41abefccebf2729a70be9ec7bdb1c6226a56e369"
+  "git+https://gitlab.winehq.org/wine/wine.git"
   "git+https://gitlab.winehq.org/wine/wine-staging.git"
   "git+https://github.com/whrvt/wine-osu-patches.git#tag=02-15-2025-4de56399-735225db"
   30-win32-aliases.conf
