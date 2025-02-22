@@ -228,6 +228,7 @@ build() {
   echo "Building Wine..."
   cd "$pkgname-build"
   ../wine/configure \
+    --disable-win16 \
     --disable-tests \
     --prefix=/usr \
     --libdir=/usr/lib \
