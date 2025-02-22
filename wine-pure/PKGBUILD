@@ -227,6 +227,7 @@ build() {
   cd "$pkgname-build"
   ../wine/configure \
     --disable-tests \
+    --disable-win16 \
     --prefix=/usr \
     --libdir=/usr/lib \
     --with-x \
