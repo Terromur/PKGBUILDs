@@ -35,6 +35,7 @@ source=(
   include-use-ntsync.h-v7-module-header-as-an-in-tree-header.patch
   0019-rpcrt4-Avoid-closing-the-server-thread-handle-while-.patch
   explorer-prefer-wayland-over-x11-by-default.patch
+  0001-Fix-stack-align-issues-with-Clang.patch
 )
 sha512sums=(
   'SKIP'
@@ -55,6 +56,7 @@ sha512sums=(
   '8694685c4b4e8559b98286a11e39b662edc6c0ff1fa0446abd828af84f31d26fc6b8d18c00e3e3d273dcdad373dd6af8f01eeaa0d3de14ef28512494c756bdc4'
   '605f6f527fc0b25768a3fa7bd921506269c2e70edb17289042eac4f34a410da26bfc4e61d0ae6356258d5fc10be25b8baab9dcabbd7bed034e94560882be457f'
   '67d2e1e08d7f3bab2cd8d39d9bafd2451ab813fd4696ace70e3a310dd4d249112f3a88dedb7a2bcc0f4b85131a41cd1f20a6f21384ef92ec02ec66f07fd46a93'
+  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -159,6 +161,7 @@ prepare() {
   patch -Np1 -i "${srcdir}/HACK-winex11.drv-Let-the-WM-focus-our-windows-by-def.patch"
 
   # Clang fixes
+  patch -Np1 -i "${srcdir}/0001-Fix-stack-align-issues-with-Clang.patch"
   patch -Np1 -i "${srcdir}/0001-clang-fixup-lto.patch"
   patch -Np1 -i "${srcdir}/0002-makedep-add-per-source-cflags-and-per-program-ldflag.patch"
 
