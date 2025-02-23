@@ -102,7 +102,7 @@ prepare() {
     #CXXFLAGS+=" -mno-avx2"
 
     
-    local cross_ldflags="-Wl,-O3 -Wl,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -flto=auto -flto-partition=one -fdevirtualize-at-ltrans -lpthread -flto=jobserver -Wl,--file-alignment,4096"
+    local cross_ldflags="-Wl,-O3 -Wl,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -flto=auto -flto-partition=one -fdevirtualize-at-ltrans -lpthread -flto=jobserver -Wl,--gc-sections -Wl,--file-alignment,4096"
 
     local cross_cflags="$CFLAGS -mcmodel=small"
     local cross_cxxflags="$CXXFLAGS -mcmodel=small"
