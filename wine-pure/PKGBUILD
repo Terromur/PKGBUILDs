@@ -212,7 +212,7 @@ fi
 }
 
 build() {
-  export CFLAGS="-O3 -march=native -mtune=native -fipa-pta -fno-math-errno -flive-range-shrinkage -fno-trapping-math -mtls-dialect=gnu2 -feliminate-unused-debug-types -floop-nest-optimize -fgraphite-identity -fdata-sections -ffunction-sections -fdevirtualize-at-ltrans -fno-semantic-interposition -fivopts -fmodulo-sched -ffp-contract=fast -fno-plt -fno-stack-protector -fcf-protection=none -mharden-sls=none -funroll-loops -fomit-frame-pointer -fno-unwind-tables -mprefer-vector-width=256 -floop-strip-mine -pthread -fno-ident -fipa-pta -funsafe-math-optimizations -fPIC -fprofile-correction -D_FORTIFY_SOURCE=0"
+  export CFLAGS="-O3 -march=native -mtune=native -fipa-pta -fno-math-errno -flive-range-shrinkage -fno-trapping-math -mtls-dialect=gnu2 -flto-partition=one -feliminate-unused-debug-types -floop-nest-optimize -fgraphite-identity -fdata-sections -ffunction-sections -fdevirtualize-at-ltrans -fno-semantic-interposition -fivopts -fmodulo-sched -ffp-contract=fast -fno-plt -fno-stack-protector -fcf-protection=none -mharden-sls=none -funroll-loops -fomit-frame-pointer -fno-unwind-tables -mprefer-vector-width=256 -floop-strip-mine -pthread -fno-ident -fipa-pta -funsafe-math-optimizations -fPIC -fprofile-correction -D_FORTIFY_SOURCE=0"
   export CXXFLAGS="$CFLAGS -Wp,-U_GLIBCXX_ASSERTIONS"
   export LDFLAGS="-Wl,-O3 -Wl,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -flto=auto -lpthread -flto=jobserver -Wl,-z,pack-relative-relocs -Wl,--gc-sections"
 
