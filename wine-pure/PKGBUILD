@@ -6,7 +6,7 @@
 # Contributor: Eduardo Romero <eduardo@archlinux.org>
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
-pkgname=wine-staging-ntsync-pure-git
+pkgname=wine-pure-git
 pkgver=10.1.r156.g59720e7d1b8
 pkgrel=1
 source=(
