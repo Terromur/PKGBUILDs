@@ -78,14 +78,13 @@ prepare() {
 
     # Так же вы можете добавить в CFLAGS флаг -D_WIN32_WINNT=0xA00. Он используется тогда, когда вам ничего не нужно, кроме совместимости Windows 10
     # Так же вы можете добавить в CFLAGS флаг -mprefer-avx128. Он нужен в том случае, когда возникают проблемы с запуском игр. Если вы собрали мой mingw-w64-gcc - вам этот флаг не нужен.
-  export CFLAGS="-O3 -march=native -mtune=native -fipa-pta -fno-math-errno -flive-range-shrinkage -fno-trapping-math -mtls-dialect=gnu2 -feliminate-unused-debug-types -floop-nest-optimize -fgraphite-identity -fdata-sections -ffunction-sections -fdevirtualize-at-ltrans -fno-semantic-interposition -fivopts -fmodulo-sched -ffp-contract=fast -fno-plt -fno-stack-protector -fcf-protection=none -mharden-sls=none -funroll-loops -fomit-frame-pointer -fno-unwind-tables -mprefer-vector-width=256 -D_FORTIFY_SOURCE=0"
+  export CFLAGS="-O3 -march=native -mtune=native -fipa-pta -fno-math-errno -flive-range-shrinkage -fno-trapping-math -mtls-dialect=gnu2 -feliminate-unused-debug-types -floop-nest-optimize -fgraphite-identity -fdata-sections -ffunction-sections -fdevirtualize-at-ltrans -fno-semantic-interposition -fivopts -fmodulo-sched -ffp-contract=fast -fno-stack-protector -fcf-protection=none -mharden-sls=none -funroll-loops -fomit-frame-pointer -fno-unwind-tables -mprefer-vector-width=256 -floop-strip-mine -fprofile-correction -pthread -fno-ident -funsafe-math-optimizations -flto-partition=one -fopenmp -D_FORTIFY_SOURCE=0"
   export CXXFLAGS="$CFLAGS -Wp,-U_GLIBCXX_ASSERTIONS"
-  export LDFLAGS="-Wl,-O3 -flto=auto -lpthread"
+  export LDFLAGS="-Wl,-O3 -Wl,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -flto=auto -lpthread -flto-partition=one -fdevirtualize-at-ltrans -flto=jobserver -Wl,-z,pack-relative-relocs -Wl,--gc-sections"
 
     # These flags are taken from Proton
     CFLAGS+=" -mfpmath=sse -fwrapv -fno-strict-aliasing -std=gnu23"
     CXXFLAGS+=" -mfpmath=sse -fwrapv -fno-strict-aliasing -std=gnu++23"
-    LDFLAGS+=" -Wl,--file-alignment,4096"
 
     # If using -march=native and the CPU supports AVX, launching a d3d9
     # game can cause an Unhandled exception. The cause seems to be the
@@ -103,7 +102,7 @@ prepare() {
     #CXXFLAGS+=" -mno-avx2"
 
     
-    local cross_ldflags="$LDFLAGS"
+    local cross_ldflags="-Wl,-O3 -Wl,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -flto=auto -flto-partition=one -fdevirtualize-at-ltrans -lpthread -flto=jobserver -Wl,--file-alignment,4096"
 
     local cross_cflags="$CFLAGS -mcmodel=small"
     local cross_cxxflags="$CXXFLAGS -mcmodel=small"
