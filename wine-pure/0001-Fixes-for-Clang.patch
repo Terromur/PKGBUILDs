@@ -1,0 +1,44 @@
+diff --git a/configure.ac b/configure.ac
+index b889b32f5a1..40d94b0ebbd 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -974,12 +974,19 @@
+     WINE_TRY_PE_CFLAGS([-flarge-source-files -Wmisleading-indentation],[AS_VAR_APPEND(${wine_arch}_EXTRACFLAGS,[" -Wno-misleading-indentation"])])
+ 
+     case $wine_arch in
+-      i386) WINE_TRY_PE_CFLAGS([-fno-omit-frame-pointer])
++      i386) WINE_TRY_PE_CFLAGS([-momit-leaf-frame-pointer])
++            WINE_TRY_PE_CFLAGS([-mstack-alignment=4])      
+             WINE_TRY_PE_CFLAGS([-mpreferred-stack-boundary=2])
+             WINE_TRY_PE_CFLAGS([-Wl,--disable-stdcall-fixup],
+-                               [AS_VAR_APPEND([${wine_arch}_LDFLAGS],[" -Wl,--disable-stdcall-fixup"])]) ;;
+-      x86_64) WINE_TRY_PE_CFLAGS([-Wformat-overflow])
++                               [AS_VAR_APPEND([${wine_arch}_LDFLAGS],[" -Wl,--disable-stdcall-fixup"])]) 
++            case "x$with_mingw" in
++                xclang|x*/clang|x*/*-clang|x*-clang) WINE_TRY_PE_CFLAGS([-fno-omit-frame-pointer]) ;;
++                x*-gcc|x*/*-gcc) WINE_TRY_PE_CFLAGS([-fomit-frame-pointer]) ;;
++            esac ;;
++      x86_64) WINE_TRY_PE_CFLAGS([-fomit-frame-pointer])
++              WINE_TRY_PE_CFLAGS([-Wformat-overflow])
+               WINE_TRY_PE_CFLAGS([-Wnonnull])
++              WINE_TRY_PE_CFLAGS([-mstack-alignment=32])
+               WINE_TRY_PE_CFLAGS([-mcx16])
+               WINE_TRY_PE_CFLAGS([-mcmodel=small]) ;;
+     esac
+@@ -1972,7 +1979,6 @@
+ 
+   case $HOST_ARCH in
+     dnl gcc-4.6+ omits frame pointers by default, breaking some copy protections
+-    i386) WINE_TRY_CFLAGS([-fno-omit-frame-pointer],[MSVCRTFLAGS="$MSVCRTFLAGS -fno-omit-frame-pointer"]) ;;
+     x86_64)
+       case $host_os in
+         dnl Mingw uses Windows 64-bit types, not Unix ones
+@@ -1991,6 +1997,8 @@
+       esac ;;
+     arm)
+       WINE_TRY_CFLAGS([-Wincompatible-function-pointer-types],[EXTRACFLAGS="$EXTRACFLAGS -Wno-error=incompatible-function-pointer-types"]) ;;
++    *)
++      WINE_TRY_CFLAGS([-fomit-frame-pointer],[MSVCRTFLAGS="$MSVCRTFLAGS -fomit-frame-pointer"])
+   esac
+ 
+   CFLAGS=$saved_CFLAGS
