@@ -175,6 +175,7 @@ prepare() {
   patch -Np1 -i "${srcdir}/wmiutils-Add-IClassFactory2-implementation.patch"
   patch -Np1 -i "${srcdir}/0019-rpcrt4-Avoid-closing-the-server-thread-handle-while-.patch"
   patch -Np1 -i "${srcdir}/explorer-prefer-wayland-over-x11-by-default.patch"
+  patch -Np1 -i "${srcdir}/lowlatency_audio.patch"
   local osu_patches_dir="${srcdir}/wine-osu-patches"
 if [ -d "${osu_patches_dir}" ]; then
   while IFS= read -r -d '' patch; do
