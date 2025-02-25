@@ -187,6 +187,7 @@ if [ -d "${osu_patches_dir}" ]; then
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/*" \
     -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/2000-configure.ac-Omit-frame-pointers-except-on-llvm-i386.patch" \
     -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/ps0250-p0003-server-Allow-skipping-debug-handle-retrieval.patch" \
+    -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/8500-headers-change-more-__GNUC__-to-__GNUC__-__clang__.patch" \
     -not -path "${osu_patches_dir}/0006-proton-esync-fsync/*" \
     -not -path "${osu_patches_dir}/0007-ntsync/*" \
     -not -path "${osu_patches_dir}/0009-windowing-system-integration/0001-misc/0001-proton-focusin-focusout-workarounds.patch" \
