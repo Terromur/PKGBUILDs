@@ -10,7 +10,7 @@ pkgname=wine-pure-git
 pkgver=10.1.r156.g59720e7d1b8
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=e1b8e7f6ec755afd251a3b7af0e632c6e4d74a64"
   "git+https://gitlab.winehq.org/wine/wine-staging.git"
   "git+https://github.com/whrvt/wine-osu-patches.git#tag=02-21-2025-41abefcc-4378292a-v2"
   30-win32-aliases.conf
