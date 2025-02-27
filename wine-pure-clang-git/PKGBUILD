@@ -116,7 +116,7 @@ optdepends=(
   wine-mono
 )
 provides=("wine-staging" "wine" 'wine-wow64')
-conflicts=("wine")
+conflicts=("wine" "wine-pure-git")
 makedepends=(${makedepends[@]} ${depends[@]})
 install=wine.install
 
