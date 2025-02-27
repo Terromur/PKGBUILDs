@@ -15,7 +15,7 @@ groups=('mingw-w64-toolchain' 'mingw-w64')
 depends=('zlib' 'libisl' 'libmpc' 'mingw-w64-crt' 'mingw-w64-binutils' 'mingw-w64-winpthreads' 'mingw-w64-headers')
 provides=('mingw-w64-gcc')
 conflicts=('mingw-w64-gcc')
-options=('!strip' 'staticlibs' '!emptydirs')
+options=('!strip' 'staticlibs' '!emptydirs' '!buildflags')
 source=("https://ftp.gnu.org/gnu/gcc/gcc-$pkgver/gcc-$pkgver.tar.xz"
         '0020-libgomp-Don-t-hard-code-MS-printf-attributes.patch'
         'clearlinux.patch'
@@ -58,6 +58,7 @@ prepare() {
   # mmapio.c:69:14: error: implicit declaration of function ‘getpagesize’
   sed -i 's|\-Werror||g' libbacktrace/configure
 }
+
 
 build() {
 # Добавлено для уверенности стабильной работы для lgomp
