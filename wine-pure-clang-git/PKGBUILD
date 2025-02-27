@@ -10,7 +10,7 @@ pkgname=wine-pure-clang-git
 pkgver=10.2.r101.geb94c31c525
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=eb94c31c5251be320e6170b88dc5610862ea1591"
+  "git+https://gitlab.winehq.org/wine/wine.git"
   "git+https://gitlab.winehq.org/wine/wine-staging.git"
   30-win32-aliases.conf
   wine-binfmt.conf
