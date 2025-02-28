@@ -1,0 +1,45 @@
+diff --git a/src/d3d9/d3d9_fixed_function.cpp b/src/d3d9/d3d9_fixed_function.cpp
+--- a/src/d3d9/d3d9_fixed_function.cpp
++++ b/src/d3d9/d3d9_fixed_function.cpp
+@@ -814,7 +814,7 @@
+     const D3D9FFShaderKeyVS&       Key,
+     const std::string&             Name,
+           D3D9FixedFunctionOptions Options)
+-  : m_module(spvVersion(1, 3)), m_options(Options) {
++  : m_module(spvVersion(1, 6)), m_options(Options) {
+     m_programType = DxsoProgramTypes::VertexShader;
+     m_vsKey    = Key;
+     m_filename = Name;
+@@ -826,7 +826,7 @@
+     const D3D9FFShaderKeyFS&       Key,
+     const std::string&             Name,
+           D3D9FixedFunctionOptions Options)
+-  : m_module(spvVersion(1, 3)), m_options(Options) {
++  : m_module(spvVersion(1, 6)), m_options(Options) {
+     m_programType = DxsoProgramTypes::PixelShader;
+     m_fsKey    = Key;
+     m_filename = Name;
+diff --git a/src/d3d9/d3d9_swvp_emu.cpp b/src/d3d9/d3d9_swvp_emu.cpp
+--- a/src/d3d9/d3d9_swvp_emu.cpp
++++ b/src/d3d9/d3d9_swvp_emu.cpp
+@@ -84,7 +84,7 @@
+   public:
+ 
+     D3D9SWVPEmulatorGenerator(const std::string& name)
+-    : m_module(spvVersion(1, 3)) {
++    : m_module(spvVersion(1, 6)) {
+       m_entryPointId = m_module.allocateId();
+ 
+       m_module.setDebugSource(
+diff --git a/src/dxso/dxso_compiler.cpp b/src/dxso/dxso_compiler.cpp
+--- a/src/dxso/dxso_compiler.cpp
++++ b/src/dxso/dxso_compiler.cpp
+@@ -23,7 +23,7 @@
+     , m_programInfo( programInfo )
+     , m_analysis   ( &analysis )
+     , m_layout     ( &layout )
+-    , m_module     ( spvVersion(1, 3) ) {
++    , m_module     ( spvVersion(1, 6) ) {
+     // Declare an entry point ID. We'll need it during the
+     // initialization phase where the execution mode is set.
+     m_entryPointId = m_module.allocateId();
