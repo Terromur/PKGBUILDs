@@ -1,0 +1,11 @@
+diff -uNr mesa-main-24.1.4.orig/meson.build mesa-main-24.1.4/meson.build
+--- mesa-main-24.1.4.orig/meson.build
++++ mesa-main-24.1.4/meson.build
+@@ -1016,7 +1016,6 @@
+     '-Werror=return-type',
+     '-Werror=empty-body',
+     '-Werror=incompatible-pointer-types',
+-    '-Werror=int-conversion',
+     '-Wimplicit-fallthrough',
+     '-Wmisleading-indentation',
+     '-Wno-missing-field-initializers',
