@@ -4,7 +4,7 @@
 # Maintainer: Adrià Cereto i Massagué <ssorgatem at gmail.com>
 
 pkgname=dxvk-pure-git
-pkgver=2.5.2
+pkgver=2.5.3.r219.gfcbdff3b7
 pkgrel=1
 pkgdesc="A Vulkan-based compatibility layer for Direct3D 9/10/11 which allows running 3D applications on Linux using Wine. Windows DLL version)"
 arch=('x86_64')
@@ -12,8 +12,8 @@ url="https://github.com/doitsujin/dxvk"
 license=('zlib/libpng')
 depends=('vulkan-icd-loader')
 provides=('dxvk' 'd9vk' "dxvk=$pkgver")
-conflicts=('d9vk'  "dxvk" 'dxvk-bin')
-makedepends=('ninja' 'meson>=0.43' 'glslang' 'mingw-w64-gcc' 'git' 'openmp')
+conflicts=('d9vk'  "dxvk" 'dxvk-bin' 'dxvk-pure-clang-git')
+makedepends=('ninja' 'meson>=0.43' 'glslang' 'mingw-w64-gcc' 'git')
 options=(!strip !buildflags staticlibs)
 source=(
     "git+https://github.com/doitsujin/dxvk.git"
@@ -47,21 +47,23 @@ pkgver() {
 prepare() {
     cd dxvk
 
+    # Explicitly set origin URL for submodules using relative paths
     git remote set-url origin https://github.com/doitsujin/dxvk.git
     git submodule update --init --filter=tree:0 --recursive
 
-    # Patch to passthrough compiler flags (thanks @loathingkernel)
+    # Uncomment to enable extra optimizations
+    # Patch crossfiles with extra optimizations from makepkg.conf
     patch -p1 -i "$srcdir"/dxvk-extraopts.patch
 
     # Исправление back buffers для d3d9
     patch -p1 -i "$srcdir"/fixLockRectd3d9.patch
-
+    
     # Работа с dxvk.conf в пользовательской директории
     patch -p1 -i "$srcdir"/global-dxvk.conf.patch
-
+    
     # Добавление gplasync
     patch -p1 -i "$srcdir"/dxvk-gplasync-master.patch
-
+    
     # Обновление spirv
     patch -p1 -i "$srcdir"/update-spirv-version-to-1.6.patch
 
@@ -69,14 +71,13 @@ prepare() {
     # This overrides FLAGS from makepkg.conf, if you comment these you are on your own
     # If you want the "best" possible optimizations for your system you can use
     # `-march=native` and remove the `-mtune=core-avx2` option.
-    # Thanks for flags ms178 https://github.com/ms178/archpkgbuilds/blob/main/packages/dxvk-mingw-git/PKGBUILD
+    # Thanks for flags ms178 https://github.com/ms178/archpkgbuilds/blob/main/packages/dxvk-mingw-git
 
     # Так же вы можете добавить в CFLAGS флаг -D_WIN32_WINNT=0xA00. Он используется тогда, когда вам ничего не нужно, кроме совместимости Windows 10
     # Так же вы можете добавить в CFLAGS флаг -mprefer-avx128. Он нужен в том случае, когда возникают проблемы с запуском игр. Если вы собрали мой mingw-w64-gcc - вам этот флаг не нужен.
-  export CFLAGS="-O3 -march=native -mtune=native -fipa-pta -fno-math-errno -flive-range-shrinkage -fno-pie -fno-trapping-math -mtls-dialect=gnu2 -feliminate-unused-debug-types -floop-nest-optimize -fgraphite-identity -fdata-sections -ffunction-sections -fdevirtualize-at-ltrans -fno-semantic-interposition -fivopts -fmodulo-sched -ffp-contract=fast -fno-stack-protector -fcf-protection=none -mharden-sls=none -funroll-loops -fomit-frame-pointer -fno-unwind-tables -mprefer-vector-width=256 -floop-strip-mine -fprofile-correction -pthread -fno-ident -funsafe-math-optimizations -flto-partition=one -fopenmp -D_FORTIFY_SOURCE=0"
-  export CXXFLAGS="$CFLAGS -Wp,-U_GLIBCXX_ASSERTIONS"
-  export LDFLAGS="-Wl,-O3 -Wl,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -flto=auto -lpthread -flto-partition=one -fdevirtualize-at-ltrans -flto=jobserver -Wl,-z,pack-relative-relocs -Wl,--gc-sections"
-
+    export CFLAGS="-march=native -mtune=native -O3 -fdata-sections -fno-unwind-tables -fomit-frame-pointer -funsafe-math-optimizations -fno-ident -fno-stack-protector -pthread -fopenmp -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -fivopts -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine -fmodulo-sched -flive-range-shrinkage -mharden-sls=none"
+    export CXXFLAGS="$CFLAGS -Wp,-U_GLIBCXX_ASSERTIONS"
+    export LDFLAGS="-Wl,-O3 -Wl,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -flto=auto -flto-partition=one -fdevirtualize-at-ltrans -lpthread -flto=jobserver -Wl,-z,pack-relative-relocs -Wl,--gc-sections"
     # These flags are taken from Proton
     CFLAGS+=" -mfpmath=sse -fwrapv -fno-strict-aliasing -std=gnu23"
     CXXFLAGS+=" -mfpmath=sse -fwrapv -fno-strict-aliasing -std=gnu++23"
@@ -96,12 +97,10 @@ prepare() {
     #CFLAGS+=" -mno-avx2"
     #CXXFLAGS+=" -mno-avx2"
 
-    
-    local cross_ldflags="-Wl,-O3 -Wl,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -flto=auto -flto-partition=one -fdevirtualize-at-ltrans -lpthread -flto=jobserver -Wl,--gc-sections -Wl,--file-alignment,4096"
+    local cross_ldflags="-Wl,-O3 -Wl,--sort-common,--as-needed,--strip-all -flto=auto -flto-partition=one -fdevirtualize-at-ltrans -lpthread -flto=jobserver -Wl,--gc-sections -Wl,--file-alignment,4096"
 
     local cross_cflags="$CFLAGS -mcmodel=small"
     local cross_cxxflags="$CXXFLAGS -mcmodel=small"
-    
     sed -i build-win64.txt \
         -e "s|@CARGS@|\'${cross_cflags// /\',\'}\'|g" \
         -e "s|@CXXARGS@|\'${cross_cxxflags// /\',\'}\'|g" \
