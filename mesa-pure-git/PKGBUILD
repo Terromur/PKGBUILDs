@@ -76,6 +76,7 @@ conflicts=(
     'mesa-libgl'
     'mesa'
     'mesa-pure'
+    'mesa-pure-git'
 )
 options=(
   lto
@@ -152,7 +153,7 @@ build() {
     -D amd-use-llvm=false
     -D android-libbacktrace=disabled
     -D android-strict=false
-    -D c_args="$CFLAGS"
+    -D c_args="-march=native -mtune=native -O3 -fdata-sections -fno-unwind-tables -fomit-frame-pointer -funsafe-math-optimizations -fno-ident -fno-stack-protector -pthread -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -fivopts -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine -fmodulo-sched -flive-range-shrinkage -mharden-sls=none"
     -D c_link_args="$LDFLAGS"
     -D cpp_args="$CXXFLAGS"
     -D cpp_link_args="$LDFLAGS"
