@@ -7,11 +7,12 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-pure-clang-git
-pkgver=10.2.r101.geb94c31c525
+pkgver=10.2.r92.g32a81ee2135
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=32a81ee2135c67e393e49cce60ef8ebfbaefb531"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=a381f356d65565735c1a89c06a92acdda19e9ef4"
+  "git+https://github.com/whrvt/wine-osu-patches.git#tag=02-26-2025-32a81ee2-35465516"
   30-win32-aliases.conf
   wine-binfmt.conf
   ntsync-10.2-staging.patch
@@ -34,7 +35,6 @@ source=(
   0019-rpcrt4-Avoid-closing-the-server-thread-handle-while-.patch
   explorer-prefer-wayland-over-x11-by-default.patch
   0001-Fixes-for-Clang.patch
-  alsa-period.patch
 )
 sha512sums=(
   'SKIP'
@@ -174,6 +174,38 @@ prepare() {
   patch -Np1 -i "${srcdir}/0019-rpcrt4-Avoid-closing-the-server-thread-handle-while-.patch"
   patch -Np1 -i "${srcdir}/explorer-prefer-wayland-over-x11-by-default.patch"
   patch -Np1 -i "${srcdir}/lowlatency_audio.patch"
+      local osu_patches_dir="${srcdir}/wine-osu-patches"
+if [ -d "${osu_patches_dir}" ]; then
+  while IFS= read -r -d '' patch; do
+    msg2 "Applying wine-osu-patches: ${patch#${osu_patches_dir}/}"
+    patch -Np1 < "$patch"
+  done < <(find "${osu_patches_dir}" \
+    -type f \
+    -name "*.patch" \
+    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/*" \
+    -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/2000-configure.ac-Omit-frame-pointers-except-on-llvm-i386.patch" \
+    -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/ps0250-p0003-server-Allow-skipping-debug-handle-retrieval.patch" \
+    -not -path "${osu_patches_dir}/0006-proton-esync-fsync/*" \
+    -not -path "${osu_patches_dir}/0007-ntsync/*" \
+    -not -path "${osu_patches_dir}/0009-windowing-system-integration/0004-proton/0018-HACK-winex11.drv-Let-the-WM-focus-our-windows-by-def.patch" \
+    -not -path "${osu_patches_dir}/0009-windowing-system-integration/0004-proton/0020-winex11.drv-Recognize-the-keyboard-in-a-locale-indep.patch" \
+    -not -path "${osu_patches_dir}/0009-windowing-system-integration/0004-proton/0014-winex11.drv-Pass-XEvent-instead-of-XClientMessageEve.patch" \
+    -not -path "${osu_patches_dir}/0012-audio/0005-alsa-pulse-mmdevapi-Support-custom-period-and-buffer-sizes.patch" \
+    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/*" \
+    -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/1001-ntdll-Add-__wine_get_tsc_calibration-internal-functi.patch" \
+    -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/1002-wineboot-Use-__wine_get_tsc_calibration-for-TSC-cali.patch" \
+    -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/9300-qpc-support-hardcode-with-old-kernel-check.patch" \
+    -not -path "${osu_patches_dir}/0013-server-optimization/0004-time-wait/0100-fsync-Remove-clock_gettime-v-syscall-from-get_wait_e.patch" \
+    -not -path "${osu_patches_dir}/0013-server-optimization/0005-writewatches/0004-ntdll-HACK-Add-WINE_RAM_REPORTING_BIAS-option.patch" \
+    -not -path "${osu_patches_dir}/9000-misc-additions/600hz-default.patch" \
+    -not -path "${osu_patches_dir}/9000-misc-additions/Avoid-winemenubuilder-to-startup-explorer.exe.patch" \
+    -not -path "${osu_patches_dir}/9000-misc-additions/gecko-mono-skip-default-envvar.patch" \
+    -not -path "${osu_patches_dir}/9000-misc-additions/wineserver-debug_level-unlikely.patch" \
+    -not -path "${osu_patches_dir}/9000-misc-additions/win32u-gdi32-Semi-stub-NtGdiGetDCDpiScaleValue.patch" \
+    -not -path "${osu_patches_dir}/9000-misc-additions/wineserver-debug_level-unlikely.patch" \
+    -not -path "${osu_patches_dir}/9990-nowow64/*" \
+    -print0 | sort -z)
+fi
   autoreconf -f
 }
 
