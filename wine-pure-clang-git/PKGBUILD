@@ -7,11 +7,11 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-pure-clang-git
-pkgver=10.2.r92.g32a81ee2135
+pkgver=10.2.r94.g946f2c1ae36
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=32a81ee2135c67e393e49cce60ef8ebfbaefb531"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=a381f356d65565735c1a89c06a92acdda19e9ef4"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=946f2c1ae364317d2af3fc42ecb7128a16ce9d04"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=0e1220c76d84f60fc53b75013b75926d0d5dcedf"
   "git+https://github.com/whrvt/wine-osu-patches.git#tag=02-26-2025-32a81ee2-35465516"
   30-win32-aliases.conf
   wine-binfmt.conf
@@ -202,6 +202,7 @@ if [ -d "${osu_patches_dir}" ]; then
     -not -path "${osu_patches_dir}/9000-misc-additions/gecko-mono-skip-default-envvar.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/wineserver-debug_level-unlikely.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/win32u-gdi32-Semi-stub-NtGdiGetDCDpiScaleValue.patch" \
+    -not -path "${osu_patches_dir}/9000-misc-additions/audio-thread-priority-and-name.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/wineserver-debug_level-unlikely.patch" \
     -not -path "${osu_patches_dir}/9990-nowow64/*" \
     -print0 | sort -z)
