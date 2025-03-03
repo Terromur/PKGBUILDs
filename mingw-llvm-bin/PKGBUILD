@@ -1,18 +1,26 @@
 # Maintainer: Terromur <terromuroz@proton.me>
-pkgname=llvm-mingw-bin
-pkgver=20.0.1
+# Maintainer: Karl Ludwig Brennan <karlludwigbrennan@outlook.com>
+
+pkgname=llvm-mingw-w64-toolchain-msvcrt-bin
+pkgver=20250227
 pkgrel=1
-pkgdesc="Stable builds of Clang for compiling Android Kernels / DXVK / VKD3D "
+pkgdesc="LLVM/Clang/LLD based mingw-w64 toolchain (MSVCRT) targeting i686, x86-64, armv7, and aarch64"
 _crt=msvcrt
 arch=('aarch64' 'x86_64')
-url="https://github.com/v3kt0r-87/Clang-Stable"
+url="https://github.com/mstorsjo/llvm-mingw"
 license=('custom')
 depends=()
 provides=('llvm-mingw-w64-toolchain' 'mingw-w64-binutils' 'mingw-w64-crt' 'mingw-w64-gcc' 'mingw-w64-headers' 'mingw-w64-winpthreads')
-source=("https://github.com/v3kt0r-87/Clang-Stable/releases/download/llvm-mingw-20.0.1.0-RC2/llvm-mingw-20.0.1.0-RC2.zip")
-sha256sums=('SKIP')
+source=("https://github.com/mstorsjo/llvm-mingw/releases/download/${pkgver}/llvm-mingw-${pkgver}-${_crt}-ubuntu-20.04-${CARCH}.tar.xz")
+if [ "$CARCH" = "aarch64" ]; then
+  sha256sums=('SKIP')
+else
+  sha256sums=('SKIP')
+fi
+
 options=(!strip)
+
 package() {
-	mkdir -p ${pkgdir}/opt/llvm-mingw/
-	cp -dpr --no-preserve=ownership ./* "${pkgdir}/opt/llvm-mingw/"
+	mkdir -p ${pkgdir}/opt/llvm-mingw/llvm-mingw-$_crt
+	cp -dpr --no-preserve=ownership ./llvm-mingw-${pkgver}-${_crt}-ubuntu-20.04-${CARCH}/* "${pkgdir}/opt/llvm-mingw/llvm-mingw-$_crt"
 }
