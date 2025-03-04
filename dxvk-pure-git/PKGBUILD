@@ -82,10 +82,10 @@ prepare() {
     # Так же вы можете добавить в CFLAGS флаг -mprefer-avx128. Он нужен в том случае, когда возникают проблемы с запуском игр. Если вы собрали мой mingw-w64-gcc - вам этот флаг не нужен.
     export CFLAGS="-march=native -mtune=native -O3 -fdata-sections -fno-unwind-tables -fomit-frame-pointer -funsafe-math-optimizations -fno-ident -fno-stack-protector -pthread -fopenmp -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -fivopts -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine -fmodulo-sched -flive-range-shrinkage -mharden-sls=none"
     export CXXFLAGS="$CFLAGS -Wp,-U_GLIBCXX_ASSERTIONS"
-    export LDFLAGS="-Wl,-O3 -Wl,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -flto=auto -flto-partition=one -fdevirtualize-at-ltrans -lpthread -flto=jobserver -Wl,-z,pack-relative-relocs -Wl,--gc-sections"
+    export LDFLAGS="-Wl,-O3 -Wl,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -flto=auto -lpthread -flto=jobserver -Wl,-z,pack-relative-relocs -Wl,--gc-sections"
     # These flags are taken from Proton
-    CFLAGS+=" -mfpmath=sse -fwrapv -fno-strict-aliasing -std=gnu2x"
-    CXXFLAGS+=" -mfpmath=sse -fwrapv -fno-strict-aliasing -std=gnu++2a"
+    CFLAGS+=" -mfpmath=sse -fwrapv -fno-strict-aliasing -std=gnu23"
+    CXXFLAGS+=" -mfpmath=sse -fwrapv -fno-strict-aliasing -std=gnu++23"
 
     # If using -march=native and the CPU supports AVX, launching a d3d9
     # game can cause an Unhandled exception. The cause seems to be the
@@ -102,7 +102,7 @@ prepare() {
     #CFLAGS+=" -mno-avx2"
     #CXXFLAGS+=" -mno-avx2"
 
-    local cross_ldflags="-Wl,-O3 -Wl,--sort-common,--as-needed,--strip-all -flto=auto -flto-partition=one -fdevirtualize-at-ltrans -lpthread -flto=jobserver -Wl,--gc-sections -Wl,--file-alignment,4096"
+    local cross_ldflags="-Wl,-O3 -Wl,--sort-common,--as-needed,--strip-all -flto=auto -lpthread -flto=jobserver -Wl,--gc-sections -Wl,--file-alignment,4096"
 
     local cross_cflags="$CFLAGS -mcmodel=small"
     local cross_cxxflags="$CXXFLAGS -mcmodel=small"
