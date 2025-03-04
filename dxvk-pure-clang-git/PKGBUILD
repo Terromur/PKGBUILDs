@@ -89,8 +89,8 @@ prepare() {
     export CXXFLAGS="$CFLAGS -Wp,-U_GLIBCXX_ASSERTIONS"
     export LDFLAGS="-Wl,-O3 -Wl,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -flto=auto -lpthread -fwhole-program-vtables -flto=jobserver -Wl,-z,pack-relative-relocs -Wl,--gc-sections"
     # These flags are taken from Proton
-    CFLAGS+=" -mfpmath=sse -fwrapv -fno-strict-aliasing -std=gnu2x"
-    CXXFLAGS+=" -mfpmath=sse -fwrapv -fno-strict-aliasing -std=gnu++2a"
+    CFLAGS+=" -mfpmath=sse -fwrapv -fno-strict-aliasing -std=gnu23"
+    CXXFLAGS+=" -mfpmath=sse -fwrapv -fno-strict-aliasing -std=gnu++23"
 
     # If using -march=native and the CPU supports AVX, launching a d3d9
     # game can cause an Unhandled exception. The cause seems to be the
