@@ -27,6 +27,7 @@ source=(
     "dxvk-gplasync-master.patch"
     "update-spirv-version-to-1.6.patch"
     "fix-nvidia.patch"
+    "fix-clang-build.patch"
 )
 sha256sums=(
     "SKIP"
@@ -34,6 +35,7 @@ sha256sums=(
     "SKIP"
     "SKIP"
     "bcc15521e4c7f966a0192a1dabb7fb4935b33db39344ab5b861f9d81486f1362"
+    "SKIP"
     "SKIP"
     "SKIP"
     "SKIP"
