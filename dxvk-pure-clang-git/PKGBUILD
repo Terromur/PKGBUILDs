@@ -27,7 +27,6 @@ source=(
     "dxvk-gplasync-master.patch"
     "update-spirv-version-to-1.6.patch"
     "fix-nvidia.patch"
-    "fix-clang-build.patch"
 )
 sha256sums=(
     "SKIP"
@@ -78,9 +77,6 @@ prepare() {
 
     # Исправление зависания изображения на NVIDIA+Wayland
     patch -p1 -i "$srcdir"/fix-nvidia.patch
-
-    # Исправление сборки
-    patch -p1 -i "$srcdir"/"fix-clang-build.patch"
 
     # Так же вы можете добавить в CFLAGS флаг -D_WIN32_WINNT=0xA00. Он используется тогда, когда вам ничего не нужно, кроме совместимости Windows 10
     # Так же вы можете добавить в CFLAGS флаг -mprefer-avx128. Он нужен в том случае, когда возникают проблемы с запуском игр. Если вы собрали мой mingw-w64-gcc - вам этот флаг не нужен.
