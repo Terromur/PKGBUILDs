@@ -57,9 +57,6 @@ prepare() {
     git remote set-url origin https://github.com/doitsujin/dxvk.git
     git submodule update --init --filter=tree:0 --recursive
 
-    # Отмена коммита из-за ошибки сборки dxvk
-    git revert -n 416f9c5a4abbd392dcca69b1aa1b4712b2df34ce || true
-
     # Uncomment to enable extra optimizations
     # Patch crossfiles with extra optimizations from makepkg.conf
     patch -p1 -i "$srcdir"/dxvk-extraopts.patch
