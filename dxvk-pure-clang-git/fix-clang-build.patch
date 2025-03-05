@@ -3,7 +3,8 @@ diff --git a/src/d3d11/d3d11_context.cpp b/src/d3d11/d3d11_context.cpp
 +++ b/src/d3d11/d3d11_context.cpp
 @@ -5510,9 +5510,9 @@
        // Write the data directly to the CS chunk.
-       uint32_t dwordCount = Length / sizeof(uint32_t);
+-       uint32_t dwordCount = Length / sizeof(uint32_t);
++	uint64_t dwordCount = Length / sizeof(uint64_t);
  
 -      EmitCsCmd<uint32_t>(D3D11CmdType::None, dwordCount, [
 +      EmitCsCmd<uint64_t>(D3D11CmdType::None, dwordCount, [
