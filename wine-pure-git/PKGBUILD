@@ -7,12 +7,12 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-pure-git
-pkgver=10.2.r214.g2fd29a4c440
+pkgver=10.2.r291.g1f947b1c62c
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=2fd29a4c440ca4a0420c7ed305d8bf4662f90956"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=0682c264964498dae7934cbc6aeac5f1dcd52807"
-  "git+https://github.com/whrvt/wine-osu-patches.git#tag=03-02-2025-d17225a8-6f8931b3"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=1f947b1c62c4f6fdfad4da812567cf33c904c1eb"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=4914f150c52908924d335238e4be3a61d8273fb2"
+  "git+https://github.com/whrvt/wine-osu-patches.git#tag=03-05-2025-0530ef6f-0682c264-v2"
   30-win32-aliases.conf
   wine-binfmt.conf
   ntsync-10.2-staging.patch
@@ -176,9 +176,6 @@ if [ -d "${osu_patches_dir}" ]; then
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7157-winex11-Only-erase-the-desktop-window-pixels-on-expose-events/*" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7368-winex11-Use-XFixes-to-hide-cursor-before-warping-it/*" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7344-winex11-Fix-alpha-blending-in-X11DRV-UpdateLayeredWindow/*" \
-    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7408-setupapi-Implement-basic-disk-space-list-functions/0002-setupapi-Get-rid-of-the-DISKSPACELIST-typedef.patch" \
-    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7408-setupapi-Implement-basic-disk-space-list-functions/0003-setupapi-Implement-SetupAddToDiskSpaceList-.patch" \
-    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7408-setupapi-Implement-basic-disk-space-list-functions/0004-setupapi-Correctly-implement-SetupQuerySpaceRequiredOnDrive-.patch" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7064-ntdll-Check-for-invalid-GS-base-in-the-64-bit-segv-handler/0001-ntdll-Check-for-invalid-GS-base-in-the-64-bit-segv-handler-on-WoW64.patch" \
     -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/2000-configure.ac-Omit-frame-pointers-except-on-llvm-i386.patch" \
     -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/ps0250-p0003-server-Allow-skipping-debug-handle-retrieval.patch" \
