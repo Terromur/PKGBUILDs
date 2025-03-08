@@ -11,7 +11,7 @@ pkgver=10.3.r0.g3364df08cb6
 pkgrel=1
 source=(
   "git+https://gitlab.winehq.org/wine/wine.git#commit=3364df08cb6b03543f9650bac211777f607153c6"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=4914f150c52908924d335238e4be3a61d8273fb2"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=946648d13fbc6b0ae33793c621bf744377168b6b"
   "git+https://github.com/whrvt/wine-osu-patches.git#tag=03-05-2025-0530ef6f-0682c264-v2"
   30-win32-aliases.conf
   wine-binfmt.conf
