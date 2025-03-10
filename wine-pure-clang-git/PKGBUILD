@@ -35,8 +35,26 @@ source=(
   0019-rpcrt4-Avoid-closing-the-server-thread-handle-while-.patch
   explorer-prefer-wayland-over-x11-by-default.patch
   0001-Fixes-for-Clang.patch
+  ps0053-p0001-ntdll-Add-stub-for-RtlLCIDToCultureName.patch
+  ps0053-p0003-ntdll-Implement-RtlLCIDToCultureName.patch
+  ps0053-p0004-ntdll-Add-stubs-for-LdrAddLoadAsDataTable-an.patch
+  ps0053-p0005-kernelbase-Call-LdrAddLoadAsDataTable-and-Ld.patch
+  ps0053-p0007-ntdll-Maintain-list-of-loaded-data-modules.patch
+  ps0053-p0008-ntdll-Handle-MUI-redirection-in-LdrFindResou.patch
+  ps0053-p0009-ntdll-Handle-MUI-redirection-in-LdrAccessRes.patch
+  ps0053-p0010-ntdll-Cleanup-MUI-structures-when-modules-ar.patch
+  ps0775-kernelbase-Do-not-attempt-to-start-winedbg-if-loggin.patch
 )
 sha512sums=(
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -174,6 +192,15 @@ prepare() {
   patch -Np1 -i "${srcdir}/0019-rpcrt4-Avoid-closing-the-server-thread-handle-while-.patch"
   patch -Np1 -i "${srcdir}/explorer-prefer-wayland-over-x11-by-default.patch"
   patch -Np1 -i "${srcdir}/lowlatency_audio.patch"
+  patch -Np1 -i "${srcdir}/ps0053-p0001-ntdll-Add-stub-for-RtlLCIDToCultureName.patch"
+  patch -Np1 -i "${srcdir}/ps0053-p0003-ntdll-Implement-RtlLCIDToCultureName.patch"
+  patch -Np1 -i "${srcdir}/ps0053-p0004-ntdll-Add-stubs-for-LdrAddLoadAsDataTable-an.patch"
+  patch -Np1 -i "${srcdir}/ps0053-p0005-kernelbase-Call-LdrAddLoadAsDataTable-and-Ld.patch"
+  patch -Np1 -i "${srcdir}/ps0053-p0007-ntdll-Maintain-list-of-loaded-data-modules.patch"
+  patch -Np1 -i "${srcdir}/ps0053-p0008-ntdll-Handle-MUI-redirection-in-LdrFindResou.patch"
+  patch -Np1 -i "${srcdir}/ps0053-p0009-ntdll-Handle-MUI-redirection-in-LdrAccessRes.patch"
+  patch -Np1 -i "${srcdir}/ps0053-p0010-ntdll-Cleanup-MUI-structures-when-modules-ar.patch"
+  patch -Np1 -i "${srcdir}/ps0775-kernelbase-Do-not-attempt-to-start-winedbg-if-loggin.patch"
     local osu_patches_dir="${srcdir}/wine-osu-patches"
 if [ -d "${osu_patches_dir}" ]; then
   while IFS= read -r -d '' patch; do
