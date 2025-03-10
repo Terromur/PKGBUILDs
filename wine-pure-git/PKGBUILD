@@ -32,11 +32,9 @@ source=(
   include-use-ntsync.h-v7-module-header-as-an-in-tree-header.patch
   0019-rpcrt4-Avoid-closing-the-server-thread-handle-while-.patch
   explorer-prefer-wayland-over-x11-by-default.patch
-  alsa-period.patch
   extra-cflags.patch
 )
 sha512sums=(
-  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
