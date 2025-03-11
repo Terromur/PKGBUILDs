@@ -4,7 +4,7 @@
 # Maintainer: Adrià Cereto i Massagué <ssorgatem at gmail.com>
 
 pkgname=dxvk-pure-clang-git
-pkgver=2.5.3.r239.gd04fe1cdc
+pkgver=2.5.3.r304.gafbfee6cd
 pkgrel=1
 pkgdesc="A Vulkan-based compatibility layer for Direct3D 9/10/11 which allows running 3D applications on Linux using Wine. Windows DLL version)"
 arch=('x86_64')
@@ -16,7 +16,7 @@ conflicts=('d9vk'  "dxvk" 'dxvk-bin' 'dxvk-pure-git')
 makedepends=('ninja' 'meson>=0.43' 'glslang' 'mingw-w64-gcc' 'git')
 options=(!strip !buildflags !staticlibs)
 source=(
-    "git+https://github.com/doitsujin/dxvk.git#commit=3558b4c3da133309d5e503c1d7d01a706ab64e54"
+    "git+https://github.com/doitsujin/dxvk.git"
     "git+https://github.com/Joshua-Ashton/mingw-directx-headers.git"
     "git+https://github.com/KhronosGroup/Vulkan-Headers.git"
     "git+https://github.com/KhronosGroup/SPIRV-Headers.git"
@@ -55,6 +55,7 @@ prepare() {
     # Explicitly set origin URL for submodules using relative paths
     git remote set-url origin https://github.com/doitsujin/dxvk.git
     git submodule update --init --filter=tree:0 --recursive
+    git revert -n 34e5cc2aca41262b0d017e985e064e593e309237 || true
 
     # Uncomment to enable extra optimizations
     # Patch crossfiles with extra optimizations from makepkg.conf
