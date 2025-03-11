@@ -42,8 +42,10 @@ source=(
   ps0053-p0010-ntdll-Cleanup-MUI-structures-when-modules-ar.patch
   ps0775-kernelbase-Do-not-attempt-to-start-winedbg-if-loggin.patch
   winewayland-no-enter-move-if-relative.patch
+  kernelbase-Fix-uninitialized-structs-in-OpenThread.patch.patch
 )
 sha512sums=(
+  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -192,6 +194,7 @@ prepare() {
   patch -Np1 -i "${srcdir}/ps0053-p0010-ntdll-Cleanup-MUI-structures-when-modules-ar.patch"
   patch -Np1 -i "${srcdir}/ps0775-kernelbase-Do-not-attempt-to-start-winedbg-if-loggin.patch"
   patch -Np1 -i "${srcdir}/winewayland-no-enter-move-if-relative.patch"
+  patch -Np1 -i "${srcdir}/kernelbase-Fix-uninitialized-structs-in-OpenThread.patch.patch'
         local osu_patches_dir="${srcdir}/wine-osu-patches"
 if [ -d "${osu_patches_dir}" ]; then
   while IFS= read -r -d '' patch; do
