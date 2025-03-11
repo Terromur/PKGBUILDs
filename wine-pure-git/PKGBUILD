@@ -10,9 +10,9 @@ pkgname=wine-pure-git
 pkgver=10.3.r0.g3364df08cb6
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=3364df08cb6b03543f9650bac211777f607153c6"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=4cb856a95de0d28947fe59a98296682a7444894e"
   "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=946648d13fbc6b0ae33793c621bf744377168b6b"
-  "git+https://github.com/whrvt/wine-osu-patches.git#tag=03-05-2025-0530ef6f-0682c264-v2"
+  "git+https://github.com/whrvt/wine-osu-patches.git#commit=65f9455be3291f6e41c11b4cb8f5ca9b92cd00ad"
   30-win32-aliases.conf
   wine-binfmt.conf
   ntsync-10.2-staging.patch
@@ -200,8 +200,11 @@ if [ -d "${osu_patches_dir}" ]; then
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7157-winex11-Only-erase-the-desktop-window-pixels-on-expose-events/*" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7368-winex11-Use-XFixes-to-hide-cursor-before-warping-it/*" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7344-winex11-Fix-alpha-blending-in-X11DRV-UpdateLayeredWindow/*" \
+    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7516-Server-side-thread-priorities-implementation-Part-3-/*" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7064-ntdll-Check-for-invalid-GS-base-in-the-64-bit-segv-handler/0001-ntdll-Check-for-invalid-GS-base-in-the-64-bit-segv-handler-on-WoW64.patch" \
-    -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/2000-configure.ac-Omit-frame-pointers-except-on-llvm-i386.patch" \
+    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7512-win32u-Introduce-shared-memory-objects-for-windows/0003-server-Move-the-window-full-handle-to-the-shared-memory.patch" \
+    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7512-win32u-Introduce-shared-memory-objects-for-windows/0004-win32u-Read-the-windows-full-handle-from-the-shared-memory.patch" \
+    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7512-win32u-Introduce-shared-memory-objects-for-windows/0002-server-Introduce-shared-session-objects-for-windows.patch" \
     -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/ps0250-p0003-server-Allow-skipping-debug-handle-retrieval.patch" \
     -not -path "${osu_patches_dir}/0006-proton-esync-fsync/*" \
     -not -path "${osu_patches_dir}/0007-ntsync/*" \
@@ -215,7 +218,6 @@ if [ -d "${osu_patches_dir}" ]; then
     -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/9300-qpc-support-hardcode-with-old-kernel-check.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0004-time-wait/0015-ntdll-Use-clock_nanosleep-for-delay.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0005-writewatches/0004-ntdll-HACK-Add-WINE_RAM_REPORTING_BIAS-option.patch" \
-    -not -path "${osu_patches_dir}/0016-proton-tkg-additions/0010-ntdll-Handle-NULL-object-name-buffer-in-nt_to_unix_file_name_attr.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/600hz-default.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/Avoid-winemenubuilder-to-startup-explorer.exe.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/gecko-mono-skip-default-envvar.patch" \
