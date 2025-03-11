@@ -1,24 +1,24 @@
 diff --git a/src/d3d9/d3d9_fixed_function.cpp b/src/d3d9/d3d9_fixed_function.cpp
 --- a/src/d3d9/d3d9_fixed_function.cpp
 +++ b/src/d3d9/d3d9_fixed_function.cpp
-@@ -814,7 +814,7 @@
-     const D3D9FFShaderKeyVS&       Key,
+@@ -815,7 +815,7 @@
      const std::string&             Name,
            D3D9FixedFunctionOptions Options)
--  : m_module(spvVersion(1, 3)), m_options(Options) {
-+  : m_module(spvVersion(1, 6)), m_options(Options) {
-     m_programType = DxsoProgramTypes::VertexShader;
-     m_vsKey    = Key;
-     m_filename = Name;
-@@ -826,7 +826,7 @@
-     const D3D9FFShaderKeyFS&       Key,
+   : m_filename    ( Name )
+-  , m_module      ( spvVersion(1, 3) )
++  , m_module      ( spvVersion(1, 6) )
+   , m_programType ( DxsoProgramTypes::VertexShader )
+   , m_vsKey       ( Key )
+   , m_options     ( Options ) { }
+@@ -827,7 +827,7 @@
      const std::string&             Name,
            D3D9FixedFunctionOptions Options)
--  : m_module(spvVersion(1, 3)), m_options(Options) {
-+  : m_module(spvVersion(1, 6)), m_options(Options) {
-     m_programType = DxsoProgramTypes::PixelShader;
-     m_fsKey    = Key;
-     m_filename = Name;
+   : m_filename    ( Name )
+-  , m_module      ( spvVersion(1, 3) )
++  , m_module      ( spvVersion(1, 6) )
+   , m_programType ( DxsoProgramTypes::PixelShader )
+   , m_fsKey       ( Key )
+   , m_options     ( Options ) { }
 diff --git a/src/d3d9/d3d9_swvp_emu.cpp b/src/d3d9/d3d9_swvp_emu.cpp
 --- a/src/d3d9/d3d9_swvp_emu.cpp
 +++ b/src/d3d9/d3d9_swvp_emu.cpp
