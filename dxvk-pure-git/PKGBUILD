@@ -16,7 +16,7 @@ conflicts=('d9vk'  "dxvk" 'dxvk-bin' 'dxvk-pure-clang-git')
 makedepends=('ninja' 'meson>=0.43' 'glslang' 'mingw-w64-gcc' 'git')
 options=(!strip !buildflags !staticlibs)
 source=(
-    "git+https://github.com/doitsujin/dxvk.git"
+    "git+https://github.com/doitsujin/dxvk.git#commit=3558b4c3da133309d5e503c1d7d01a706ab64e54"
     "git+https://github.com/Joshua-Ashton/mingw-directx-headers.git"
     "git+https://github.com/KhronosGroup/Vulkan-Headers.git"
     "git+https://github.com/KhronosGroup/SPIRV-Headers.git"
