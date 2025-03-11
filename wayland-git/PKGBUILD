@@ -50,7 +50,7 @@ check() {
 }
 
 package_wayland-git() {
-    provides=("wayland=${pkgver}")
+    provides=("wayland=${pkgver}" "libwayland-client.so" "libwayland-server.so")
     conflicts=('wayland')
     
     DESTDIR="$pkgdir" ninja -C build install
