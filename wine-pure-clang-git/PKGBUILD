@@ -10,8 +10,8 @@ pkgname=wine-pure-clang-git
 pkgver=10.3.r15.g4cb856a95de
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=4cb856a95de0d28947fe59a98296682a7444894e"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=946648d13fbc6b0ae33793c621bf744377168b6b"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=a63d588c9e572edf76c5ebbe5076081dc6328295"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=c0e113dd3af7a7575a92fbb8885bd9feeb31ff1b"
   "git+https://github.com/whrvt/wine-osu-patches.git#commit=65f9455be3291f6e41c11b4cb8f5ca9b92cd00ad"
   30-win32-aliases.conf
   wine-binfmt.conf
@@ -212,6 +212,7 @@ if [ -d "${osu_patches_dir}" ]; then
   done < <(find "${osu_patches_dir}" \
     -type f \
     -name "*.patch" \
+    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7511-opengl32-Stop-generating-wine-opengl-driver-h/*" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7157-winex11-Only-erase-the-desktop-window-pixels-on-expose-events/*" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7368-winex11-Use-XFixes-to-hide-cursor-before-warping-it/*" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7344-winex11-Fix-alpha-blending-in-X11DRV-UpdateLayeredWindow/*" \
