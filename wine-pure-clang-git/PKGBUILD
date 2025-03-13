@@ -252,10 +252,6 @@ build() {
   export CROSSCXXFLAGS="$CROSSCFLAGS"
   export CROSSLDFLAGS="-fuse-ld=lld -flto=auto -flto=jobserver -fwhole-program-vtables -Wl,/FILEALIGN:4096,/OPT:REF,/OPT:ICF"
 
-  # Per component CFLAGS and LDFlAGS (requires makedep patch)
-  export preloader_CFLAGS=" -fno-lto -Wl,--no-relax"
-  export wine_preloader_LDFLAGS=" -fno-lto -Wl,--no-relax"
-
   echo "Building Wine..."
   cd "$pkgname-build"
   ../wine/configure \
