@@ -107,8 +107,7 @@ depends=(
 )
 makedepends=(
   git
-  llvm
-  clang
+  llvm-git
   alsa-lib
   gnutls
   gst-plugins-base-libs
