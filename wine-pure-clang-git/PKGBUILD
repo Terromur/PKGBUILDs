@@ -26,7 +26,6 @@ source=(
   0005-wineboot-Load-root-certificates-on-prefix-update.patch
   Avoid-winemenubuilder-to-startup-explorer.exe.patch
   0001-clang-fixup-lto.patch
-  0002-makedep-add-per-source-cflags-and-per-program-ldflag.patch
   access-alignment-property.patch
   lowlatency_audio.patch
   wineusb-Partial-implementation-for-BusQueryContainer.patch
@@ -47,7 +46,6 @@ source=(
   kernelbase-Fix-uninitialized-structs-in-OpenThread.patch
 )
 sha512sums=(
-  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -177,9 +175,8 @@ prepare() {
   # Fixes losing input focus after Alt-Tab in Unity games
   patch -Np1 -i "${srcdir}/HACK-winex11.drv-Let-the-WM-focus-our-windows-by-def.patch"
 
-  # Clang fixes
+  # Clang fix
   patch -Np1 -i "${srcdir}/0001-clang-fixup-lto.patch"
-  patch -Np1 -i "${srcdir}/0002-makedep-add-per-source-cflags-and-per-program-ldflag.patch"
 
   # Fixes "The explorer process failed to start" issue
   patch -Np1 -i "${srcdir}/Avoid-winemenubuilder-to-startup-explorer.exe.patch"
