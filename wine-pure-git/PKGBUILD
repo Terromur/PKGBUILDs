@@ -102,6 +102,7 @@ depends=(
 makedepends=(
   git
   alsa-lib
+  llvm-git
   gnutls
   gst-plugins-base-libs
   libpulse
