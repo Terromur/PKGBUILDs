@@ -237,6 +237,7 @@ if [ -d "${osu_patches_dir}" ]; then
     -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/1001-ntdll-Add-__wine_get_tsc_calibration-internal-functi.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/1002-wineboot-Use-__wine_get_tsc_calibration-for-TSC-cali.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/9300-qpc-support-hardcode-with-old-kernel-check.patch" \
+    -not -path "${osu_patches_dir}/0013-server-optimization/0004-time-wait/0015-ntdll-Use-clock_nanosleep-for-delay.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0005-writewatches/0004-ntdll-HACK-Add-WINE_RAM_REPORTING_BIAS-option.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/600hz-default.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/Avoid-winemenubuilder-to-startup-explorer.exe.patch" \
