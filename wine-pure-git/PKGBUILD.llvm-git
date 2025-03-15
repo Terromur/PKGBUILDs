@@ -1,0 +1,311 @@
+# Maintainer: Terromur <terromuroz@proton.me>
+# Maintainer: Vasiliy Stelmachenok <ventureo@cachyos.org>
+## Maintainers of original Arch Linux package:
+# Maintainer: Sven-Hendrik Haase <sh@lutzhaase.com>
+# Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
+# Contributor: Eduardo Romero <eduardo@archlinux.org>
+# Contributor: Giovanni Scafora <giovanni@archlinux.org>
+
+pkgname=wine-pure-git
+pkgver=10.3.r0.g3364df08cb6
+pkgrel=1
+source=(
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=a63d588c9e572edf76c5ebbe5076081dc6328295"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=c0e113dd3af7a7575a92fbb8885bd9feeb31ff1b"
+  "git+https://github.com/whrvt/wine-osu-patches.git#commit=65f9455be3291f6e41c11b4cb8f5ca9b92cd00ad"
+  30-win32-aliases.conf
+  wine-binfmt.conf
+  ntsync-10.2-staging.patch
+  7064.patch
+  winex11.drv-Recognize-the-keyboard-in-a-locale-indep.patch
+  HACK-winex11.drv-Let-the-WM-focus-our-windows-by-def.patch
+  0001-HACK-wine.inf-Add-native-builtin-overrides-for-msvcr.patch
+  0002-wine.inf-Set-a-valid-Win10-ProductId.patch
+  0003-wineboot-On-prefix-upgrade-update-win10-build-number.patch
+  0004-wineboot-Generate-better-DigitalProductId.patch
+  0005-wineboot-Load-root-certificates-on-prefix-update.patch
+  Avoid-winemenubuilder-to-startup-explorer.exe.patch
+  access-alignment-property.patch
+  lowlatency_audio.patch
+  wineusb-Partial-implementation-for-BusQueryContainer.patch
+  wmiutils-Add-IClassFactory2-implementation.patch
+  include-use-ntsync.h-v7-module-header-as-an-in-tree-header.patch
+  0019-rpcrt4-Avoid-closing-the-server-thread-handle-while-.patch
+  explorer-prefer-wayland-over-x11-by-default.patch
+  ps0053-p0001-ntdll-Add-stub-for-RtlLCIDToCultureName.patch
+  ps0053-p0003-ntdll-Implement-RtlLCIDToCultureName.patch
+  ps0053-p0004-ntdll-Add-stubs-for-LdrAddLoadAsDataTable-an.patch
+  ps0053-p0005-kernelbase-Call-LdrAddLoadAsDataTable-and-Ld.patch
+  ps0053-p0007-ntdll-Maintain-list-of-loaded-data-modules.patch
+  ps0053-p0008-ntdll-Handle-MUI-redirection-in-LdrFindResou.patch
+  ps0053-p0009-ntdll-Handle-MUI-redirection-in-LdrAccessRes.patch
+  ps0053-p0010-ntdll-Cleanup-MUI-structures-when-modules-ar.patch
+  ps0775-kernelbase-Do-not-attempt-to-start-winedbg-if-loggin.patch
+  winewayland-no-enter-move-if-relative.patch
+  kernelbase-Fix-uninitialized-structs-in-OpenThread.patch
+  ps9901-ntdll-Improve-spin_lock-performance.patch
+  ps3504-p0001-Revert-ntdll-Tweak-the-binary-representation-of-SRWLOCK.patch
+  ps3504-p0002-ntdll-An-implementation-of-SRWLOCK-that-closer-.patch
+)
+sha512sums=(
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+)
+
+pkgdesc="A compatibility layer for running Windows programs"
+url="https://www.winehq.org"
+arch=(x86_64)
+options=(staticlibs !lto)
+license=(LGPL-2.1-or-later)
+depends=(
+  desktop-file-utils
+  fontconfig
+  freetype2
+  gcc-libs
+  gettext
+  libxcursor
+  libxkbcommon
+  libxi
+  libxrandr
+  wayland
+  ffmpeg
+  unixodbc
+)
+makedepends=(
+  git
+  alsa-lib
+  llvm-git
+  gnutls
+  gst-plugins-base-libs
+  libpulse
+  libxcomposite
+  mesa
+  opencl-headers
+  opencl-icd-loader
+  sdl2
+  vulkan-headers
+  vulkan-icd-loader
+  mingw-w64-gcc
+)
+optdepends=(
+  alsa-lib
+  alsa-plugins
+  gnutls
+  gst-plugins-bad
+  gst-plugins-base
+  gst-plugins-base-libs
+  gst-plugins-good
+  gst-plugins-ugly
+  libpulse
+  libxcomposite
+  opencl-icd-loader
+  sdl2
+  wine-gecko
+  wine-mono
+)
+provides=("wine-staging" "wine" 'wine-wow64')
+conflicts=("wine")
+makedepends=(${makedepends[@]} ${depends[@]})
+install=wine.install
+
+pkgver() {
+  git -C wine describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^wine.//;s/^v//;s/\.rc/rc/'
+}
+
+prepare() {
+  # Get rid of old build dirs
+  rm -rf "$pkgname-build"
+  mkdir "$pkgname-build"
+
+  cd wine
+
+  # apply wine-staging patchset (no Esync to prevent conflicts with NTSync)
+  ../wine-staging/staging/patchinstall.py --backend=git-apply --all \
+    -W server-Signal_Thread \
+    -W eventfd_synchronization
+
+  # NTSync for Wine 10.2
+  patch -Np1 -i "${srcdir}/ntsync-10.2-staging.patch"
+  patch -Np1 -i "${srcdir}/include-use-ntsync.h-v7-module-header-as-an-in-tree-header.patch"
+
+  # Use native Visual C++ DLLs, fix Windows product version
+  patch -Np1 -i "${srcdir}/0001-HACK-wine.inf-Add-native-builtin-overrides-for-msvcr.patch"
+  patch -Np1 -i "${srcdir}/0002-wine.inf-Set-a-valid-Win10-ProductId.patch"
+  patch -Np1 -i "${srcdir}/0003-wineboot-On-prefix-upgrade-update-win10-build-number.patch"
+  patch -Np1 -i "${srcdir}/0004-wineboot-Generate-better-DigitalProductId.patch"
+  patch -Np1 -i "${srcdir}/0005-wineboot-Load-root-certificates-on-prefix-update.patch"
+
+  # Fixes crashes in many games in new WoW64 mode
+  # https://bugs.winehq.org/show_bug.cgi?id=57444
+  patch -Np1 -i "${srcdir}/7064.patch"
+
+  # Make keyboard shortcuts independent of layout
+  # https://bugs.winehq.org/show_bug.cgi?id=30984
+  patch -Np1 -i "${srcdir}/winex11.drv-Recognize-the-keyboard-in-a-locale-indep.patch"
+
+  # Fixes losing input focus after Alt-Tab in Unity games
+  patch -Np1 -i "${srcdir}/HACK-winex11.drv-Let-the-WM-focus-our-windows-by-def.patch"
+
+  # Fixes "The explorer process failed to start" issue
+  patch -Np1 -i "${srcdir}/Avoid-winemenubuilder-to-startup-explorer.exe.patch"
+  ./dlls/winevulkan/make_vulkan
+  ./tools/make_requests
+  ./tools/make_specfiles
+  patch -Np1 -i "${srcdir}/access-alignment-property.patch"
+  patch -Np1 -i "${srcdir}/lowlatency_audio.patch"
+  patch -Np1 -i "${srcdir}/wineusb-Partial-implementation-for-BusQueryContainer.patch"
+  patch -Np1 -i "${srcdir}/wmiutils-Add-IClassFactory2-implementation.patch"
+  patch -Np1 -i "${srcdir}/0019-rpcrt4-Avoid-closing-the-server-thread-handle-while-.patch"
+  patch -Np1 -i "${srcdir}/explorer-prefer-wayland-over-x11-by-default.patch"
+  patch -Np1 -i "${srcdir}/ps0053-p0001-ntdll-Add-stub-for-RtlLCIDToCultureName.patch"
+  patch -Np1 -i "${srcdir}/ps0053-p0003-ntdll-Implement-RtlLCIDToCultureName.patch"
+  patch -Np1 -i "${srcdir}/ps0053-p0004-ntdll-Add-stubs-for-LdrAddLoadAsDataTable-an.patch"
+  patch -Np1 -i "${srcdir}/ps0053-p0005-kernelbase-Call-LdrAddLoadAsDataTable-and-Ld.patch"
+  patch -Np1 -i "${srcdir}/ps0053-p0007-ntdll-Maintain-list-of-loaded-data-modules.patch"
+  patch -Np1 -i "${srcdir}/ps0053-p0008-ntdll-Handle-MUI-redirection-in-LdrFindResou.patch"
+  patch -Np1 -i "${srcdir}/ps0053-p0009-ntdll-Handle-MUI-redirection-in-LdrAccessRes.patch"
+  patch -Np1 -i "${srcdir}/ps0053-p0010-ntdll-Cleanup-MUI-structures-when-modules-ar.patch"
+  patch -Np1 -i "${srcdir}/ps0775-kernelbase-Do-not-attempt-to-start-winedbg-if-loggin.patch"
+  patch -Np1 -i "${srcdir}/winewayland-no-enter-move-if-relative.patch"
+  patch -Np1 -i "${srcdir}/kernelbase-Fix-uninitialized-structs-in-OpenThread.patch"
+  patch -Np1 -i "${srcdir}/ps9901-ntdll-Improve-spin_lock-performance.patch"
+  patch -Np1 -i "${srcdir}/ps3504-p0001-Revert-ntdll-Tweak-the-binary-representation-of-SRWLOCK.patch"
+  patch -Np1 -i "${srcdir}/ps3504-p0002-ntdll-An-implementation-of-SRWLOCK-that-closer-.patch"
+        local osu_patches_dir="${srcdir}/wine-osu-patches"
+if [ -d "${osu_patches_dir}" ]; then
+  while IFS= read -r -d '' patch; do
+    msg2 "Applying wine-osu-patches: ${patch#${osu_patches_dir}/}"
+    patch -Np1 < "$patch"
+  done < <(find "${osu_patches_dir}" \
+    -type f \
+    -name "*.patch" \
+    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7511-opengl32-Stop-generating-wine-opengl-driver-h/*" \
+    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7157-winex11-Only-erase-the-desktop-window-pixels-on-expose-events/*" \
+    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7368-winex11-Use-XFixes-to-hide-cursor-before-warping-it/*" \
+    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7344-winex11-Fix-alpha-blending-in-X11DRV-UpdateLayeredWindow/*" \
+    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7516-Server-side-thread-priorities-implementation-Part-3-/*" \
+    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7064-ntdll-Check-for-invalid-GS-base-in-the-64-bit-segv-handler/0001-ntdll-Check-for-invalid-GS-base-in-the-64-bit-segv-handler-on-WoW64.patch" \
+    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7512-win32u-Introduce-shared-memory-objects-for-windows/0003-server-Move-the-window-full-handle-to-the-shared-memory.patch" \
+    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7512-win32u-Introduce-shared-memory-objects-for-windows/0004-win32u-Read-the-windows-full-handle-from-the-shared-memory.patch" \
+    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7512-win32u-Introduce-shared-memory-objects-for-windows/0002-server-Introduce-shared-session-objects-for-windows.patch" \
+    -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/ps0250-p0003-server-Allow-skipping-debug-handle-retrieval.patch" \
+    -not -path "${osu_patches_dir}/0006-proton-esync-fsync/*" \
+    -not -path "${osu_patches_dir}/0007-ntsync/*" \
+    -not -path "${osu_patches_dir}/0009-windowing-system-integration/0004-proton/0018-HACK-winex11.drv-Let-the-WM-focus-our-windows-by-def.patch" \
+    -not -path "${osu_patches_dir}/0009-windowing-system-integration/0004-proton/0020-winex11.drv-Recognize-the-keyboard-in-a-locale-indep.patch" \
+    -not -path "${osu_patches_dir}/0009-windowing-system-integration/0004-proton/0014-winex11.drv-Pass-XEvent-instead-of-XClientMessageEve.patch" \
+    -not -path "${osu_patches_dir}/0012-audio/0005-alsa-pulse-mmdevapi-Support-custom-period-and-buffer-sizes.patch" \
+    -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/*" \
+    -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/1001-ntdll-Add-__wine_get_tsc_calibration-internal-functi.patch" \
+    -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/1002-wineboot-Use-__wine_get_tsc_calibration-for-TSC-cali.patch" \
+    -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/9300-qpc-support-hardcode-with-old-kernel-check.patch" \
+    -not -path "${osu_patches_dir}/0013-server-optimization/0004-time-wait/0015-ntdll-Use-clock_nanosleep-for-delay.patch" \
+    -not -path "${osu_patches_dir}/0013-server-optimization/0005-writewatches/0004-ntdll-HACK-Add-WINE_RAM_REPORTING_BIAS-option.patch" \
+    -not -path "${osu_patches_dir}/9000-misc-additions/600hz-default.patch" \
+    -not -path "${osu_patches_dir}/9000-misc-additions/Avoid-winemenubuilder-to-startup-explorer.exe.patch" \
+    -not -path "${osu_patches_dir}/9000-misc-additions/gecko-mono-skip-default-envvar.patch" \
+    -not -path "${osu_patches_dir}/9000-misc-additions/wineserver-debug_level-unlikely.patch" \
+    -not -path "${osu_patches_dir}/9000-misc-additions/win32u-gdi32-Semi-stub-NtGdiGetDCDpiScaleValue.patch" \
+    -not -path "${osu_patches_dir}/9000-misc-additions/winebus-Fake-load-driver-if-EnableWinebus-isn-t-set-.patch" \
+    -not -path "${osu_patches_dir}/9990-nowow64/*" \
+    -print0 | sort -z)
+fi
+  autoreconf -f
+}
+
+build() {
+  export CC=clang
+  export CXX=clang++
+  export CFLAGS="-O3 -march=native -mtune=native -fno-math-errno -fno-trapping-math -fcf-protection=none -mharden-sls=none -fno-stack-protector -fno-unwind-tables -fomit-frame-pointer -mprefer-vector-width=256 -fdata-sections -ffunction-sections -fsplit-lto-unit -fno-semantic-interposition -pthread -funsafe-math-optimizations -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement -mllvm -enable-gvn-hoist -mllvm -enable-loop-distribute -mllvm -enable-unroll-and-jam -mllvm -enable-dfa-jump-thread -mllvm -inline-threshold=1500 -mllvm -enable-nontrivial-unswitch -mllvm -enable-interleaved-mem-accesses  -mllvm -polly -mllvm -polly-omp-backend=LLVM -mllvm -polly-vectorizer=stripmine -mllvm -polly-run-inliner -mllvm -polly-ast-use-context -mllvm -polly-optimizer=isl -mllvm -polly-dependences-computeout=600000 -mllvm -polly-num-threads=$(nproc) -mllvm -polly-run-dce -mllvm -polly-invariant-load-hoisting -mllvm -polly-detect-profitability-min-per-loop-insts=40 -mllvm -polly-tiling -mllvm -polly-2nd-level-tiling -mllvm -polly-enable-delicm=true -mllvm -polly-loopfusion-greedy -ffp-contract=fast -fno-unique-section-names -fuse-ld=lld -mllvm -polly-prevect-width=256 -mllvm -polly-omp-backend=LLVM -mllvm -polly-scheduling=dynamic -mllvm -polly-scheduling-chunksize=1 -D_FORTIFY_SOURCE=0 -w"
+  export CXXFLAGS="$CFLAGS -Wp,-U_GLIBCXX_ASSERTIONS"
+  export LDFLAGS="-Wl,-O3,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -fwhole-program-vtables -lpthread -fuse-ld=lld -flto=jobserver -flto=auto -Wl,-z,pack-relative-relocs -Wl,--gc-sections"
+  export CROSSCFLAGS="$CFLAGS"
+
+  CFLAGS+=" -std=gnu23"
+  CXXFLAGS+=" -std=gnu++23"
+
+  export CROSSCFLAGS="-O3 -march=native -mtune=native -fipa-pta -fno-math-errno -flive-range-shrinkage -fno-trapping-math -mtls-dialect=gnu2 -feliminate-unused-debug-types -floop-nest-optimize -fgraphite-identity -fdata-sections -ffunction-sections -fno-semantic-interposition -fivopts -fmodulo-sched -ffp-contract=fast -fno-stack-protector -fcf-protection=none -mharden-sls=none -funroll-loops -fomit-frame-pointer -fno-unwind-tables -mprefer-vector-width=256 -floop-strip-mine -pthread -fno-ident -fipa-pta -funsafe-math-optimizations -fprofile-correction -D_FORTIFY_SOURCE=0"
+  export CROSSCXXFLAGS="$CROSSCFLAGS -Wp,-U_GLIBCXX_ASSERTIONS"
+  export CROSSLDFLAGS="-Wl,-O3 -Wl,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -flto=auto -lpthread -flto=jobserver -Wl,--file-alignment,4096"
+
+  echo "Building Wine..."
+  cd "$pkgname-build"
+  ../wine/configure \
+    --disable-tests \
+    --disable-win16 \
+    --prefix=/usr \
+    --libdir=/usr/lib \
+    --with-x \
+    --with-wayland \
+    --with-gstreamer \
+    --with-ffmpeg \
+    --without-sane \
+    --without-v4l2 \
+    --without-cups \
+    --without-capi \
+    --without-gphoto \
+    --without-xinerama \
+    --without-pcsclite \
+    --without-xxf86vm \
+    --without-pcap \
+    --enable-archs=x86_64,i386
+
+  make
+}
+
+package() {
+  cd "$pkgname-build"
+  make prefix="$pkgdir/usr" \
+    libdir="$pkgdir/usr/lib" \
+    dlldir="$pkgdir/usr/lib/wine" install
+
+  # Strip Windows binaries
+  i686-w64-mingw32-strip --strip-debug "$pkgdir"/usr/lib/wine/i386-windows/*.dll
+  x86_64-w64-mingw32-strip --strip-debug "$pkgdir"/usr/lib/wine/x86_64-windows/*.dll
+
+  # Font aliasing settings for Win32 applications
+  install -d "$pkgdir"/usr/share/fontconfig/conf.{avail,default}
+  install -m644 "$srcdir/30-win32-aliases.conf" "$pkgdir/usr/share/fontconfig/conf.avail"
+  ln -s ../conf.avail/30-win32-aliases.conf "$pkgdir/usr/share/fontconfig/conf.default/30-win32-aliases.conf"
+  install -Dm 644 "$srcdir/wine-binfmt.conf" "$pkgdir/usr/lib/binfmt.d/wine.conf"
+
+  # NTSync additions
+  echo "ntsync" | install -Dm644 /dev/stdin "$pkgdir/usr/lib/modules-load.d/wine-pure.conf"
+  echo 'KERNEL=="ntsync", MODE="0644"' | install -Dm644 /dev/stdin "$pkgdir/usr/lib/udev/rules.d/50-wine-pure.rules"
+}
+
+# vim:set ts=8 sts=2 sw=2 et:
