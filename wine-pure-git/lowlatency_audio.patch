@@ -16,18 +16,6 @@ index 046b447..c396c5e 100644
  
  static const WCHAR drv_keyW[] = {'S','o','f','t','w','a','r','e','\\',
      'W','i','n','e','\\','D','r','i','v','e','r','s','\\',
-@@ -2010,8 +2010,10 @@
-     int err;
- 
-     params->result = alsa_open_device(params->device, params->flow, &pcm_handle, &hw_params);
--    if(FAILED(params->result))
-+    if(FAILED(params->result)) {
-+        snd_pcm_close(pcm_handle);
-         return STATUS_SUCCESS;
-+    }
- 
-     formats = calloc(1, snd_pcm_format_mask_sizeof());
-     if(!formats){
 @@ -2056,26 +2081,20 @@
          params->result = AUDCLNT_E_DEVICE_INVALIDATED;
          goto exit;
