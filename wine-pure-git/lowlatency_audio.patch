@@ -2,7 +2,7 @@ diff --git a/dlls/winealsa.drv/alsa.c b/dlls/winealsa.drv/alsa.c
 index 046b447..c396c5e 100644
 --- a/dlls/winealsa.drv/alsa.c
 +++ b/dlls/winealsa.drv/alsa.c
-@@ -82,10 +82,10 @@ struct alsa_stream
+@@ -82,10 +82,10 @@
      pthread_mutex_t lock;
  };
  
@@ -16,52 +16,25 @@ index 046b447..c396c5e 100644
  
  static const WCHAR drv_keyW[] = {'S','o','f','t','w','a','r','e','\\',
      'W','i','n','e','\\','D','r','i','v','e','r','s','\\',
-@@ -2056,26 +2081,20 @@
-         params->result = AUDCLNT_E_DEVICE_INVALIDATED;
-         goto exit;
-     }
--
--    if(max_channels > 6)
--        fmt->Format.nChannels = 2;
--    else
--        fmt->Format.nChannels = max_channels;
--
--    if(fmt->Format.nChannels > 1 && (fmt->Format.nChannels & 0x1)){
--        /* For most hardware on Windows, users must choose a configuration with an even
--         * number of channels (stereo, quad, 5.1, 7.1). Users can then disable
--         * channels, but those channels are still reported to applications from
--         * GetMixFormat! Some applications behave badly if given an odd number of
--         * channels (e.g. 2.1). */
--
--        if(fmt->Format.nChannels < max_channels)
--            fmt->Format.nChannels += 1;
--        else
--            /* We could "fake" more channels and downmix the emulated channels,
--             * but at that point you really ought to tweak your ALSA setup or
--             * just use PulseAudio. */
--            WARN("Some Windows applications behave badly with an odd number of channels (%u)!\n", fmt->Format.nChannels);
-+    
-+    if (max_rate == 0) {
-+       ERR("Device reports zero sample rate\n");
-+       params->result = AUDCLNT_E_DEVICE_INVALIDATED;
-+       goto exit;
-+   }
-+   
-+    fmt->Format.nChannels = (max_channels > 8) ? 8 : max_channels;
-+    if(fmt->Format.nChannels > 1 && (fmt->Format.nChannels % 2 != 0)) {
-+        if(fmt->Format.nChannels < max_channels) {
-+            fmt->Format.nChannels++;
-+        } else {
-+            WARN("Odd channel count may cause issues: %u\n", fmt->Format.nChannels);
-+        }
-     }
- 
-     fmt->dwChannelMask = get_channel_mask(fmt->Format.nChannels);
-@@ -2086,25 +2105,31 @@
+@@ -2086,21 +2086,28 @@
          goto exit;
      }
  
 -    if(max_rate >= 48000)
+-        fmt->Format.nSamplesPerSec = 48000;
+-    else if(max_rate >= 44100)
+-        fmt->Format.nSamplesPerSec = 44100;
+-    else if(max_rate >= 22050)
+-        fmt->Format.nSamplesPerSec = 22050;
+-    else if(max_rate >= 11025)
+-        fmt->Format.nSamplesPerSec = 11025;
+-    else if(max_rate >= 8000)
+-        fmt->Format.nSamplesPerSec = 8000;
+-    else{
+-        ERR("Unknown max rate: %u\n", max_rate);
+-        params->result = AUDCLNT_E_DEVICE_INVALIDATED;
+-        goto exit;
+-    }
 +    if (snd_pcm_hw_params_test_rate(pcm_handle, hw_params, 192000, 0) == 0) {
 +        fmt->Format.nSamplesPerSec = 192000;
 +    } else if (snd_pcm_hw_params_test_rate(pcm_handle, hw_params, 176400, 0) == 0) {
@@ -71,38 +44,19 @@ index 046b447..c396c5e 100644
 +    } else if (snd_pcm_hw_params_test_rate(pcm_handle, hw_params, 88200, 0) == 0) {
 +        fmt->Format.nSamplesPerSec = 88200;
 +    } else if (snd_pcm_hw_params_test_rate(pcm_handle, hw_params, 48000, 0) == 0) {
-         fmt->Format.nSamplesPerSec = 48000;
--    else if(max_rate >= 44100)
++         fmt->Format.nSamplesPerSec = 48000;
 +    } else if (snd_pcm_hw_params_test_rate(pcm_handle, hw_params, 44100, 0) == 0) {
-         fmt->Format.nSamplesPerSec = 44100;
--    else if(max_rate >= 22050)
++         fmt->Format.nSamplesPerSec = 44100;
 +    } else if (snd_pcm_hw_params_test_rate(pcm_handle, hw_params, 22050, 0) == 0) {
-         fmt->Format.nSamplesPerSec = 22050;
--    else if(max_rate >= 11025)
++         fmt->Format.nSamplesPerSec = 22050;
 +    } else if (snd_pcm_hw_params_test_rate(pcm_handle, hw_params, 11025, 0) == 0) {
-         fmt->Format.nSamplesPerSec = 11025;
--    else if(max_rate >= 8000)
++         fmt->Format.nSamplesPerSec = 11025;
 +    } else if (snd_pcm_hw_params_test_rate(pcm_handle, hw_params, 8000, 0) == 0) {
-         fmt->Format.nSamplesPerSec = 8000;
--    else{
--        ERR("Unknown max rate: %u\n", max_rate);
--        params->result = AUDCLNT_E_DEVICE_INVALIDATED;
--        goto exit;
++         fmt->Format.nSamplesPerSec = 8000;
 +    } else {
 +        fmt->Format.nSamplesPerSec = max_rate;
 +        WARN("Using fallback rate: %u\n", max_rate);
-     }
++     }
  
      fmt->Format.nBlockAlign = (fmt->Format.wBitsPerSample * fmt->Format.nChannels) / 8;
      fmt->Format.nAvgBytesPerSec = fmt->Format.nSamplesPerSec * fmt->Format.nBlockAlign;
--
-     fmt->Samples.wValidBitsPerSample = fmt->Format.wBitsPerSample;
-     fmt->Format.cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
- 
-@@ -2112,7 +2137,6 @@
-     free(formats);
-     free(hw_params);
-     snd_pcm_close(pcm_handle);
--
-     return STATUS_SUCCESS;
- }
