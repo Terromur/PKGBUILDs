@@ -46,8 +46,10 @@ source=(
   ps9901-ntdll-Improve-spin_lock-performance.patch
   ps3504-p0001-Revert-ntdll-Tweak-the-binary-representation-of-SRWLOCK.patch
   ps3504-p0002-ntdll-An-implementation-of-SRWLOCK-that-closer-.patch
+  winecfg-Add-checkbox-to-enable-ALSA-driver.patch
 )
 sha512sums=(
+  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -180,6 +182,13 @@ prepare() {
   # Fixes losing input focus after Alt-Tab in Unity games
   patch -Np1 -i "${srcdir}/HACK-winex11.drv-Let-the-WM-focus-our-windows-by-def.patch"
 
+  # Fixes struct alignment inside kernelbase.OpenThread()
+  # Fixes: Hogwarts Legacy
+  patch -Np1 -i "${srcdir}/kernelbase-Fix-uninitialized-structs-in-OpenThread.patch"
+
+  # Add checkbox to enable ALSA in winecfg
+  patch -Np1 -i "${srcdir}/winecfg-Add-checkbox-to-enable-ALSA-driver.patch"
+
   # Fixes "The explorer process failed to start" issue
   patch -Np1 -i "${srcdir}/Avoid-winemenubuilder-to-startup-explorer.exe.patch"
   ./dlls/winevulkan/make_vulkan
@@ -201,7 +210,6 @@ prepare() {
   patch -Np1 -i "${srcdir}/ps0053-p0010-ntdll-Cleanup-MUI-structures-when-modules-ar.patch"
   patch -Np1 -i "${srcdir}/ps0775-kernelbase-Do-not-attempt-to-start-winedbg-if-loggin.patch"
   patch -Np1 -i "${srcdir}/winewayland-no-enter-move-if-relative.patch"
-  patch -Np1 -i "${srcdir}/kernelbase-Fix-uninitialized-structs-in-OpenThread.patch"
   patch -Np1 -i "${srcdir}/ps9901-ntdll-Improve-spin_lock-performance.patch"
   patch -Np1 -i "${srcdir}/ps3504-p0001-Revert-ntdll-Tweak-the-binary-representation-of-SRWLOCK.patch"
   patch -Np1 -i "${srcdir}/ps3504-p0002-ntdll-An-implementation-of-SRWLOCK-that-closer-.patch"
