@@ -12,7 +12,7 @@ pkgrel=1
 source=(
   "git+https://gitlab.winehq.org/wine/wine.git#commit=245d32302712ead24a6f5852e3a5708af755ea8a"
   "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=f247cd5d6b563ee6a3bc184482c0d1d2f9503e27"
-  "git+https://github.com/whrvt/wine-osu-patches.git#commit=086707c1fe4f53366c40b50484831d6045379100"
+  "git+https://github.com/whrvt/wine-osu-patches.git#commit=66292e979139d405f866af2fe6455d8a908706fb"
   30-win32-aliases.conf
   wine-binfmt.conf
   ntsync-10.3-staging.patch
@@ -47,8 +47,10 @@ source=(
   ps3504-p0001-Revert-ntdll-Tweak-the-binary-representation-of-SRWLOCK.patch
   ps3504-p0002-ntdll-An-implementation-of-SRWLOCK-that-closer-.patch
   winecfg-Add-checkbox-to-enable-ALSA-driver.patch
+  dsound-Divide-default-buffer-length-by-a-factor-of-8.patch
 )
 sha512sums=(
+  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -213,6 +215,7 @@ prepare() {
   patch -Np1 -i "${srcdir}/ps9901-ntdll-Improve-spin_lock-performance.patch"
   patch -Np1 -i "${srcdir}/ps3504-p0001-Revert-ntdll-Tweak-the-binary-representation-of-SRWLOCK.patch"
   patch -Np1 -i "${srcdir}/ps3504-p0002-ntdll-An-implementation-of-SRWLOCK-that-closer-.patch"
+  patch -Np1 -i "${srcdir}/dsound-Divide-default-buffer-length-by-a-factor-of-8.patch"
         local osu_patches_dir="${srcdir}/wine-osu-patches"
 if [ -d "${osu_patches_dir}" ]; then
   while IFS= read -r -d '' patch; do
