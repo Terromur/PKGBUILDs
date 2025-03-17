@@ -7,16 +7,72 @@ index 046b447..c396c5e 100644
  };
  
 -#define EXTRA_SAFE_RT 40000
-+#define EXTRA_SAFE_RT 4000
++REFERENCE_TIME EXTRA_SAFE_RT = 4000;
  
 -static const REFERENCE_TIME def_period = 100000;
 -static const REFERENCE_TIME min_period = 50000;
-+static const REFERENCE_TIME def_period = 10000;
-+static const REFERENCE_TIME min_period = 5000;
++REFERENCE_TIME def_period = 1000;
++REFERENCE_TIME min_period = 500;
  
  static const WCHAR drv_keyW[] = {'S','o','f','t','w','a','r','e','\\',
      'W','i','n','e','\\','D','r','i','v','e','r','s','\\',
-@@ -2086,21 +2086,28 @@
+@@ -805,10 +805,22 @@
+     snd_pcm_format_t format;
+     unsigned int rate, alsa_period_us, i;
+     WAVEFORMATEXTENSIBLE *fmtex = (WAVEFORMATEXTENSIBLE *)params->fmt;
++    const char *esrtenv;
++    REFERENCE_TIME esrtval;
+     int err;
+     SIZE_T size;
+ 
+     params->result = S_OK;
++    
++    esrtenv = getenv("ALSA_EXTRA_PAD");
++    if (esrtenv) {
++    	esrtval = atoll(esrtenv);
++    	if (esrtval >= 0) EXTRA_SAFE_RT = esrtval; // failsafe
++    	MESSAGE("ALSA padding:\t%lld\n", (long long int)EXTRA_SAFE_RT);
++    }
++    else {
++    	TRACE("ALSA padding:\t%lld\t(default)\n", (long long int)EXTRA_SAFE_RT);
++    }
+ 
+     stream = calloc(1, sizeof(*stream));
+     if(!stream){
+@@ -1008,10 +1020,10 @@
+ 
+     pthread_mutex_init(&stream->lock, NULL);
+ 
+-    TRACE("ALSA period: %lu frames\n", stream->alsa_period_frames);
+-    TRACE("ALSA buffer: %lu frames\n", stream->alsa_bufsize_frames);
+-    TRACE("MMDevice period: %u frames\n", stream->mmdev_period_frames);
+-    TRACE("MMDevice buffer: %u frames\n", stream->bufsize_frames);
++    MESSAGE("PIPEWIRE_ALSA period: %lu frames\n", stream->alsa_period_frames);
++    MESSAGE("PIPEWIRE_ALSA buffer: %lu frames\n", stream->alsa_bufsize_frames);
++    MESSAGE("MMDevAPI period: %u frames\n", stream->mmdev_period_frames);
++    MESSAGE("MMDevAPI buffer: %u frames\n", stream->bufsize_frames);
+ 
+ exit:
+     free(sw_params);
+@@ -1280,7 +1292,7 @@
+         WARN("writei failed, recovering: %ld (%s)\n", written,
+                 snd_strerror(written));
+ 
+-        ret = snd_pcm_recover(stream->pcm_handle, written, 0);
++        ret = snd_pcm_recover(stream->pcm_handle, written, 1);
+         if(ret < 0){
+             WARN("Could not recover: %d (%s)\n", ret, snd_strerror(ret));
+             return ret;
+@@ -1454,7 +1466,7 @@
+ 
+         WARN("read failed, recovering: %ld (%s)\n", nread, snd_strerror(nread));
+ 
+-        ret = snd_pcm_recover(stream->pcm_handle, nread, 0);
++        ret = snd_pcm_recover(stream->pcm_handle, nread, 1);
+         if(ret < 0){
+             WARN("Recover failed: %d (%s)\n", ret, snd_strerror(ret));
+             return;
+@@ -2086,21 +2098,28 @@
          goto exit;
      }
  
@@ -60,3 +116,61 @@ index 046b447..c396c5e 100644
  
      fmt->Format.nBlockAlign = (fmt->Format.wBitsPerSample * fmt->Format.nChannels) / 8;
      fmt->Format.nAvgBytesPerSec = fmt->Format.nSamplesPerSec * fmt->Format.nBlockAlign;
+diff --git a/dlls/winepulse.drv/pulse.c b/dlls/winepulse.drv/pulse.c
+index 9e54d88b5ad..6e2e27d87d0 100644
+--- a/dlls/winepulse.drv/pulse.c
++++ b/dlls/winepulse.drv/pulse.c
+@@ -744,8 +744,9 @@ static void pulse_probe_settings(int render, const char *pulse_name, WAVEFORMATE
+     pa_channel_map map;
+     pa_sample_spec ss;
+     pa_buffer_attr attr;
+-    int ret;
++    int ret, periodval;
+     unsigned int length = 0;
++    const char *penv;
+ 
+     if (pulse_name && !pulse_name[0])
+         pulse_name = NULL;
+@@ -794,6 +795,12 @@ static void pulse_probe_settings(int render, const char *pulse_name, WAVEFORMATE
+     if (length)
+         *def_period = *min_period = pa_bytes_to_usec(10 * length, &ss);
+ 
++    penv = getenv("STAGING_AUDIO_PERIOD");
++    if (penv && (periodval = atoi(penv)) >= 0) {
++        *def_period = *min_period = periodval;
++        TRACE("Pulse audio period set to %d.\n", periodval);
++    }
++
+     wfx->wFormatTag = WAVE_FORMAT_EXTENSIBLE;
+     wfx->cbSize = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
+ 
+@@ -1127,6 +1127,8 @@
+ {
+     struct create_stream_params *params = args;
+     struct pulse_stream *stream;
++    const char *penv, *denv;
++    int periodval, durationval;
+     unsigned int i, bufsize_bytes;
+     HRESULT hr;
+     char *name;
+@@ -1200,6 +1209,18 @@ static NTSTATUS pulse_create_stream(void *args)
+     if (FAILED(hr))
+         goto exit;
+ 
++    penv = getenv("STAGING_AUDIO_PERIOD");
++    if ((stream->dataflow == eRender) && penv && (periodval = atoi(penv)) >= 0) {
++        params->period = periodval;
++        TRACE("Pulse audio period set to %d.\n", periodval);
++    }
++
++    denv = getenv("STAGING_AUDIO_DURATION");
++    if ((stream->dataflow == eRender) && denv && (durationval = atoi(denv)) >= 0) {
++        params->duration = max(durationval, params->period);
++        TRACE("Pulse audio duration set to %d.\n", durationval);
++    }
++
+     stream->def_period = params->period;
+     stream->duration = params->duration;
+ 
+-- 
+2.48.1
