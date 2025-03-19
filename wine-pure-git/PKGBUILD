@@ -7,12 +7,12 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-pure-git
-pkgver=10.3.r101.g245d3230271
+pkgver=10.3.r171.ge66405a5040
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=245d32302712ead24a6f5852e3a5708af755ea8a"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=f247cd5d6b563ee6a3bc184482c0d1d2f9503e27"
-  "git+https://github.com/whrvt/wine-osu-patches.git#commit=66292e979139d405f866af2fe6455d8a908706fb"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=e66405a5040ac233ebdc7bdd925919ad63b4dd69"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=fa0cd8ead07e8308dae196122b38f95ef031187e"
+  "git+https://github.com/whrvt/wine-osu-patches.git#commit=3b6b0ec91408ca20c6a01e81eeb1c7c43be18296"
   30-win32-aliases.conf
   wine-binfmt.conf
   ntsync-10.3-staging.patch
@@ -225,10 +225,9 @@ if [ -d "${osu_patches_dir}" ]; then
     -type f \
     -name "*.patch" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7368-winex11-Use-XFixes-to-hide-cursor-before-warping-it/*" \
-    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7583-ntdll-Stop-using-chdir-in-nt-to-unix-file-name-/0003-ntdll-Stop-using-chdir-in-nt-to-unix-file-name-.patch" \
+    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7516-Server-side-thread-priorities-implementation-Part-3-/*" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7064-ntdll-Check-for-invalid-GS-base-in-the-64-bit-segv-handler/0001-ntdll-Check-for-invalid-GS-base-in-the-64-bit-segv-handler-on-WoW64.patch" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7512-win32u-Introduce-shared-memory-objects-for-windows/*" \
-    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7516-Server-side-thread-priorities-implementation-Part-3-/*" \
     -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/ps0250-p0003-server-Allow-skipping-debug-handle-retrieval.patch" \
     -not -path "${osu_patches_dir}/0006-proton-esync-fsync/*" \
     -not -path "${osu_patches_dir}/0007-ntsync/*" \
