@@ -160,7 +160,8 @@ prepare() {
   # apply wine-staging patchset (no Esync to prevent conflicts with NTSync)
   ../wine-staging/staging/patchinstall.py --backend=git-apply --all \
     -W server-Signal_Thread \
-    -W eventfd_synchronization
+    -W eventfd_synchronization \
+    -W winex11-MWM_Decorations
 
   # NTSync for Wine 10.3
   patch -Np1 -i "${srcdir}/ntsync-10.3-staging.patch"
