@@ -11,7 +11,7 @@ pkgver=10.3.r171.ge66405a5040
 pkgrel=1
 source=(
   "git+https://gitlab.winehq.org/wine/wine.git#commit=e66405a5040ac233ebdc7bdd925919ad63b4dd69"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=fa0cd8ead07e8308dae196122b38f95ef031187e"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=c5767aad30cd47aadde87672346802b0a1c6a23b"
   "git+https://github.com/whrvt/wine-osu-patches.git#commit=3b6b0ec91408ca20c6a01e81eeb1c7c43be18296"
   30-win32-aliases.conf
   wine-binfmt.conf
@@ -160,8 +160,7 @@ prepare() {
   # apply wine-staging patchset (no Esync to prevent conflicts with NTSync)
   ../wine-staging/staging/patchinstall.py --backend=git-apply --all \
     -W server-Signal_Thread \
-    -W eventfd_synchronization \
-    -W winex11-MWM_Decorations
+    -W eventfd_synchronization
 
   # NTSync for Wine 10.3
   patch -Np1 -i "${srcdir}/ntsync-10.3-staging.patch"
