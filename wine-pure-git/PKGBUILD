@@ -12,7 +12,7 @@ pkgrel=1
 source=(
   "git+https://gitlab.winehq.org/wine/wine.git#commit=e66405a5040ac233ebdc7bdd925919ad63b4dd69"
   "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=c5767aad30cd47aadde87672346802b0a1c6a23b"
-  "git+https://github.com/whrvt/wine-osu-patches.git#commit=3b6b0ec91408ca20c6a01e81eeb1c7c43be18296"
+  "git+https://github.com/whrvt/wine-osu-patches.git#tag=03-19-2025-e66405a5-fa0cd8ea"
   30-win32-aliases.conf
   wine-binfmt.conf
   ntsync-10.3-staging.patch
