@@ -54,6 +54,9 @@
 - Отключение xwayland (смотреть PKGBUILD)
 - Добавлен патч на включение тиринга (расскомментировать в PKGBUILD, если нужен)
 
+Был добавлен llvm-git:
+- Взят и переадаптирован от ms178: https://github.com/ms178/archpkgbuilds/tree/main/toolchain-experimental/llvm-git
+
 Был добавлен swfbar-pure-git:
 - Оптимизация и отключение лишних параметров
 - Был отключен bluez (смотреть PKGBUILD)
