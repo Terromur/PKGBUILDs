@@ -257,7 +257,7 @@ fi
 build() {
   export CC=clang
   export CXX=clang++
-  export CFLAGS="-O3 -march=native -mtune=native -fno-math-errno -fno-trapping-math -fcf-protection=none -mharden-sls=none -fno-stack-protector -fno-unwind-tables -fomit-frame-pointer -fdata-sections -ffunction-sections -fsplit-lto-unit -fno-semantic-interposition -pthread -funsafe-math-optimizations -ffp-contract=fast -fno-unique-section-names -fuse-ld=lld -D_FORTIFY_SOURCE=0 -w"
+  export CFLAGS="-O3 -march=native -mtune=native -fno-math-errno -fno-trapping-math -fcf-protection=none -mharden-sls=none -fno-stack-protector -fno-unwind-tables -fomit-frame-pointer -fdata-sections -ffunction-sections -fsplit-lto-unit -fno-semantic-interposition -pthread -funsafe-math-optimizations -ffp-contract=fast -fno-unique-section-names -funroll-loops -fuse-ld=lld -D_FORTIFY_SOURCE=0 -w"
   export CXXFLAGS="$CFLAGS -Wp,-U_GLIBCXX_ASSERTIONS"
   export LDFLAGS="-Wl,-O3,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -fwhole-program-vtables -lpthread -fuse-ld=lld -flto=jobserver -flto=auto -Wl,-z,pack-relative-relocs -Wl,--gc-sections"
   export CROSSCFLAGS="$CFLAGS"
