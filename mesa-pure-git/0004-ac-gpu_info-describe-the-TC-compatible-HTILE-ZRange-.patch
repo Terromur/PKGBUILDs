@@ -1,0 +1,43 @@
+From e2307cce307282961662d526af91589e2e5205f6 Mon Sep 17 00:00:00 2001
+From: Vitaliy Triang3l Kuzmin <triang3l@yandex.ru>
+Date: Sun, 9 Mar 2025 17:23:16 +0300
+Subject: [PATCH 04/13] ac/gpu_info: describe the TC-compatible HTILE ZRange
+ bug
+
+Signed-off-by: Vitaliy Triang3l Kuzmin <triang3l@yandex.ru>
+---
+ src/amd/common/ac_gpu_info.c | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+diff --git a/src/amd/common/ac_gpu_info.c b/src/amd/common/ac_gpu_info.c
+index 045c8e2953b..2e72c868892 100644
+--- a/src/amd/common/ac_gpu_info.c
++++ b/src/amd/common/ac_gpu_info.c
+@@ -1224,6 +1224,25 @@ bool ac_query_gpu_info(int fd, void *dev_p, struct radeon_info *info,
+ 
+    info->has_gfx9_scissor_bug = info->family == CHIP_VEGA10 || info->family == CHIP_RAVEN;
+ 
++   /* For clear tiles in HTILE, TC uses the upper bit of the tile to determine the depth clear value
++    * for the tile (0 or 1).
++    *
++    * If all samples covering a clear tile were discarded by late Z (such as via `discard` in the
++    * pixel shader, sample mask output, alpha to coverage), the tile stays clear.
++    *
++    * However, on some chips, when late Z discards samples, the Z range in the tile still gets
++    * updated, and that may change the upper bit of HTILE (max Z in the depth-only encoding, Z base
++    * in the depth/stencil encoding), thus making TC assume the tile was cleared to a different
++    * value.
++    *
++    * On the affected chips, when using the depth/stencil HTILE encoding, ZRANGE_PRECISION must be
++    * set to 0 after clearing depth to 0.0f (so the Z base is the min Z, and the upper bit stays 0),
++    * and to 1 after clearing depth to 1.0f (so the Z base is the max Z, and the upper bit stays 1).
++    *
++    * On certain chips, the depth-only HTILE encoding is also affected, so the depth/stencil
++    * encoding with the workaround needs to be used for TC-compatible HTILE even if no stencil
++    * aspect is present.
++    */
+    info->has_tc_compat_zrange_bug = info->gfx_level >= GFX8 && info->gfx_level <= GFX9;
+ 
+    info->has_small_prim_filter_sample_loc_bug =
+-- 
+2.48.1
