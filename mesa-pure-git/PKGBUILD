@@ -83,7 +83,6 @@ options=(
 )
 source=(
   "mesa::git+https://gitlab.freedesktop.org/mesa/mesa.git#branch=main"
-  33415.patch
   gnome-shell-glthread-disable.patch
   001-fix-amd-crash.patch
   valve.patch
@@ -92,8 +91,27 @@ source=(
   intel-genxml-add.patch
   lavapipe.patch
   no_error_int_conversion.patch
+  30720.patch
+  31658.patch
+  33415.patch
+  33639.patch
+  ms178-1.patch
+  0004-ac-gpu_info-describe-the-TC-compatible-HTILE-ZRange-.patch
+  0005-ac-gpu_info-add-has_tc_compat_zrange_bug_without_ste.patch
+  0006-radv-handle-has_tc_compat_zrange_bug_without_stencil.patch
+  0007-radeonsi-handle-has_tc_compat_zrange_bug_without_ste.patch
+  0008-ac-gpu_info-use-TC-compatible-HTILE-clear-WA-on-GFX1.patch
 )
 sha256sums=(
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -155,7 +173,7 @@ build() {
     -D android-strict=false
     -D c_args="-march=native -mtune=native -O3 -fdata-sections -fno-unwind-tables -fomit-frame-pointer -funsafe-math-optimizations -fno-ident -fno-stack-protector -pthread -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -fivopts -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine -fmodulo-sched -flive-range-shrinkage -mharden-sls=none"
     -D c_link_args="-Wl,-O3 -Wl,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -flto=auto -lpthread -flto=jobserver -Wl,-z,pack-relative-relocs -Wl,--gc-sections -flto=auto -flto-partition=one -fdevirtualize-at-ltrans"
-    -D cpp_args="-march=native -mtune=native -O3 -fdata-sections -flto=auto -flto-partition=one -fno-unwind-tables -fdevirtualize-at-ltrans -fomit-frame-pointer -funsafe-math-optimizations -fno-ident -fno-stack-protector -pthread -fopenmp -falign-functions=64 -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -fivopts -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine -fmodulo-sched -flive-range-shrinkage -mharden-sls=none -Wp,-U_GLIBCXX_ASSERTIONS"
+    -D cpp_args="-march=native -mtune=native -O3 -fdata-sections -flto=auto -flto-partition=one -fno-unwind-tables -fdevirtualize-at-ltrans -fomit-frame-pointer -funsafe-math-optimizations -fno-ident -fno-stack-protector -pthread -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -fivopts -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine -fmodulo-sched -flive-range-shrinkage -mharden-sls=none -Wp,-U_GLIBCXX_ASSERTIONS"
     -D cpp_link_args="-Wl,-O3 -Wl,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -flto=auto -lpthread -flto=jobserver -Wl,-z,pack-relative-relocs -Wl,--gc-sections -flto=auto -flto-partition=one -fdevirtualize-at-ltrans"
     -D b_asneeded=false
     -D b_pch=false
