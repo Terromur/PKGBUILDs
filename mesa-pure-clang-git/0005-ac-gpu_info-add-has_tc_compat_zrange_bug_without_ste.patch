@@ -1,0 +1,50 @@
+From a62c1289ac2532dc662b10fd564389d31039ccec Mon Sep 17 00:00:00 2001
+From: Vitaliy Triang3l Kuzmin <triang3l@yandex.ru>
+Date: Sun, 9 Mar 2025 17:34:28 +0300
+Subject: [PATCH 05/13] ac/gpu_info: add
+ has_tc_compat_zrange_bug_without_stencil
+
+Signed-off-by: Vitaliy Triang3l Kuzmin <triang3l@yandex.ru>
+---
+ src/amd/common/ac_gpu_info.c | 6 +++++-
+ src/amd/common/ac_gpu_info.h | 1 +
+ 2 files changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/src/amd/common/ac_gpu_info.c b/src/amd/common/ac_gpu_info.c
+index 2e72c868892..c49b0476675 100644
+--- a/src/amd/common/ac_gpu_info.c
++++ b/src/amd/common/ac_gpu_info.c
+@@ -1243,7 +1243,9 @@ bool ac_query_gpu_info(int fd, void *dev_p, struct radeon_info *info,
+     * encoding with the workaround needs to be used for TC-compatible HTILE even if no stencil
+     * aspect is present.
+     */
+-   info->has_tc_compat_zrange_bug = info->gfx_level >= GFX8 && info->gfx_level <= GFX9;
++   info->has_tc_compat_zrange_bug_without_stencil = info->gfx_level == GFX8;
++   info->has_tc_compat_zrange_bug = info->has_tc_compat_zrange_bug_without_stencil ||
++                                    info->gfx_level == GFX9;
+ 
+    info->has_small_prim_filter_sample_loc_bug =
+       (info->family >= CHIP_POLARIS10 && info->family <= CHIP_POLARIS12) ||
+@@ -1902,6 +1904,8 @@ void ac_print_gpu_info(const struct radeon_info *info, FILE *f)
+    fprintf(f, "    cpdma_prefetch_writes_memory = %u\n", info->cpdma_prefetch_writes_memory);
+    fprintf(f, "    has_gfx9_scissor_bug = %i\n", info->has_gfx9_scissor_bug);
+    fprintf(f, "    has_tc_compat_zrange_bug = %i\n", info->has_tc_compat_zrange_bug);
++   fprintf(f, "    has_tc_compat_zrange_bug_without_stencil = %i\n",
++           info->has_tc_compat_zrange_bug_without_stencil);
+    fprintf(f, "    has_small_prim_filter_sample_loc_bug = %i\n", info->has_small_prim_filter_sample_loc_bug);
+    fprintf(f, "    has_ls_vgpr_init_bug = %i\n", info->has_ls_vgpr_init_bug);
+    fprintf(f, "    has_pops_missed_overlap_bug = %i\n", info->has_pops_missed_overlap_bug);
+diff --git a/src/amd/common/ac_gpu_info.h b/src/amd/common/ac_gpu_info.h
+index 933267386c4..974bb826ecd 100644
+--- a/src/amd/common/ac_gpu_info.h
++++ b/src/amd/common/ac_gpu_info.h
+@@ -96,6 +96,7 @@ struct radeon_info {
+    bool cpdma_prefetch_writes_memory;
+    bool has_gfx9_scissor_bug;
+    bool has_tc_compat_zrange_bug;
++   bool has_tc_compat_zrange_bug_without_stencil;
+    bool has_small_prim_filter_sample_loc_bug;
+    bool has_ls_vgpr_init_bug;
+    bool has_pops_missed_overlap_bug;
+-- 
+2.48.1
