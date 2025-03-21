@@ -6,8 +6,8 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 # Contributor: Andreas Radke <andyrtr@archlinux.org>
 
-pkgname=mesa-pure-clang-git
-pkgver=25.1.0_devel.202500.c8fd0298e42.7119e3c
+pkgname=mesa-pure-git
+pkgver=25.1.0_devel.203224.5b11c3ff0a4.6ad70cb
 pkgrel=1
 pkgdesc="A purely personal Mesa build, git version"
 url="https://www.mesa3d.org/"
@@ -83,7 +83,6 @@ options=(
 )
 source=(
   "mesa::git+https://gitlab.freedesktop.org/mesa/mesa.git#branch=main"
-  33415.patch
   gnome-shell-glthread-disable.patch
   001-fix-amd-crash.patch
   valve.patch
@@ -92,8 +91,27 @@ source=(
   intel-genxml-add.patch
   lavapipe.patch
   no_error_int_conversion.patch
+  30720.patch
+  31658.patch
+  33415.patch
+  33639.patch
+  ms178-1.patch
+  0004-ac-gpu_info-describe-the-TC-compatible-HTILE-ZRange-.patch
+  0005-ac-gpu_info-add-has_tc_compat_zrange_bug_without_ste.patch
+  0006-radv-handle-has_tc_compat_zrange_bug_without_stencil.patch
+  0007-radeonsi-handle-has_tc_compat_zrange_bug_without_ste.patch
+  0008-ac-gpu_info-use-TC-compatible-HTILE-clear-WA-on-GFX1.patch
 )
 sha256sums=(
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -153,10 +171,10 @@ build() {
     -D amd-use-llvm=false
     -D android-libbacktrace=disabled
     -D android-strict=false
-    -D c_args="-march=native -mtune=native -O3 -fdata-sections -fopenmp -fomit-frame-pointer -fno-unwind-tables -funsafe-math-optimizations -fno-stack-protector -pthread -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -ffunction-sections -mharden-sls=none -mllvm -enable-interleaved-mem-accesses -mllvm -enable-unroll-and-jam -mllvm -polly -mllvm -polly-num-threads=$(nproc) -mllvm -polly-run-dce -mllvm -polly-invariant-load-hoisting -mllvm -polly-loopfusion-greedy -mllvm -polly-vectorizer=stripmine -mllvm -enable-loop-distribute -mllvm -polly-run-inliner -mllvm -polly-ast-use-context -mllvm -polly-optimizer=isl -mllvm -inline-threshold=1500 -Wno-unused-command-line-argument -mllvm -enable-gvn-hoist -mllvm -enable-nontrivial-unswitch -mllvm -polly-position=early -mllvm -polly-dependences-computeout=600000 -mllvm -polly-detect-profitability-min-per-loop-insts=40 -mllvm -polly-tiling -mllvm -polly-2nd-level-tiling -mllvm -polly-enable-delicm=true -mllvm -polly-prevect-width=256 -mllvm -polly-omp-backend=LLVM -mllvm -polly-scheduling=dynamic -mllvm -polly-scheduling-chunksize=1 -funroll-loops -mllvm -aggressive-ext-opt -mllvm -unroll-runtime-multi-exit -mllvm -enable-loop-flatten -mllvm -enable-loopinterchange -mllvm -slp-vectorize-hor-store -mllvm -enable-cond-stores-vec -mllvm -extra-vectorizer-passes"
-    -D c_link_args="-Wl,-O3,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -lpthread -fwhole-program-vtables -flto=jobserver -flto=auto -Wl,-z,pack-relative-relocs -Wl,--gc-sections"
-    -D cpp_args="-march=native -mtune=native -O3 -fdata-sections -fopenmp -fomit-frame-pointer -fno-unwind-tables -funsafe-math-optimizations -fno-stack-protector -pthread -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -ffunction-sections -mharden-sls=none -mllvm -enable-interleaved-mem-accesses -mllvm -enable-unroll-and-jam -mllvm -polly -mllvm -polly-num-threads=$(nproc) -mllvm -polly-run-dce -mllvm -polly-invariant-load-hoisting -mllvm -polly-loopfusion-greedy -mllvm -polly-vectorizer=stripmine -mllvm -enable-loop-distribute -mllvm -polly-run-inliner -mllvm -polly-ast-use-context -mllvm -polly-optimizer=isl -mllvm -inline-threshold=1500 -Wno-unused-command-line-argument -mllvm -enable-gvn-hoist -mllvm -enable-nontrivial-unswitch -mllvm -polly-position=early -mllvm -polly-dependences-computeout=600000 -mllvm -polly-detect-profitability-min-per-loop-insts=40 -mllvm -polly-tiling -mllvm -polly-2nd-level-tiling -mllvm -polly-enable-delicm=true -mllvm -polly-prevect-width=256 -mllvm -polly-omp-backend=LLVM -mllvm -polly-scheduling=dynamic -mllvm -polly-scheduling-chunksize=1 -funroll-loops -mllvm -aggressive-ext-opt -mllvm -unroll-runtime-multi-exit -mllvm -enable-loop-flatten -mllvm -enable-loopinterchange -mllvm -slp-vectorize-hor-store -mllvm -enable-cond-stores-vec -mllvm -extra-vectorizer-passes -Wp,-U_GLIBCXX_ASSERTIONS"
-    -D cpp_link_args="-Wl,-O3,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -lpthread -fwhole-program-vtables -flto=jobserver -flto=auto -Wl,-z,pack-relative-relocs -Wl,--gc-sections"
+    -D c_args="-march=native -mtune=native -O1 -fdata-sections -fomit-frame-pointer -fno-unwind-tables -funsafe-math-optimizations -fno-stack-protector -pthread -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -ffunction-sections -mharden-sls=none -mllvm -enable-interleaved-mem-accesses -mllvm -enable-unroll-and-jam -mllvm -polly -mllvm -polly-num-threads=$(nproc) -mllvm -polly-run-dce -mllvm -polly-invariant-load-hoisting -mllvm -polly-loopfusion-greedy -mllvm -polly-vectorizer=stripmine -mllvm -enable-loop-distribute -mllvm -polly-run-inliner -mllvm -polly-ast-use-context -mllvm -polly-optimizer=isl -mllvm -inline-threshold=1500 -Wno-unused-command-line-argument -mllvm -enable-gvn-hoist -mllvm -enable-nontrivial-unswitch -mllvm -polly-position=early -mllvm -polly-dependences-computeout=600000 -mllvm -polly-detect-profitability-min-per-loop-insts=40 -mllvm -polly-tiling -mllvm -polly-2nd-level-tiling -mllvm -polly-enable-delicm=true -mllvm -polly-prevect-width=256 -mllvm -polly-omp-backend=LLVM -mllvm -polly-scheduling=dynamic -mllvm -polly-scheduling-chunksize=1 -funroll-loops -mllvm -aggressive-ext-opt -mllvm -unroll-runtime-multi-exit -mllvm -enable-loop-flatten -mllvm -enable-loopinterchange -mllvm -slp-vectorize-hor-store -mllvm -enable-cond-stores-vec -mllvm -extra-vectorizer-passes"
+    -D c_link_args="-Wl,-O1,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all"
+    -D cpp_args="-march=native -mtune=native -O1 -fdata-sections -fomit-frame-pointer -fno-unwind-tables -funsafe-math-optimizations -fno-stack-protector -pthread -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -ffunction-sections -mharden-sls=none -mllvm -enable-interleaved-mem-accesses -mllvm -enable-unroll-and-jam -mllvm -polly -mllvm -polly-num-threads=$(nproc) -mllvm -polly-run-dce -mllvm -polly-invariant-load-hoisting -mllvm -polly-loopfusion-greedy -mllvm -polly-vectorizer=stripmine -mllvm -enable-loop-distribute -mllvm -polly-run-inliner -mllvm -polly-ast-use-context -mllvm -polly-optimizer=isl -mllvm -inline-threshold=1500 -Wno-unused-command-line-argument -mllvm -enable-gvn-hoist -mllvm -enable-nontrivial-unswitch -mllvm -polly-position=early -mllvm -polly-dependences-computeout=600000 -mllvm -polly-detect-profitability-min-per-loop-insts=40 -mllvm -polly-tiling -mllvm -polly-2nd-level-tiling -mllvm -polly-enable-delicm=true -mllvm -polly-prevect-width=256 -mllvm -polly-omp-backend=LLVM -mllvm -polly-scheduling=dynamic -mllvm -polly-scheduling-chunksize=1 -funroll-loops -mllvm -aggressive-ext-opt -mllvm -unroll-runtime-multi-exit -mllvm -enable-loop-flatten -mllvm -enable-loopinterchange -mllvm -slp-vectorize-hor-store -mllvm -enable-cond-stores-vec -mllvm -extra-vectorizer-passes -Wp,-U_GLIBCXX_ASSERTIONS"
+    -D cpp_link_args="-Wl,-O1,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all"
     -D b_asneeded=false
     -D b_pch=false
     --buildtype=release
