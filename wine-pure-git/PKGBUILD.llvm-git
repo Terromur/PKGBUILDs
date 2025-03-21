@@ -7,12 +7,12 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-pure-git
-pkgver=10.3.r202.gced1402d20b
+pkgver=10.3.r207.gca3f50198fb
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=ced1402d20ba874f9634a306630455366c3865b5"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=bb826f2185a0190c0d3ae1fa5bcfdfc6e2813f64"
-  "git+https://github.com/whrvt/wine-osu-patches.git#tag=03-19-2025-e66405a5-fa0cd8ea"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=ca3f50198fbb45bb0c40d1012e415638f42c5e21"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=30f69aa45aa6eac59f193b5488227a1a67c9c256"
+  "git+https://github.com/whrvt/wine-osu-patches.git#commit=3b6b0ec91408ca20c6a01e81eeb1c7c43be18296"
   30-win32-aliases.conf
   wine-binfmt.conf
   ntsync-10.3-staging.patch
@@ -46,7 +46,7 @@ source=(
   ps9901-ntdll-Improve-spin_lock-performance.patch
   ps3504-p0001-Revert-ntdll-Tweak-the-binary-representation-of-SRWLOCK.patch
   ps3504-p0002-ntdll-An-implementation-of-SRWLOCK-that-closer-.patch
-  winecfg-Add-checkbox-to-enable-ALSA-driver.patch
+  winecfg-Add-tweaks-tab-page.patch
   dsound-Divide-default-buffer-length-by-a-factor-of-8.patch
 )
 sha512sums=(
@@ -188,8 +188,8 @@ prepare() {
   # Fixes: Hogwarts Legacy
   patch -Np1 -i "${srcdir}/kernelbase-Fix-uninitialized-structs-in-OpenThread.patch"
 
-  # Add checkbox to enable ALSA in winecfg
-  patch -Np1 -i "${srcdir}/winecfg-Add-checkbox-to-enable-ALSA-driver.patch"
+  # Add tweaks tab page in winecfg
+  patch -Np1 -i "${srcdir}/winecfg-Add-tweaks-tab-page.patch"
 
   # Fixes "The explorer process failed to start" issue
   patch -Np1 -i "${srcdir}/Avoid-winemenubuilder-to-startup-explorer.exe.patch"
