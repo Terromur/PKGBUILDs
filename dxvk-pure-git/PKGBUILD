@@ -74,7 +74,7 @@ prepare() {
 
     # Так же вы можете добавить в CFLAGS флаг -D_WIN32_WINNT=0xA00. Он используется тогда, когда вам ничего не нужно, кроме совместимости Windows 10
     # Так же вы можете добавить в CFLAGS флаг -mprefer-avx128. Он нужен в том случае, когда возникают проблемы с запуском игр. Если вы собрали мой mingw-w64-gcc - вам этот флаг не нужен.
-    export CFLAGS="-march=native -mtune=native -O3 -fdata-sections -fno-unwind-tables -fomit-frame-pointer -funsafe-math-optimizations -fno-ident -fno-stack-protector -pthread -fopenmp -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -fivopts -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine -fmodulo-sched -flive-range-shrinkage -mharden-sls=none"
+    export CFLAGS="-march=native -mtune=native -O3 -funroll-loops -fdata-sections -fno-unwind-tables -fomit-frame-pointer -funsafe-math-optimizations -fno-ident -fno-stack-protector -pthread -fopenmp -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -fivopts -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine -fmodulo-sched -flive-range-shrinkage -mharden-sls=none"
     export CXXFLAGS="$CFLAGS -Wp,-U_GLIBCXX_ASSERTIONS"
     export LDFLAGS="-Wl,-O3 -Wl,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -flto=auto -lpthread -flto=jobserver -Wl,-z,pack-relative-relocs -Wl,--gc-sections"
     # These flags are taken from Proton
