@@ -7,12 +7,12 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-pure-git
-pkgver=10.4.r0.g0927c5c3da7
+pkgver=10.4.r29.gaae9ba21cef
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=0927c5c3da7cda8cf476416260286bd299ad6319"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=aae9ba21cefbac36e14674a2fef3a6987e6bc780"
   "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=c110178b0d74cd0483d91aa2c19a8a02a4f2e10c"
-  "git+https://github.com/whrvt/wine-osu-patches.git#commit=2b2d9ab9072702b71ba225a6f518b29cfba576f9"
+  "git+https://github.com/whrvt/wine-osu-patches.git#commit=ffe70d36a0df4d8c92a23ee93d5462faf250da4a"
   30-win32-aliases.conf
   wine-binfmt.conf
   ntsync-10.4-staging.patch
@@ -162,7 +162,7 @@ prepare() {
     -W server-Signal_Thread \
     -W eventfd_synchronization
 
-  # NTSync for Wine 10.3
+  # NTSync for Wine 10.4
   patch -Np1 -i "${srcdir}/ntsync-10.4-staging.patch"
   patch -Np1 -i "${srcdir}/include-use-ntsync.h-v7-module-header-as-an-in-tree-header.patch"
 
@@ -224,12 +224,9 @@ if [ -d "${osu_patches_dir}" ]; then
   done < <(find "${osu_patches_dir}" \
     -type f \
     -name "*.patch" \
-    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7368-winex11-Use-XFixes-to-hide-cursor-before-warping-it/*" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7181-winex11-Avoid-creating-windows-with-override-redirect-flag-set/*" \
-    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7625-winex11-Use-the-state-tracker-for-the-desktop-window-NET-WM-STATE/*" \
-    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7626-winex11-Use-the-current-state-when-deciding-how-to-reply-to-WM-TAKE-FOCUS/*" \
+    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7368-winex11-Use-XFixes-to-hide-cursor-before-warping-it/*" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7627-winex11-Track-NET-ACTIVE-WINDOW-property-changes/*" \
-    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7632-server-ntdll-Return-the-correct-base-actual-thread-process-priority/*" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7064-ntdll-Check-for-invalid-GS-base-in-the-64-bit-segv-handler/0001-ntdll-Check-for-invalid-GS-base-in-the-64-bit-segv-handler-on-WoW64.patch" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7512-win32u-Introduce-shared-memory-objects-for-windows/*" \
     -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/ps0250-p0003-server-Allow-skipping-debug-handle-retrieval.patch" \
@@ -238,6 +235,7 @@ if [ -d "${osu_patches_dir}" ]; then
     -not -path "${osu_patches_dir}/0009-windowing-system-integration/0004-proton/0018-HACK-winex11.drv-Let-the-WM-focus-our-windows-by-def.patch" \
     -not -path "${osu_patches_dir}/0009-windowing-system-integration/0004-proton/0020-winex11.drv-Recognize-the-keyboard-in-a-locale-indep.patch" \
     -not -path "${osu_patches_dir}/0009-windowing-system-integration/0004-proton/0014-winex11.drv-Pass-XEvent-instead-of-XClientMessageEve.patch" \
+    -not -path "${osu_patches_dir}/0009-windowing-system-integration/0001-misc/0018-winex11-child-window-styles.patch" \
     -not -path "${osu_patches_dir}/0012-audio/*" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0001-misc/*" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/1001-ntdll-Add-__wine_get_tsc_calibration-internal-functi.patch" \
