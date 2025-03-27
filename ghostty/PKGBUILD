@@ -24,7 +24,7 @@ depends=(bzip2
          libpng
          oniguruma # libonig.so
          pixman
-         wayland-git libwayland-client.so
+         wayland libwayland-client.so
          zlib)
 makedepends=(blueprint-compiler
              git
