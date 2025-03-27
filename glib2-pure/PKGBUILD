@@ -8,8 +8,8 @@ pkgname=(
   glib2
   glib2-devel
 )
-pkgver=2.82.4
-pkgrel=3.1
+pkgver=2.84.0
+pkgrel=1
 pkgdesc="Low level core library"
 url="https://gitlab.gnome.org/GNOME/glib"
 license=(LGPL-2.1-or-later)
@@ -49,8 +49,12 @@ source=(
   gio-querymodules.hook
   glib-compile-schemas.hook
   gdbus-codegen-version.patch
+  0002-gdesktopappinfo-Add-more-known-terminals.patch
+  0003-tests-Don-t-install-runner-scripts-without-installed.patch
 )
 b2sums=('SKIP'
+        'SKIP'
+        'SKIP'
         'SKIP'
         'SKIP'
         'SKIP'
@@ -66,6 +70,8 @@ prepare() {
 
   # Suppress noise from glib-compile-schemas.hook
   git apply -3 ../0001-glib-compile-schemas-Remove-noisy-deprecation-warnin.patch
+  git apply -3 ../0002-gdesktopappinfo-Add-more-known-terminals.patch
+  git apply -3 ../0003-tests-Don-t-install-runner-scripts-without-installed.patch
   git apply -3 ../gdbus-codegen-version.patch
   git submodule init
   git submodule set-url subprojects/gvdb "$srcdir/gvdb"
