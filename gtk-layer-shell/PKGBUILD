@@ -1,0 +1,58 @@
+# Maintainer: Terromur <terromuroz@proton.me>
+# Maintainer: Brett Cornwall <ainola@archlinux.org>
+# Contributor: Adrian Perez de Castro <aperez@igalia.com>
+
+pkgdesc='Library to create Wayland desktop components using the Layer Shell protocol'
+pkgname=gtk-layer-shell
+pkgver=0.9.0
+pkgrel=1
+arch=(x86_64)
+license=(LGPL3)
+url="https://github.com/wmww/gtk-layer-shell"
+depends=(
+    "gtk3"
+    "wayland"
+)
+makedepends=(
+    "gtk-doc"
+    "gobject-introspection"
+    "meson"
+    "ninja"
+    "valabind"
+)
+source=("$pkgname-$pkgver.tar.gz::https://github.com/wmww/gtk-layer-shell/archive/v$pkgver.tar.gz")
+sha512sums=('38179dd83a0828740ca8e2cc27fe3708f61107e88246644745da6c300da03ce04b17dd7117087946a68401a43176a599bdb98ed50936602d2b2540449c0e9066')
+
+build() {
+  arch-meson \
+ --prefix=/usr \
+ --wrap-mode=nofallback \
+ --buildtype=release \
+ -Dwerror=false \
+ -Dexamples=false \
+ -Ddebug=false \
+ -Doptimization=3 \
+ -Dstrip=true \
+ -Db_lto=true \
+ -Dc_std=gnu23 \
+ -Dbuild.c_args=gnu23 \
+ -Dcpp_std=gnu++23 \
+ -Dbuild.cpp_std=gnu++23 \
+ -Dpython.bytecompile=2 \
+ -Derrorlogs=false \
+ -Dstdsplit=false \
+ -Dtests=false \
+ -Ddocs=false \
+ -Dintrospection=true \
+ "$pkgname-$pkgver" \
+ build
+ meson compile -C build
+}
+
+check() {
+    ninja -C build test
+}
+
+package() {
+    DESTDIR="$pkgdir" ninja -C build install
+}
