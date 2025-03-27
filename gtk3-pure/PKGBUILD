@@ -98,6 +98,17 @@ build() {
     -D tracker3=false
     -D atk_bridge=false
     -D x11_backend=false
+    -D man=false
+    -D python.bytecompile=2
+    -D b_ndebug=true
+    -D b_pie=false
+    -D tests=false
+    -D errorlogs=false
+    -D stdsplit=false
+    -D optimization=3
+    -D strip=true
+    -D b_lto=true
+    --buildtype=release
   )
 
   CFLAGS+=" -DG_DISABLE_CAST_CHECKS"
