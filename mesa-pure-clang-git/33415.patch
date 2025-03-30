@@ -267,4 +267,3 @@ index fe9f32c0e0bab..8a03059ee0e9d 100644
           shader->draw->statistics.ds_invocations += data.num_domain_points;
 -- 
 GitLab
-
