@@ -7,7 +7,7 @@
 # Contributor: Andreas Radke <andyrtr@archlinux.org>
 
 pkgname=mesa-pure-git
-pkgver=25.1.0_devel.201565.6b2b74a894d.a5d22b0
+pkgver=25.1.0_devel.203584.b74a6e05bd6.2855e4f
 pkgrel=1
 pkgdesc="A purely personal Mesa build, git version"
 url="https://www.mesa3d.org/"
@@ -94,8 +94,7 @@ source=(
   30720.patch
   31658.patch
   33415.patch
-  33639.patch
-  ms178-1.patch
+  34236.patch
   0004-ac-gpu_info-describe-the-TC-compatible-HTILE-ZRange-.patch
   0005-ac-gpu_info-add-has_tc_compat_zrange_bug_without_ste.patch
   0006-radv-handle-has_tc_compat_zrange_bug_without_stencil.patch
@@ -103,7 +102,6 @@ source=(
   0008-ac-gpu_info-use-TC-compatible-HTILE-clear-WA-on-GFX1.patch
 )
 sha256sums=(
-  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
