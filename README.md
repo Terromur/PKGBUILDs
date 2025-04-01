@@ -126,10 +126,14 @@
 Был добавлен kwin:
 - Изменений нет, форкнут пакет от ms178: https://github.com/ms178/archpkgbuilds/tree/main/packages/kwin-main
 
+Был добавлен sddm:
+- Изменений нет, форкнут пакет от ms178: https://github.com/ms178/archpkgbuilds/tree/main/packages/sddm
+
 Был изменён gtk3-pure:
 - Оптимизация и отключение лишних параметров
 - Отключение x11 поддержки
 - Собирать только с gcc!
+
 
 Был изменён dxvk-pure-git:
 - Агрессивная оптимизация -O3 и другие флаги
