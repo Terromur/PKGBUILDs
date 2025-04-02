@@ -7,12 +7,12 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-pure-git
-pkgver=10.4.r77.g8b8b40eb94d
+pkgver=10.4.r163.g8e2aea6290e
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=8b8b40eb94da7b6ae4f8637fd4ad180cc2e08f6a"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=d88d44f1d9d94cb11aff9e2f0ce37d0d67fe1e95"
-  "git+https://github.com/whrvt/wine-osu-patches.git#commit=407f5cd1c1339e7b627ca3b28b676d3098ddb003"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=8e2aea6290e823d2f5023e2bff5c2fec0880a65d"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=5b64f435e92f270c4792ae3788dbb167c7dc629c"
+  "git+https://github.com/whrvt/wine-osu-patches.git#tag=04-01-2025-8e2aea62-5b64f435"
   30-win32-aliases.conf
   wine-binfmt.conf
   ntsync-10.4-staging.patch
@@ -227,9 +227,9 @@ if [ -d "${osu_patches_dir}" ]; then
     -name "*.patch" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7181-winex11-Avoid-creating-windows-with-override-redirect-flag-set/*" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7368-winex11-Use-XFixes-to-hide-cursor-before-warping-it/*" \
-    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7684-winex11-Avoid-stealing-focus-during-foreground-window-mapping/*" \
+    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7699-winex11-Use-NET-ACTIVE-WINDOW-to-request-track-window-activation/*" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7064-ntdll-Check-for-invalid-GS-base-in-the-64-bit-segv-handler/0001-ntdll-Check-for-invalid-GS-base-in-the-64-bit-segv-handler-on-WoW64.patch" \
-    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7512-win32u-Introduce-shared-memory-objects-for-windows/*" \
+    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7610-win32u-Create-a-shared-object-for-user-handle-entries/*" \
     -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/ps0250-p0003-server-Allow-skipping-debug-handle-retrieval.patch" \
     -not -path "${osu_patches_dir}/0006-proton-esync-fsync/*" \
     -not -path "${osu_patches_dir}/0007-ntsync/*" \
@@ -250,6 +250,8 @@ if [ -d "${osu_patches_dir}" ]; then
     -not -path "${osu_patches_dir}/9000-misc-additions/wineserver-debug_level-unlikely.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/win32u-gdi32-Semi-stub-NtGdiGetDCDpiScaleValue.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/winebus-Fake-load-driver-if-EnableWinebus-isn-t-set-.patch" \
+    -not -path "${osu_patches_dir}/9000-misc-additions/cursor-clip-hack.patch" \
+    -not -path "${osu_patches_dir}/9000-misc-additions/winex11-Custom-frame-limiter-for-OpenGL.patch" \
     -not -path "${osu_patches_dir}/9990-nowow64/*" \
     -print0 | sort -z)
 fi
