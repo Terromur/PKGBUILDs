@@ -23,7 +23,7 @@
 - Он может исправить проблемы с запуском игр
 
 Был добавлен llvm-mingw-bin:
-- Версия LLVM 20.0.1
+- Версия LLVM 20.0.1.1
 - Для сборки dxvk-pure-clang-git
 
 Были добавлены pipewire-git и wireplumber-git:
