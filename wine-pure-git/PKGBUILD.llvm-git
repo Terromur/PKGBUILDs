@@ -7,12 +7,12 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-pure-git
-pkgver=10.4.r235.g761a06fc76e
+pkgver=10.5.r23.g731b8445b48
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=761a06fc76e473f9ecd34d704e3e9c0d47732fd5"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=8924ee42d868d8d2785a8b175507cbd085461e3c"
-  "git+https://github.com/whrvt/wine-osu-patches.git#commit=4e31734fed8ed419d958ff0c4fa57bd3d20d342b"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=731b8445b4885b2b89f34e727771e77f38b3dfe2"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=835c92a2980d221a14e576f6dce896715cddb4db"
+  "git+https://github.com/whrvt/wine-osu-patches.git#commit=18c0d4a9f92b73d20693abfad21cb6d4dc35ccae"
   30-win32-aliases.conf
   wine-binfmt.conf
   ntsync-10.4-staging.patch
@@ -163,7 +163,7 @@ prepare() {
     -W server-Signal_Thread \
     -W eventfd_synchronization
 
-  # NTSync for Wine 10.4
+  # NTSync for Wine 10.5
   patch -Np1 -i "${srcdir}/ntsync-10.4-staging.patch"
   patch -Np1 -i "${srcdir}/include-use-ntsync.h-v7-module-header-as-an-in-tree-header.patch"
 
