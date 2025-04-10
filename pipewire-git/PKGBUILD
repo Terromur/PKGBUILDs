@@ -126,6 +126,7 @@ build() {
     -D tests=disabled
     -D errorlogs=false
     -D stdsplit=false
+    -D bluez5-codec-ldac-dec=disabled
     --buildtype=release
     --wrap-mode=nofallback
     -D session-managers=[]
