@@ -2,10 +2,10 @@ diff --git a/pipewire-alsa/alsa-plugins/pcm_pipewire.c b/pipewire-alsa/alsa-plug
 index 4ba25ee..8a61402 100644
 --- a/pipewire-alsa/alsa-plugins/pcm_pipewire.c
 +++ b/pipewire-alsa/alsa-plugins/pcm_pipewire.c
-@@ -33,15 +33,15 @@ PW_LOG_TOPIC_STATIC(alsa_log_topic, "alsa.pcm");
+@@ -30,15 +30,15 @@
+ #define MIN_BUFFERS	2u
  #define MAX_BUFFERS	64u
  
- #define MAX_CHANNELS	64
 -#define MAX_RATE	(48000*8)
 +#define MAX_RATE	(48000*16)
  
@@ -24,7 +24,7 @@ index 4ba25ee..8a61402 100644
  
  typedef struct {
  	snd_pcm_ioplug_t io;
-@@ -1001,7 +1001,7 @@ struct param_info infos[] = {
+@@ -1102,7 +1102,7 @@
  	{ "alsa.period-bytes", SND_PCM_IOPLUG_HW_PERIOD_BYTES, TYPE_MIN_MAX,
  		{ MIN_PERIOD_BYTES, MAX_PERIOD_BYTES }, 2, collect_int },
  	{ "alsa.periods", SND_PCM_IOPLUG_HW_PERIODS, TYPE_MIN_MAX,
