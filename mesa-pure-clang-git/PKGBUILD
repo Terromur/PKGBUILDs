@@ -94,7 +94,6 @@ source=(
   30720.patch
   31658.patch
   33415.patch
-  34236.patch
   0004-ac-gpu_info-describe-the-TC-compatible-HTILE-ZRange-.patch
   0005-ac-gpu_info-add-has_tc_compat_zrange_bug_without_ste.patch
   0006-radv-handle-has_tc_compat_zrange_bug_without_stencil.patch
@@ -102,7 +101,6 @@ source=(
   0008-ac-gpu_info-use-TC-compatible-HTILE-clear-WA-on-GFX1.patch
 )
 sha256sums=(
-  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
