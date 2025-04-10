@@ -96,7 +96,6 @@ prepare() {
   cd pipewire
   patch -Np1 -i ../buffer_fix.patch
   patch -Np1 -i ../alsa_default_params_tweak.patch
-  patch -Np1 -i ../reorder_BT_codecs.patch
   patch -Np1 -i ../resample_quality_boost.patch
 }
 
