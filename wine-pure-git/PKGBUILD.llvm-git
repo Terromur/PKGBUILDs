@@ -121,6 +121,7 @@ makedepends=(
   vulkan-icd-loader
   mingw-w64-gcc
   nasm
+  "linux-api-headers>=6.14"
 )
 optdepends=(
   alsa-lib
