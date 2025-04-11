@@ -7,18 +7,17 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-pure-git
-pkgver=10.5.r23.g731b8445b48
+pkgver=10.5.r123.g813f921a357
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=731b8445b4885b2b89f34e727771e77f38b3dfe2"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=835c92a2980d221a14e576f6dce896715cddb4db"
-  "git+https://github.com/whrvt/wine-osu-patches.git#commit=18c0d4a9f92b73d20693abfad21cb6d4dc35ccae"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=813f921a357fcb80f0eb01c4e3b160901182f6e5"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=aa0c8391eb7c7cf7e31d850150f6f2527eaffc28"
+  "git+https://github.com/whrvt/wine-osu-patches.git#tag=04-10-2025-647004cd-aa0c8391"
   30-win32-aliases.conf
   wine-binfmt.conf
-  ntsync-10.4-staging.patch
+  ntsync-10.5-staging.patch
   7064.patch
   winex11.drv-Recognize-the-keyboard-in-a-locale-indep.patch
-  HACK-winex11.drv-Let-the-WM-focus-our-windows-by-def.patch
   0001-HACK-wine.inf-Add-native-builtin-overrides-for-msvcr.patch
   0002-wine.inf-Set-a-valid-Win10-ProductId.patch
   0003-wineboot-On-prefix-upgrade-update-win10-build-number.patch
@@ -29,7 +28,6 @@ source=(
   lowlatency_audio.patch
   wineusb-Partial-implementation-for-BusQueryContainer.patch
   wmiutils-Add-IClassFactory2-implementation.patch
-  include-use-ntsync.h-v7-module-header-as-an-in-tree-header.patch
   0019-rpcrt4-Avoid-closing-the-server-thread-handle-while-.patch
   explorer-prefer-wayland-over-x11-by-default.patch
   ps0053-p0001-ntdll-Add-stub-for-RtlLCIDToCultureName.patch
@@ -50,8 +48,6 @@ source=(
   dsound-Divide-default-buffer-length-by-a-factor-of-8.patch
 )
 sha512sums=(
-  'SKIP'
-  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -164,8 +160,7 @@ prepare() {
     -W eventfd_synchronization
 
   # NTSync for Wine 10.5
-  patch -Np1 -i "${srcdir}/ntsync-10.4-staging.patch"
-  patch -Np1 -i "${srcdir}/include-use-ntsync.h-v7-module-header-as-an-in-tree-header.patch"
+  patch -Np1 -i "${srcdir}/ntsync-10.5-staging.patch"
 
   # Use native Visual C++ DLLs, fix Windows product version
   patch -Np1 -i "${srcdir}/0001-HACK-wine.inf-Add-native-builtin-overrides-for-msvcr.patch"
@@ -181,9 +176,6 @@ prepare() {
   # Make keyboard shortcuts independent of layout
   # https://bugs.winehq.org/show_bug.cgi?id=30984
   patch -Np1 -i "${srcdir}/winex11.drv-Recognize-the-keyboard-in-a-locale-indep.patch"
-
-  # Fixes losing input focus after Alt-Tab in Unity games
-  patch -Np1 -i "${srcdir}/HACK-winex11.drv-Let-the-WM-focus-our-windows-by-def.patch"
 
   # Fixes struct alignment inside kernelbase.OpenThread()
   # Fixes: Hogwarts Legacy
@@ -225,8 +217,8 @@ if [ -d "${osu_patches_dir}" ]; then
   done < <(find "${osu_patches_dir}" \
     -type f \
     -name "*.patch" \
-    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7181-winex11-Avoid-creating-windows-with-override-redirect-flag-set/*" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7368-winex11-Use-XFixes-to-hide-cursor-before-warping-it/*" \
+    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7678-winewayland-Use-system-cursor-shapes-when-possible/*" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7064-ntdll-Check-for-invalid-GS-base-in-the-64-bit-segv-handler/0001-ntdll-Check-for-invalid-GS-base-in-the-64-bit-segv-handler-on-WoW64.patch" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7610-win32u-Create-a-shared-object-for-user-handle-entries/*" \
     -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/ps0250-p0003-server-Allow-skipping-debug-handle-retrieval.patch" \
@@ -241,6 +233,7 @@ if [ -d "${osu_patches_dir}" ]; then
     -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/1001-ntdll-Add-__wine_get_tsc_calibration-internal-functi.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/1002-wineboot-Use-__wine_get_tsc_calibration-for-TSC-cali.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/9300-qpc-support-hardcode-with-old-kernel-check.patch" \
+    -not -path "${osu_patches_dir}/0013-server-optimization/0003-qpc/9300-configure-ntdll-Check-for-perf-struct-attributes.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0004-time-wait/0015-ntdll-Use-clock_nanosleep-for-delay.patch" \
     -not -path "${osu_patches_dir}/0013-server-optimization/0005-writewatches/0004-ntdll-HACK-Add-WINE_RAM_REPORTING_BIAS-option.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/600hz-default.patch" \
@@ -249,13 +242,12 @@ if [ -d "${osu_patches_dir}" ]; then
     -not -path "${osu_patches_dir}/9000-misc-additions/wineserver-debug_level-unlikely.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/win32u-gdi32-Semi-stub-NtGdiGetDCDpiScaleValue.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/winebus-Fake-load-driver-if-EnableWinebus-isn-t-set-.patch" \
-    -not -path "${osu_patches_dir}/9000-misc-additions/winediag-startup-messages.patch" \
-    -not -path "${osu_patches_dir}/9000-misc-additions/cursor-clip-hack.patch" \
     -not -path "${osu_patches_dir}/9000-misc-additions/winex11-Custom-frame-limiter-for-OpenGL.patch" \
+    -not -path "${osu_patches_dir}/9000-misc-additions/cursor-clip-hack.patch" \
+    -not -path "${osu_patches_dir}/9000-misc-additions/winediag-startup-messages.patch" \
     -not -path "${osu_patches_dir}/9990-nowow64/*" \
     -print0 | sort -z)
 fi
-  autoreconf -f
   autoreconf -f
 }
 
@@ -317,7 +309,6 @@ package() {
 
   # NTSync additions
   echo "ntsync" | install -Dm644 /dev/stdin "$pkgdir/usr/lib/modules-load.d/wine-pure.conf"
-  echo 'KERNEL=="ntsync", MODE="0644"' | install -Dm644 /dev/stdin "$pkgdir/usr/lib/udev/rules.d/50-wine-pure.rules"
 }
 
 # vim:set ts=8 sts=2 sw=2 et:
