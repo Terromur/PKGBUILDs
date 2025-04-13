@@ -97,7 +97,7 @@ build() {
     -D tracker=false
     -D tracker3=false
     -D atk_bridge=false
-    -D x11_backend=false
+    -D x11_backend=true
     -D man=false
     -D python.bytecompile=2
     -D b_ndebug=true
