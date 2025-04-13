@@ -84,7 +84,6 @@ options=(
 source=(
   "mesa::git+https://gitlab.freedesktop.org/mesa/mesa.git#branch=main"
   gnome-shell-glthread-disable.patch
-  001-fix-amd-crash.patch
   valve.patch
   intel_anv_fix_wayland.patch
   fix-mpeg1_2-decode-mesa-20.2.patch
@@ -100,7 +99,6 @@ source=(
   0008-ac-gpu_info-use-TC-compatible-HTILE-clear-WA-on-GFX1.patch
 )
 sha256sums=(
-  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
