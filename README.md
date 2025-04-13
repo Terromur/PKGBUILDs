@@ -120,14 +120,8 @@
 - Оптимизация и отключение лишних параметров
 - Собирать только с gcc!
 
-Был добавлен kpipewire:
-- Оптимизация параметров
-
 Был добавлен mpv-pure-git:
 - Все теже изменения, которые есть в mpv-pure
-
-Был добавлен kwin:
-- Изменений нет, форкнут пакет от ms178: https://github.com/ms178/archpkgbuilds/tree/main/packages/kwin-main
 
 Был добавлен sddm:
 - Изменений нет, форкнут пакет от ms178: https://github.com/ms178/archpkgbuilds/tree/main/packages/sddm
