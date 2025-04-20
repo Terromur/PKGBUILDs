@@ -11,7 +11,7 @@
 
 pkgname=mpd
 pkgver=0.24.3
-pkgrel=1
+pkgrel=2
 pkgdesc="Flexible, powerful, server-side application for playing music"
 arch=(x86_64)
 url="https://www.musicpd.org/"
@@ -69,7 +69,6 @@ makedepends=(
   libsamplerate
   libsndfile
   libupnp
-  liburing
   libvorbis
   meson
   mpg123
@@ -115,6 +114,7 @@ build() {
     -D nfs=disabled
     -D tremor=disabled
     -D openmpt=disabled
+    -D io_uring=disabled
     -D b_ndebug=false
     -D b_lto=true
     -D snapcast=false
