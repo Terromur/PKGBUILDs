@@ -7,15 +7,15 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-pure-git
-pkgver=10.5.r201.g661cc2a1dec
+pkgver=10.6.r144.gaa8621d2fdb
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=661cc2a1dec5e44e074702707272228178f21487"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=6912feaf6590508836f1cb521fd8a85896506789"
-  "git+https://github.com/whrvt/wine-osu-patches.git#tag=04-14-2025-78fe1014-aa0c8391"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=aa8621d2fdb121619f677396733e88176ce6aedc"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=42a307df6790bdf84f2fd9095a4a4c169a797782"
+  "git+https://github.com/whrvt/wine-osu-patches.git#tag=04-30-2025-aa8621d2-42a307df"
   30-win32-aliases.conf
   wine-binfmt.conf
-  ntsync-10.5-staging.patch
+  ntsync-10.6-staging.patch
   7064.patch
   winex11.drv-Recognize-the-keyboard-in-a-locale-indep.patch
   0001-HACK-wine.inf-Add-native-builtin-overrides-for-msvcr.patch
@@ -39,7 +39,6 @@ source=(
   ps0053-p0009-ntdll-Handle-MUI-redirection-in-LdrAccessRes.patch
   ps0053-p0010-ntdll-Cleanup-MUI-structures-when-modules-ar.patch
   ps0775-kernelbase-Do-not-attempt-to-start-winedbg-if-loggin.patch
-  winewayland-no-enter-move-if-relative.patch
   kernelbase-Fix-uninitialized-structs-in-OpenThread.patch
   ps9901-ntdll-Improve-spin_lock-performance.patch
   ps3504-p0001-Revert-ntdll-Tweak-the-binary-representation-of-SRWLOCK.patch
@@ -48,7 +47,6 @@ source=(
   dsound-Divide-default-buffer-length-by-a-factor-of-8.patch
 )
 sha512sums=(
-  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -160,8 +158,8 @@ prepare() {
     -W server-Signal_Thread \
     -W eventfd_synchronization
 
-  # NTSync for Wine 10.5
-  patch -Np1 -i "${srcdir}/ntsync-10.5-staging.patch"
+  # NTSync for Wine 10.6
+  patch -Np1 -i "${srcdir}/ntsync-10.6-staging.patch"
 
   # Use native Visual C++ DLLs, fix Windows product version
   patch -Np1 -i "${srcdir}/0001-HACK-wine.inf-Add-native-builtin-overrides-for-msvcr.patch"
@@ -205,7 +203,6 @@ prepare() {
   patch -Np1 -i "${srcdir}/ps0053-p0009-ntdll-Handle-MUI-redirection-in-LdrAccessRes.patch"
   patch -Np1 -i "${srcdir}/ps0053-p0010-ntdll-Cleanup-MUI-structures-when-modules-ar.patch"
   patch -Np1 -i "${srcdir}/ps0775-kernelbase-Do-not-attempt-to-start-winedbg-if-loggin.patch"
-  patch -Np1 -i "${srcdir}/winewayland-no-enter-move-if-relative.patch"
   patch -Np1 -i "${srcdir}/ps9901-ntdll-Improve-spin_lock-performance.patch"
   patch -Np1 -i "${srcdir}/ps3504-p0001-Revert-ntdll-Tweak-the-binary-representation-of-SRWLOCK.patch"
   patch -Np1 -i "${srcdir}/ps3504-p0002-ntdll-An-implementation-of-SRWLOCK-that-closer-.patch"
@@ -219,9 +216,7 @@ if [ -d "${osu_patches_dir}" ]; then
     -type f \
     -name "*.patch" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7368-winex11-Use-XFixes-to-hide-cursor-before-warping-it/*" \
-    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7806-winewayland-Implement-relative-motion-accumulator/0001-winewayland-Implement-relative-motion-accumulator.patch" \
-    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7797-ntdll-Wait-for-all-pending-operations-to-be-cancelled-in-NtCancelIoFile-Ex-/0002-ntdll-Wait-for-all-pending-operations-to-be-cancelled-in-NtCancelIoFile-Ex-.patch" \
-    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7064-ntdll-Check-for-invalid-GS-base-in-the-64-bit-segv-handler/0001-ntdll-Check-for-invalid-GS-base-in-the-64-bit-segv-handler-on-WoW64.patch" \
+    -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7064-ntdll-Check-for-invalid-GS-base-in-the-64-bit-segv-handler/*" \
     -not -path "${osu_patches_dir}/0003-pending-mrs-and-backports/7610-win32u-Create-a-shared-object-for-user-handle-entries/*" \
     -not -path "${osu_patches_dir}/0004-build-fix-undebug-optimize/ps0250-p0003-server-Allow-skipping-debug-handle-retrieval.patch" \
     -not -path "${osu_patches_dir}/0006-proton-esync-fsync/*" \
@@ -298,6 +293,9 @@ package() {
   make prefix="$pkgdir/usr" \
     libdir="$pkgdir/usr/lib" \
     dlldir="$pkgdir/usr/lib/wine" install
+
+  # Symlink for comptability with older scripts such as winetricks/setup_dxvk
+  ln -sf /usr/bin/wine "$pkgdir"/usr/bin/wine64
 
   # Strip Windows binaries
   i686-w64-mingw32-strip --strip-debug "$pkgdir"/usr/lib/wine/i386-windows/*.dll
