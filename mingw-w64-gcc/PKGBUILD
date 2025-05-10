@@ -4,7 +4,7 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=mingw-w64-gcc
-pkgver=14.2.0
+pkgver=15.1.0
 pkgrel=1
 pkgdesc="Cross GCC for the MinGW-w64 cross-compiler"
 arch=('x86_64' 'aarch64')
@@ -22,10 +22,13 @@ source=("https://ftp.gnu.org/gnu/gcc/gcc-$pkgver/gcc-$pkgver.tar.xz"
         '0140-gcc-diagnostic-color.patch'
         '0014-gcc-9-branch-clone_function_name_1-Retain-any-stdcall-suffix.patch'
         '0008-Prettify-linking-no-undefined.patch'
-        '0021-PR14940-Allow-a-PCH-to-be-mapped-to-a-different-addr.patch'
  	'9001-Always-quote-labels-in-Intel-syntax.patch'
-	'9003-libstdc-Avoid-thread-local-states-for-MCF-thread-mod.patch')
+	'9003-libstdc-Avoid-thread-local-states-for-MCF-thread-mod.patch'
+	'0021-PR14940-Allow-a-PCH-to-be-mapped-to-a-different-addr.patch'
+	'3001-fix-codeview-crashes.patch'
+	)
 sha512sums=(
+    'SKIP'
     'SKIP'
     'SKIP'
     'SKIP'
@@ -49,9 +52,10 @@ prepare() {
   patch -Np1 -i "${srcdir}/0140-gcc-diagnostic-color.patch"
   patch -Np1 -i "${srcdir}/0014-gcc-9-branch-clone_function_name_1-Retain-any-stdcall-suffix.patch"
   patch -Np1 -i "${srcdir}/0008-Prettify-linking-no-undefined.patch"
-  patch -Np1 -i "${srcdir}/0021-PR14940-Allow-a-PCH-to-be-mapped-to-a-different-addr.patch"
   patch -Np1 -i "${srcdir}/9001-Always-quote-labels-in-Intel-syntax.patch"
   patch -Np1 -i "${srcdir}/9003-libstdc-Avoid-thread-local-states-for-MCF-thread-mod.patch"
+  patch -Np1 -i "${srcdir}/0021-PR14940-Allow-a-PCH-to-be-mapped-to-a-different-addr.patch"
+  patch -Np1 -i "${srcdir}/3001-fix-codeview-crashes.patch"
   # mmapio.c:69:14: error: implicit declaration of function ‘getpagesize’
   sed -i 's|\-Werror||g' libbacktrace/configure
 }
@@ -62,7 +66,7 @@ build() {
 export lt_cv_deplibs_check_method='pass_all'
 # In addition adaint.c does `#include <accctrl.h>` which pulls in msxml.h, hacky hack:
 CPPFLAGS+=" -DCOM_NO_WINDOWS_H"
-export CFLAGS="-march=native -mtune=native -O2 -fdata-sections -funsafe-math-optimizations -fno-ident -pthread -fopenmp -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fivopts -ffunction-sections -fprofile-correction -floop-nest-optimize -fgraphite-identity -floop-strip-mine -fmodulo-sched -flive-range-shrinkage -fno-stack-protector -fcf-protection=none -mharden-sls=none -fomit-frame-pointer -fno-unwind-tables"
+export CFLAGS="-march=x86-64-v3 -mtune=haswell -O2 -fdata-sections -funsafe-math-optimizations -fno-ident -pthread -fopenmp -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fivopts -ffunction-sections -fprofile-correction -floop-nest-optimize -fgraphite-identity -floop-strip-mine -fmodulo-sched -flive-range-shrinkage -fno-stack-protector -fcf-protection=none -mharden-sls=none -fomit-frame-pointer -fno-unwind-tables"
 export CXXFLAGS="$CFLAGS -Wp,-U_GLIBCXX_ASSERTIONS"
 export LDFLAGS="-Wl,-O3 -Wl,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -lpthread -Wl,--gc-sections"
   for _arch in ${_architectures}; do
