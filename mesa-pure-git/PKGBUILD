@@ -7,7 +7,7 @@
 # Contributor: Andreas Radke <andyrtr@archlinux.org>
 
 pkgname=mesa-pure-git
-pkgver=25.1.0_devel.203584.b74a6e05bd6.2855e4f
+pkgver=25.2.0_devel.205323.7c4f501e99d.4b80b43
 pkgrel=1
 pkgdesc="A purely personal Mesa build, git version"
 url="https://www.mesa3d.org/"
@@ -84,6 +84,7 @@ options=(
 source=(
   "mesa::git+https://gitlab.freedesktop.org/mesa/mesa.git#branch=main"
   gnome-shell-glthread-disable.patch
+  001-fix-amd-crash.patch
   valve.patch
   intel_anv_fix_wayland.patch
   fix-mpeg1_2-decode-mesa-20.2.patch
@@ -91,14 +92,15 @@ source=(
   lavapipe.patch
   no_error_int_conversion.patch
   30720.patch
-  31658.patch
   0004-ac-gpu_info-describe-the-TC-compatible-HTILE-ZRange-.patch
   0005-ac-gpu_info-add-has_tc_compat_zrange_bug_without_ste.patch
   0006-radv-handle-has_tc_compat_zrange_bug_without_stencil.patch
   0007-radeonsi-handle-has_tc_compat_zrange_bug_without_ste.patch
   0008-ac-gpu_info-use-TC-compatible-HTILE-clear-WA-on-GFX1.patch
+  ms178-1.patch
 )
 sha256sums=(
+  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -174,7 +176,6 @@ build() {
     -D gallium-drivers=radeonsi
     -D gallium-extra-hud=false
     -D gallium-nine=false
-    -D gallium-opencl=disabled
     -D gallium-rusticl=false
     -D gallium-xa=disabled
     -D gallium-vdpau=disabled
