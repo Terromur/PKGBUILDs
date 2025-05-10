@@ -156,16 +156,16 @@ diff --git a/src/modules/module-netjack2-manager.c b/src/modules/module-netjack2
 index 4217fbc..d00141a 100644
 --- a/src/modules/module-netjack2-manager.c
 +++ b/src/modules/module-netjack2-manager.c
-@@ -63,7 +63,7 @@
+@@ -77,7 +77,7 @@
   * - `netjack2.connect`: if jack ports should be connected automatically. Can also be
-  *                   placed per stream.
+  *                   placed per stream, default false.
   * - `netjack2.sample-rate`: the sample rate to use, default 48000
 - * - `netjack2.period-size`: the buffer size to use, default 1024
 + * - `netjack2.period-size`: the buffer size to use, default 256
   * - `netjack2.encoding`: the encoding, float|opus|int, default float
   * - `netjack2.kbps`: the number of kilobits per second when encoding, default 64
-  * - `audio.channels`: the number of audio ports. Can also be added to the stream props.
-@@ -95,7 +95,7 @@
+  * - `audio.ports`: the number of audio ports. Can also be added to the stream props. This
+@@ -112,7 +112,7 @@
   *     args = {
   *         #netjack2.connect     = true
   *         #netjack2.sample-rate = 48000
@@ -173,22 +173,22 @@ index 4217fbc..d00141a 100644
 + *         #netjack2.period-size = 256
   *         #netjack2.encoding    = float # float|opus
   *         #netjack2.kbps        = 64
-  *         #midi.ports           = 0
-@@ -132,7 +132,7 @@ PW_LOG_TOPIC_STATIC(mod_topic, "mod." NAME);
- #define NETWORK_MAX_LATENCY	30
+  *         #audio.ports          = 0
+@@ -151,7 +151,7 @@
  
+ #define DEFAULT_CONNECT		false
  #define DEFAULT_SAMPLE_RATE	48000
 -#define DEFAULT_PERIOD_SIZE	1024
 +#define DEFAULT_PERIOD_SIZE	256
  #define DEFAULT_ENCODING	"float"
  #define DEFAULT_KBPS		64
- #define DEFAULT_CHANNELS	2
-@@ -148,7 +148,7 @@ PW_LOG_TOPIC_STATIC(mod_topic, "mod." NAME);
+ #define DEFAULT_AUDIO_PORTS	2
+@@ -166,7 +166,7 @@
  			"( net.loop=<loopback, default false> ) "		\
- 			"( netjack2.connect=<bool, autoconnect ports> ) "	\
+ 			"( netjack2.connect=<autoconnect ports, default false> ) "	\
  			"( netjack2.sample-rate=<sampl erate, default 48000> ) "\
 -			"( netjack2.period-size=<period size, default 1024> ) "	\
 +			"( netjack2.period-size=<period size, default 256> ) "	\
- 			"( midi.ports=<number of midi ports> ) "		\
- 			"( audio.channels=<number of channels> ) "		\
+ 			"( midi.ports=<number of midi ports, default 1> ) "	\
+ 			"( audio.channels=<number of channels, default 2> ) "	\
  			"( audio.position=<channel map> ) "			\
