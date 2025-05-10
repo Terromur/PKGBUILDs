@@ -25,11 +25,6 @@ optdepends=('libluv: for topmem'
             'lua-luv: for topmem'
             'power-profiles-daemon: For game-performance')
 
-prepare() {
-  cd $_gitname
-  git cherry-pick -n cb8fba300066723e87c55cc2d1c3472891c9217d
-}
-
 package() {
   install -d "$pkgdir/etc"
   cp -rf "${srcdir}/${_gitname}/etc" "$pkgdir"
