@@ -6,117 +6,93 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 # Contributor: Andreas Radke <andyrtr@archlinux.org>
 
-pkgname=mesa-pure-git
-pkgver=25.2.0_devel.205323.7c4f501e99d.4b80b43
+pkgname=mesa-pure-clang-git
+pkgver=25.3.0_devel.211947.dce29ae35f6.0186545
 pkgrel=1
-pkgdesc="A purely personal Mesa build, git version"
+pkgdesc="A purely personal Mesa build"
 url="https://www.mesa3d.org/"
 arch=(x86_64)
 license=("MIT AND BSD-3-Clause AND SGI-B-2.0")
 makedepends=(
-    'xorgproto'
-    'libxml2'
-    'libvdpau'
-    'libva'
-    'elfutils'
-    'libxrandr'
-    'meson'
-    'ninja'
-    'glslang'
-    'python-mako'
-    'python-ply'
-    'cbindgen'
-    'wayland-protocols'
-    'cmake'
-    'valgrind'
-    'libpng'
-    'python-packaging'
-    'python-pyaml'
+  'xorgproto'
+  'libxml2'
+  'libvdpau'
+  'libva'
+  'elfutils'
+  'libxrandr'
+  'meson'
+  'ninja'
+  'glslang'
+  'python-mako'
+  'python-ply'
+  'cbindgen'
+  'wayland-protocols'
+  'cmake'
+  'valgrind'
+  'libpng'
+  'python-packaging'
+  'python-pyaml'
 )
 depends=(
-    'libdrm'
-    'libxxf86vm'
-    'libxdamage'
-    'libxshmfence'
-    'libelf'
-    'libunwind'
-    'libglvnd'
-    'wayland'
-    'lm_sensors'
-    'vulkan-icd-loader'
-    'zstd'
-    'expat'
-    'gcc-libs'
-    'libxfixes'
-    'libx11'
-    'systemd-libs'
-    'libxext'
-    'libxcb'
-    'glibc'
-    'zlib'
-    'python'
-    'xcb-util-keysyms'
+  'libdrm'
+  'libxxf86vm'
+  'libxdamage'
+  'libxshmfence'
+  'libelf'
+  'libunwind'
+  'libglvnd'
+  'wayland'
+  'lm_sensors'
+  'vulkan-icd-loader'
+  'zstd'
+  'expat'
+  'gcc-libs'
+  'libxfixes'
+  'libx11'
+  'systemd-libs'
+  'libxext'
+  'libxcb'
+  'glibc'
+  'zlib'
+  'python'
+  'xcb-util-keysyms'
 )
 optdepends=('opengl-man-pages: for the OpenGL API man pages')
 provides=(
-    'vulkan-mesa-layers'
-    'opencl-driver'
-    'opengl-driver'
-    'vulkan-driver'
-    'vulkan-radeon'
-    'libva-mesa-driver'
-    'mesa-libgl'
-    'mesa'
+  'vulkan-mesa-layers'
+  'opencl-driver'
+  'opengl-driver'
+  'vulkan-driver'
+  'vulkan-radeon'
+  'libva-mesa-driver'
+  'mesa-libgl'
+  'mesa'
 )
 conflicts=(
-    'vulkan-mesa-layers'
-    'opencl-clover-mesa'
-    'vulkan-radeon'
-    'libva-mesa-driver'
-    'mesa-libgl'
-    'mesa'
-    'mesa-pure'
-    'mesa-pure-git'
-)
-options=(
-  lto
+  'vulkan-mesa-layers'
+  'opencl-clover-mesa'
+  'vulkan-radeon'
+  'libva-mesa-driver'
+  'mesa-libgl'
+  'mesa'
+  'mesa-pure'
+  'mesa-git'
+  'mesa-pure-gcc-git'
 )
 source=(
   "mesa::git+https://gitlab.freedesktop.org/mesa/mesa.git#branch=main"
-  gnome-shell-glthread-disable.patch
-  001-fix-amd-crash.patch
-  valve.patch
-  intel_anv_fix_wayland.patch
-  fix-mpeg1_2-decode-mesa-20.2.patch
-  intel-genxml-add.patch
-  lavapipe.patch
-  no_error_int_conversion.patch
-  30720.patch
-  0004-ac-gpu_info-describe-the-TC-compatible-HTILE-ZRange-.patch
-  0005-ac-gpu_info-add-has_tc_compat_zrange_bug_without_ste.patch
-  0006-radv-handle-has_tc_compat_zrange_bug_without_stencil.patch
-  0007-radeonsi-handle-has_tc_compat_zrange_bug_without_ste.patch
-  0008-ac-gpu_info-use-TC-compatible-HTILE-clear-WA-on-GFX1.patch
-  ms178-1.patch
+  "001_mesa_rust_crates_versions.patch"
+  "25042.patch"
+  "31658.patch"
+  "35322.patch"
+  "37027.patch"
+  "intel_anv_fix_wayland.patch"
+  "valve.patch"
 )
 sha256sums=(
   'SKIP'
-  'SKIP'
-  'SKIP'
-  'SKIP'
-  'SKIP'
-  'SKIP'
-  'SKIP'
-  'SKIP'
-  'SKIP'
-  'SKIP'
-  'SKIP'
-  'SKIP'
-  'SKIP'
-  'SKIP'
-  'SKIP'
-  'SKIP'
 )
+
 
 pkgver() {
     cd mesa
@@ -159,6 +135,7 @@ prepare() {
 # -march=native флагом, при условии, что процессор поддерживает AVX инструкцию.
 build() {
   local meson_options=(
+    --buildtype=release
     -D b_lto=true
     -D llvm=disabled
     -D optimization=3
@@ -170,8 +147,6 @@ build() {
     -D cpp_args="-march=native -mtune=native -O3 -fdata-sections -fomit-frame-pointer -fno-plt -fno-unwind-tables -funsafe-math-optimizations -fno-stack-protector -pthread -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -ffunction-sections -mharden-sls=none -mllvm -enable-interleaved-mem-accesses -mllvm -enable-unroll-and-jam -mllvm -polly -mllvm -polly-num-threads=$(nproc) -mllvm -polly-run-dce -mllvm -polly-invariant-load-hoisting -mllvm -polly-loopfusion-greedy -mllvm -polly-vectorizer=stripmine -mllvm -enable-loop-distribute -mllvm -polly-run-inliner -mllvm -polly-ast-use-context -mllvm -polly-optimizer=isl -mllvm -inline-threshold=1500 -Wno-unused-command-line-argument -mllvm -enable-gvn-hoist -mllvm -enable-nontrivial-unswitch -mllvm -polly-position=early -mllvm -polly-dependences-computeout=600000 -mllvm -polly-detect-profitability-min-per-loop-insts=40 -mllvm -polly-tiling -mllvm -polly-2nd-level-tiling -mllvm -polly-enable-delicm=true -mllvm -polly-omp-backend=LLVM -mllvm -polly-scheduling=dynamic -mllvm -polly-scheduling-chunksize=1 -funroll-loops -mllvm -aggressive-ext-opt -mllvm -unroll-runtime-multi-exit -mllvm -enable-loop-flatten -mllvm -enable-loopinterchange -mllvm -slp-vectorize-hor-store -mllvm -enable-cond-stores-vec -mllvm -extra-vectorizer-passes -Wp,-U_GLIBCXX_ASSERTIONS"
     -D cpp_link_args="-Wl,--lto-O3,-O3,-Bsymbolic-functions,--as-needed -mllvm -enable-interleaved-mem-accesses -flto -fuse-ld=lld"
     -D b_asneeded=false
-    -D b_pch=false
-    --buildtype=release
     -D b_ndebug=true
     -D gallium-drivers=radeonsi
     -D gallium-extra-hud=false
@@ -185,7 +160,6 @@ build() {
     -D intel-rt=disabled
     -D libunwind=disabled
     -D microsoft-clc=disabled
-    -D osmesa=false
     -D platforms=x11,wayland
     -D valgrind=disabled
     -D video-codecs=all
@@ -197,10 +171,6 @@ build() {
     -Db_pie=false
     -Dshared-glapi=enabled
     -Dshared-llvm=disabled
-    --wrap-mode=nofallback
-    --force-fallback-for=syn,paste
-    --prefix=/usr
-    -D sysconfdir=/etc
   )
 
   # Build only minimal debug info to reduce size
@@ -211,13 +181,14 @@ build() {
   export MESON_PACKAGE_CACHE_DIR="$srcdir"
 
   arch-meson mesa build "${meson_options[@]}"
-  ninja $NINJAFLAGS -C build
+  meson compile -C build
 }
 
 package() {
-    DESTDIR="${pkgdir}" ninja $NINJAFLAGS -C build install
-    # indirect rendering
-    ln -s /usr/lib/libGLX_mesa.so.0 "${pkgdir}/usr/lib/libGLX_indirect.so.0"
+  meson install -C build --destdir "$pkgdir"
+
+  # indirect rendering
+  ln -s /usr/lib/libGLX_mesa.so.0 "${pkgdir}/usr/lib/libGLX_indirect.so.0"
 
   install -Dm644 mesa/docs/license.rst -t "$pkgdir/usr/share/licenses/$pkgname"
 }
