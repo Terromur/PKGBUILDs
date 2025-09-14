@@ -1,0 +1,208 @@
+# Maintainer: Terromur <terromuroz@proton.me>
+## Maintainers of original Arch Linux package:
+# Maintainer: Laurent Carlier <lordheavym@gmail.com>
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+# Contributor: Andreas Radke <andyrtr@archlinux.org>
+
+pkgname=mesa-pure-gcc-git
+pkgver=25.3.0_devel.211947.dce29ae35f6.0186545
+pkgrel=1
+pkgdesc="A purely personal Mesa build"
+url="https://www.mesa3d.org/"
+arch=(x86_64)
+license=("MIT AND BSD-3-Clause AND SGI-B-2.0")
+makedepends=(
+  'xorgproto'
+  'libxml2'
+  'libvdpau'
+  'libva'
+  'elfutils'
+  'libxrandr'
+  'meson'
+  'ninja'
+  'glslang'
+  'python-mako'
+  'python-ply'
+  'cbindgen'
+  'wayland-protocols'
+  'cmake'
+  'valgrind'
+  'libpng'
+  'python-packaging'
+  'python-pyaml'
+)
+depends=(
+  'libdrm'
+  'libxxf86vm'
+  'libxdamage'
+  'libxshmfence'
+  'libelf'
+  'libunwind'
+  'libglvnd'
+  'wayland'
+  'lm_sensors'
+  'vulkan-icd-loader'
+  'zstd'
+  'expat'
+  'gcc-libs'
+  'libxfixes'
+  'libx11'
+  'systemd-libs'
+  'libxext'
+  'libxcb'
+  'glibc'
+  'zlib'
+  'python'
+  'xcb-util-keysyms'
+)
+optdepends=('opengl-man-pages: for the OpenGL API man pages')
+provides=(
+  'vulkan-mesa-layers'
+  'opencl-driver'
+  'opengl-driver'
+  'vulkan-driver'
+  'vulkan-radeon'
+  'libva-mesa-driver'
+  'mesa-libgl'
+  'mesa'
+)
+conflicts=(
+  'vulkan-mesa-layers'
+  'opencl-clover-mesa'
+  'vulkan-radeon'
+  'libva-mesa-driver'
+  'mesa-libgl'
+  'mesa'
+  'mesa-pure'
+  'mesa-git'
+  'mesa-pure-clang-git'
+)
+source=(
+  "mesa::git+https://gitlab.freedesktop.org/mesa/mesa.git#branch=main"
+  "001_mesa_rust_crates_versions.patch"
+  "25042.patch"
+  "31658.patch"
+  "35322.patch"
+  "37027.patch"
+  "intel_anv_fix_wayland.patch"
+  "valve.patch"
+  "rusticl-radeonsi.conf"
+)
+sha256sums=(
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+)
+
+
+pkgver() {
+    cd mesa
+    local _ver
+    _ver=$(<VERSION)
+
+    local _patchver
+    local _patchfile
+    for _patchfile in "${source[@]}"; do
+        _patchfile="${_patchfile%%::*}"
+        _patchfile="${_patchfile##*/}"
+        [[ $_patchfile = *.patch ]] || continue
+        _patchver="${_patchver}$(md5sum ${srcdir}/${_patchfile} | cut -c1-32)"
+    done
+    _patchver="$(echo -n $_patchver | md5sum | cut -c1-7)"
+
+    echo ${_ver/-/_}.$(git rev-list --count HEAD).$(git rev-parse --short HEAD).${_patchver}
+}
+
+prepare() {
+    if [  -d _build ]; then
+        rm -rf _build
+    fi
+
+    local _patchfile
+    for _patchfile in "${source[@]}"; do
+        _patchfile="${_patchfile%%::*}"
+        _patchfile="${_patchfile##*/}"
+        [[ $_patchfile = *.patch ]] || continue
+        echo "Applying patch $_patchfile..."
+        patch --directory=mesa --forward --strip=1 --input="${srcdir}/${_patchfile}"
+    done
+}
+
+# Так же вы можете добавить флаги -falign-functions=32 только для старых процессоров и -falign-functions=64 для современных. 
+# А так же флаг -ftree-vectorize, но может вызывать регрессии 
+# или ошибки на неподдерживаемых процессорах AVX архитектурах, потому что флаг пытается использовать SSE и 
+# появляются проблемы при сборке пакета https://github.com/easybuilders/easybuild-easyconfigs/issues/6344
+# Возможно ошибка неактуальна, к тому же я предполагаю, что проблем с ним не будет, если -ftree-vectorize используется
+# -march=native флагом, при условии, что процессор поддерживает AVX инструкцию.
+build() {
+  local meson_options=(
+    --buildtype=release
+    -D b_lto=true
+    -D llvm=disabled
+    -D optimization=3
+    -D amd-use-llvm=false
+    -D android-libbacktrace=disabled
+    -D android-strict=false
+    -D c_args="-march=native -mtune=native -O3 -fdata-sections -fno-plt -fno-unwind-tables -funroll-loops -fomit-frame-pointer -funsafe-math-optimizations -fno-ident -fno-stack-protector -pthread -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -fivopts -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine -fmodulo-sched -flive-range-shrinkage -mharden-sls=none"
+    -D c_link_args="-Wl,-O3 -Wl,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -flto=auto -lpthread -flto=jobserver -Wl,-z,pack-relative-relocs -Wl,--gc-sections -flto=auto -flto-partition=one -fdevirtualize-at-ltrans"
+    -D cpp_args="-march=native -mtune=native -O3 -fdata-sections -fno-plt -flto=auto -funroll-loops -flto-partition=one -fno-unwind-tables -fdevirtualize-at-ltrans -fomit-frame-pointer -funsafe-math-optimizations -fno-ident -fno-stack-protector -pthread -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -fivopts -ffunction-sections -fprofile-correction -floop-nest-optimize -fipa-pta -fgraphite-identity -floop-strip-mine -fmodulo-sched -flive-range-shrinkage -mharden-sls=none -Wp,-U_GLIBCXX_ASSERTIONS"
+    -D cpp_link_args="-Wl,-O3 -Wl,-Bsymbolic-functions,--sort-common,--as-needed,--strip-all -flto=auto -lpthread -flto=jobserver -Wl,-z,pack-relative-relocs -Wl,--gc-sections -flto=auto -flto-partition=one -fdevirtualize-at-ltrans"
+    -D b_asneeded=false
+    -D b_ndebug=true
+    -D gallium-drivers=radeonsi
+    -D gallium-extra-hud=false
+    -D gallium-nine=false
+    -D gallium-rusticl=false
+    -D gallium-xa=disabled
+    -D gallium-vdpau=disabled
+    -D gles1=disabled
+    -D glx=dri
+    -D html-docs=disabled
+    -D intel-rt=disabled
+    -D libunwind=disabled
+    -D microsoft-clc=disabled
+    -D platforms=x11,wayland
+    -D valgrind=disabled
+    -D video-codecs=all
+    -D vulkan-drivers=amd
+    -D vulkan-layers=device-select,overlay
+    -D vulkan-beta=true
+    -D python.bytecompile=2
+    -D strip=true
+    -Db_pie=false
+    -Dshared-glapi=enabled
+    -Dshared-llvm=disabled
+  )
+
+  # Build only minimal debug info to reduce size
+  CFLAGS+=" -g1"
+  CXXFLAGS+=" -g1"
+
+  # Inject subproject packages
+  export MESON_PACKAGE_CACHE_DIR="$srcdir"
+
+  arch-meson mesa build "${meson_options[@]}"
+  meson compile -C build
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+
+  # enable Rusticl with radeonsi driver
+  install -m644 -Dt "${pkgdir}/etc/environment.d" rusticl-radeonsi.conf
+  
+  # indirect rendering
+  ln -s /usr/lib/libGLX_mesa.so.0 "${pkgdir}/usr/lib/libGLX_indirect.so.0"
+
+  install -Dm644 mesa/docs/license.rst -t "$pkgdir/usr/share/licenses/$pkgname"
+}
+
+# vim:set sw=2 sts=-1 et:
