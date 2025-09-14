@@ -88,8 +88,17 @@ source=(
   "37027.patch"
   "intel_anv_fix_wayland.patch"
   "valve.patch"
+  "rusticl-radeonsi.conf"
 )
 sha256sums=(
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
   'SKIP'
 )
 
@@ -187,6 +196,9 @@ build() {
 package() {
   meson install -C build --destdir "$pkgdir"
 
+  # enable Rusticl with radeonsi driver
+  install -m644 -Dt "${pkgdir}/etc/environment.d" rusticl-radeonsi.conf
+  
   # indirect rendering
   ln -s /usr/lib/libGLX_mesa.so.0 "${pkgdir}/usr/lib/libGLX_indirect.so.0"
 
