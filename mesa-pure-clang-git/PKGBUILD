@@ -88,8 +88,10 @@ source=(
   "intel_anv_fix_wayland.patch"
   "valve.patch"
   "rusticl-radeonsi.conf"
+  "gnome-shell-glthread-disable.patch"
 )
 sha256sums=(
+  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -157,7 +159,7 @@ build() {
     -D b_ndebug=true
     -D gallium-drivers=radeonsi
     -D gallium-extra-hud=false
-    -D gallium-vdpau=disabled
+    -D gallium-mediafoundation=disabled
     -D gles1=disabled
     -D glx=dri
     -D html-docs=disabled
@@ -173,8 +175,6 @@ build() {
     -D python.bytecompile=2
     -D strip=true
     -Db_pie=false
-    -Dshared-glapi=enabled
-    -Dshared-llvm=disabled
   )
 
   # Build only minimal debug info to reduce size
