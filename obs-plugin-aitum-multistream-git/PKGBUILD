@@ -1,3 +1,4 @@
+# Maintainer: Terromur <terromuroz@proton.me>
 # Maintainer: Nicolai VdS <nicolai@nvds.be>
 pkgname=obs-plugin-aitum-multistream-git
 _pkgname=obs-aitum-multistream
