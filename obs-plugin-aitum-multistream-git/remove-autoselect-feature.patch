@@ -1,0 +1,41 @@
+--- /obs-aitum-multistream/config-dialog.cpp	2025-09-23 15:40:01.403510887 +0500
++++ /obs-aitum-multistream/config-dialog.cpp	2025-09-23 15:47:30.095708627 +0500
+@@ -1213,6 +1213,7 @@
+ 		default:;
+ 		}
+ 
++
+ 		if (format == OBS_COMBO_FORMAT_STRING && list_type == OBS_COMBO_TYPE_EDITABLE) {
+ 			widget->lineEdit()->setText(value.toString());
+ 		} else {
+@@ -1221,30 +1222,6 @@
+ 				widget->setCurrentIndex(idx);
+ 		}
+ 
+-		if (obs_data_has_autoselect_value(settings, name)) {
+-			switch (format) {
+-			case OBS_COMBO_FORMAT_INT:
+-				value = QVariant::fromValue(obs_data_get_autoselect_int(settings, name));
+-				break;
+-			case OBS_COMBO_FORMAT_FLOAT:
+-				value = QVariant::fromValue(obs_data_get_autoselect_double(settings, name));
+-				break;
+-			case OBS_COMBO_FORMAT_STRING:
+-				value = QByteArray(obs_data_get_autoselect_string(settings, name));
+-				break;
+-			default:;
+-			}
+-			int id = widget->findData(value);
+-
+-			auto idx = widget->currentIndex();
+-			if (id != -1 && id != idx) {
+-				QString actual = widget->itemText(id);
+-				QString selected = widget->itemText(widget->currentIndex());
+-				QString combined = QString::fromUtf8(
+-					obs_frontend_get_locale_string("Basic.PropertiesWindow.AutoSelectFormat"));
+-				widget->setItemText(idx, combined.arg(selected).arg(actual));
+-			}
+-		}
+ 		auto label = new QLabel(QString::fromUtf8(obs_property_description(property)));
+ 		layout->addRow(label, widget);
+ 		if (!obs_property_visible(property)) {
