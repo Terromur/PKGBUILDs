@@ -47,15 +47,12 @@ build() {
           -D strip=true \
           -D b_lto=true \
           -D b_ndebug=true \
-          -D c_std=gnu23 \
-          -D build.c_std=gnu23 \
-          -D cpp_std=gnu++23 \
-          -D build.cpp_std=gnu++23 \
           -D python.bytecompile=2 \
           -D errorlogs=false \
           -D stdsplit=false \
           -D bluez=disabled \
           -D build-docs=disabled \
+		  -D mpd=disabled
           )
 	arch-meson build "${meson_options[@]}"
   meson compile -C build 
