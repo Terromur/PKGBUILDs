@@ -34,7 +34,7 @@ makedepends=('meson' 'xorgproto' 'xtrans' 'libxkbfile' 'dbus'
              'xorg-font-util' 'wayland-protocols' 'mesa-libgl'
              'systemd' 'git')
 source=("xserver::git+https://gitlab.freedesktop.org/xorg/xserver.git"
-1567.patch
+0002-Revert-xwayland-present-Check-allow_commits-in-xwl_p.patch
 xwayland-pointer-warp-fix.patch
 no-sighandler-segv-etc.patch
 allow-overflow-on-glamor_composite_clipped_region.patch
