@@ -1,0 +1,27 @@
+# Maintainer: Terromur <terromuroz@proton.me>
+pkgname=HyLauncher-git
+_pkgname=HyLauncher
+pkgver=1.0
+pkgrel=1
+pkgdesc="HyLauncher - unofficial Hytale Launcher for free to play gamers"
+arch=('x86_64')
+url="https://github.com/ArchDevs/HyLauncher"
+license=('custom')
+makedepends=('go' 'nodejs' 'wails')
+source=('git+https://github.com/ArchDevs/HyLauncher.git' 'HyLauncher.desktop')
+sha256sums=('SKIP' 'SKIP')
+
+build() {
+  cd "$_pkgname"
+  wails build
+}
+
+package() {
+  cd "$_pkgname"
+
+  install -Dm755 "build/bin/HyLauncher" "$pkgdir/usr/bin/HyLauncher"
+
+  install -Dm644 "$srcdir/HyLauncher.desktop" "$pkgdir/usr/share/applications/HyLauncher.desktop"
+
+  install -Dm644 LICENSE.txt "$pkgdir/usr/share/licenses/$_pkgname/LICENSE"
+}
