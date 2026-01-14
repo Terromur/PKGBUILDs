@@ -8,8 +8,8 @@ arch=('x86_64')
 url="https://github.com/ArchDevs/HyLauncher"
 license=('custom')
 makedepends=('go' 'nodejs' 'wails')
-source=('git+https://github.com/ArchDevs/HyLauncher.git' 'HyLauncher.desktop')
-sha256sums=('SKIP' 'SKIP')
+source=('git+https://github.com/ArchDevs/HyLauncher.git' 'HyLauncher.desktop' 'HyLauncher.jpg')
+sha256sums=('SKIP' 'SKIP' 'SKIP')
 
 build() {
   cd "$_pkgname"
@@ -23,5 +23,7 @@ package() {
 
   install -Dm644 "$srcdir/HyLauncher.desktop" "$pkgdir/usr/share/applications/HyLauncher.desktop"
 
+  install -Dm644 "$srcdir/HyLauncher.jpg" "$pkgdir/usr/share/icons/hicolor/256x256/apps/HyLauncher.png"
+  
   install -Dm644 LICENSE.txt "$pkgdir/usr/share/licenses/$_pkgname/LICENSE"
 }
