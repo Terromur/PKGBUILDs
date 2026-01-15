@@ -1,7 +1,7 @@
 # Maintainer: Terromur <terromuroz@proton.me>
 pkgname=HyLauncher-git
 _pkgname=HyLauncher
-pkgver=0.3.2
+pkgver=0.5
 pkgrel=1
 pkgdesc="HyLauncher - unofficial Hytale Launcher for free to play gamers"
 arch=('x86_64')
@@ -9,6 +9,7 @@ url="https://github.com/ArchDevs/HyLauncher"
 license=('custom')
 depends=('webkit2gtk')
 makedepends=('go' 'nodejs' 'npm' 'gtk3')
+conflicts=('HyLauncher')
 source=('git+https://github.com/ArchDevs/HyLauncher.git' 'HyLauncher.desktop' 'HyLauncher.jpg')
 sha256sums=('SKIP' 'SKIP' 'SKIP')
 
