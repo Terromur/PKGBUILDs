@@ -1,7 +1,7 @@
 # Maintainer: Terromur <terromuroz@proton.me>
 pkgname=HyLauncher-git
 _pkgname=HyLauncher
-pkgver=1.0
+pkgver=0.3.2
 pkgrel=1
 pkgdesc="HyLauncher - unofficial Hytale Launcher for free to play gamers"
 arch=('x86_64')
