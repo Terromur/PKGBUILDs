@@ -1,0 +1,33 @@
+# Maintainer: Terromur <terromuroz@proton.me>
+pkgname=Hytale-F2P
+pkgver=2.0.0.r47.gebcfdc4
+pkgrel=1
+pkgdesc="HyLauncher - unofficial Hytale Launcher for free to play gamers"
+arch=('x86_64')
+url="https://github.com/Terromur/Hytale-F2P"
+license=('custom')
+makedepends=('npm')
+source=("git+$url.git" "Hytale-F2P.desktop")
+sha256sums=('SKIP' '46488fada4775d9976d7b7b62f8d1f1f8d9a9a9d8f8aa9af4f2e2153019f6a30')
+
+pkgver() {
+  cd "$pkgname"
+  printf "2.0.0.r%s.g%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+build() {
+   cd "$pkgname"
+   npm install
+   npm run build:linux
+}
+
+package() {
+  mkdir -p "$pkgdir/opt/$pkgname"
+  
+  cp -r "$pkgname/dist/linux-unpacked/"* "$pkgdir/opt/$pkgname"
+
+  install -Dm644 "$pkgname.desktop" "$pkgdir/usr/share/applications/$pkgname.desktop"
+  
+  install -Dm644 "$pkgname/icon.png" "$pkgdir/usr/share/icons/hicolor/512x512/apps/$pkgname.png"
+
+}
