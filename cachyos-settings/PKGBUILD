@@ -3,7 +3,7 @@
 
 _gitname=CachyOS-Settings
 pkgname=cachyos-settings
-pkgver=1.2.10
+pkgver=1.4.0
 pkgrel=2
 epoch=1
 groups=(cachyos)
