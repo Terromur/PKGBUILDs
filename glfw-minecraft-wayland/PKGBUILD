@@ -29,8 +29,7 @@ makedepends=(
     wayland-protocols
 )
 source=(
-    "git+https://github.com/llyyr/glfw-minecraft-wayland.git"
-    0004-Fix-Window-size-on-unset-fullscreen.patch
+    "git+https://github.com/dablenparty/glfw-wayland-minecraft.git"
     0005-Add-warning-about-being-an-unofficial-patch.patch
     0007-Fix-fullscreen-location.patch
 )
@@ -38,18 +37,16 @@ sha512sums=(
     'SKIP'
     'SKIP'
     'SKIP'
-    'SKIP'
 )
 
 prepare() {
-    cd "glfw-minecraft-wayland"
-    patch -Np1 -i "${srcdir}"/0004-Fix-Window-size-on-unset-fullscreen.patch
+    cd "glfw-wayland-minecraft"
     patch -Np1 -i "${srcdir}"/0005-Add-warning-about-being-an-unofficial-patch.patch
     patch -Np1 -i "${srcdir}"/0007-Fix-fullscreen-location.patch
 }
 
 build() {
-  cmake -B build -S "glfw-minecraft-wayland" \
+  cmake -B build -S "glfw-wayland-minecraft" \
     -DCMAKE_BUILD_TYPE='None' \
     -DCMAKE_INSTALL_PREFIX='/usr' \
     -DGLFW_BUILD_EXAMPLES=NO \
@@ -61,6 +58,4 @@ build() {
 
 package() {
   DESTDIR="$pkgdir" cmake --install build
-
-  install -Dm644 "glfw-minecraft-wayland"/LICENSE.md "$pkgdir/usr/share/licenses/$pkgname/LICENSE.md"
 }
