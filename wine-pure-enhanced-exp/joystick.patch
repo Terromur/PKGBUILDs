@@ -1,0 +1,47 @@
+Adds an env var WINE_JSHID_FORCEJS, can be used to force a JS HID device to look like a joystick.
+Also skips the joystick if it has 0 buttons.
+diff --git a/dlls/dinput/joystick_hid.c b/dlls/dinput/joystick_hid.c
+index 367d635..0245d22 100644
+--- a/dlls/dinput/joystick_hid.c
++++ b/dlls/dinput/joystick_hid.c
+@@ -1395,6 +1395,8 @@ static HRESULT hid_joystick_device_try_open( const WCHAR *path, HANDLE *device,
+                                              HIDD_ATTRIBUTES *attrs, HIDP_CAPS *caps, DIDEVICEINSTANCEW *instance,
+                                              DWORD version )
+ {
++    const char *force_js = NULL;
++    BOOL forced = 0;
+     BOOL has_accelerator, has_brake, has_clutch, has_z, has_pov;
+     PHIDP_PREPARSED_DATA preparsed_data = NULL;
+     HIDP_LINK_COLLECTION_NODE nodes[256];
+@@ -1424,6 +1426,21 @@ static HRESULT hid_joystick_device_try_open( const WCHAR *path, HANDLE *device,
+     default: FIXME( "device usage %04x:%04x not implemented!\n", caps->UsagePage, caps->Usage); goto failed;
+     }
+ 
++    force_js = getenv("WINE_JSHID_FORCEJS");
++    if (force_js)
++    {
++        /* is there a desire to support multiple overrides?..
++         * .. actually this is what the joy.cpl override button should do! */
++        char testbuf[10];
++        snprintf(testbuf, 10, "%04x:%04x", attrs->VendorID, attrs->ProductID);
++        if (strncmp(testbuf, force_js, 10) == 0)
++        {
++            caps->Usage = HID_USAGE_GENERIC_JOYSTICK;
++            type = DI8DEVTYPE_JOYSTICK;
++            forced = 1;
++        }
++    }
++
+     if (!HidD_GetProductString( device_file, instance->tszInstanceName, MAX_PATH * sizeof(WCHAR) )) goto failed;
+     if (!HidD_GetProductString( device_file, instance->tszProductName, MAX_PATH * sizeof(WCHAR) )) goto failed;
+ 
+@@ -1465,6 +1482,8 @@ static HRESULT hid_joystick_device_try_open( const WCHAR *path, HANDLE *device,
+         if (!buttons[count].IsRange) button_count += 1;
+         else button_count += buttons[count].Range.UsageMax - buttons[count].Range.UsageMin + 1;
+     }
++    /* Why... */
++    if (button_count == 0 && forced) goto failed;
+ 
+     count = 1;
+     status = HidP_GetSpecificValueCaps( HidP_Input, HID_USAGE_PAGE_GENERIC, 0, HID_USAGE_GENERIC_X,
+

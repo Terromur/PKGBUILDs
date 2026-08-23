@@ -1,0 +1,359 @@
+From 1ac42ae88e1b0e7bf3bcf512a9ee9129ba0abdaf Mon Sep 17 00:00:00 2001
+From: Safocl Stollmannovic <safocl88@gmail.com>
+Date: Thu, 2 Apr 2026 17:42:45 +0400
+Subject: [PATCH] Increase the portability of unions
+
+One special guarantee is made in order to simplify the use of unions: if a union contains
+several structures that share a common initial sequence (see below), and if the union
+object currently contains one of these structures, it is permitted to inspect the common
+initial part of any of them anywhere that a declaration of the complete type of the union is
+visible.
+Increase the portability of unions by using a common initial sequence.
+Also undefined behavior is fixed when the value of an object with automatic storage duration is
+used while it is indeterminate:
+```
+union U{
+    int i;
+    struct {int i; int j;} s;
+};
+U u;
+u.i = 42; // U::i is active member;
+u.s.j = 42; // U::s is the active member with initialized s.j, s.i is the indeterminate value;
+int i = u.s.i; // UB: accessing a value while it is indeterminate
+int i2 = u.i; // UB: U::i does not have the expected value, even if type-punning is supported
+```
+---
+ dlls/ntdll/unix/server.c       | 32 ++++++++++++++++----------------
+ dlls/ntdll/unix/thread.c       |  2 +-
+ include/wine/server_protocol.h |  5 ++++-
+ server/async.c                 |  4 ++--
+ server/protocol.def            |  5 ++++-
+ server/thread.c                | 16 ++++++++--------
+ server/timer.c                 |  2 +-
+ server/trace.c                 |  4 ++--
+ 8 files changed, 38 insertions(+), 32 deletions(-)
+
+diff --git a/dlls/ntdll/unix/server.c b/dlls/ntdll/unix/server.c
+index 4295a56d77c..e290d2c124c 100644
+--- a/dlls/ntdll/unix/server.c
++++ b/dlls/ntdll/unix/server.c
+@@ -399,7 +399,7 @@ static void invoke_system_apc( const union apc_call *call, union apc_result *res
+ 
+     memset( result, 0, sizeof(*result) );
+ 
+-    switch (call->type)
++    switch (call->common.type)
+     {
+     case APC_NONE:
+         break;
+@@ -409,7 +409,7 @@ static void invoke_system_apc( const union apc_call *call, union apc_result *res
+         ULONG_PTR info = call->async_io.result;
+         unsigned int status;
+ 
+-        result->type = call->type;
++        result->type = call->common.type;
+         status = call->async_io.status;
+         if (user->callback( user, &info, &status ))
+         {
+@@ -422,7 +422,7 @@ static void invoke_system_apc( const union apc_call *call, union apc_result *res
+         break;
+     }
+     case APC_VIRTUAL_ALLOC:
+-        result->type = call->type;
++        result->type = call->common.type;
+         addr = wine_server_get_ptr( call->virtual_alloc.addr );
+         size = call->virtual_alloc.size;
+         bits = call->virtual_alloc.zero_bits;
+@@ -443,7 +443,7 @@ static void invoke_system_apc( const union apc_call *call, union apc_result *res
+         MEM_EXTENDED_PARAMETER ext[2];
+         ULONG count = 0;
+ 
+-        result->type = call->type;
++        result->type = call->common.type;
+         addr = wine_server_get_ptr( call->virtual_alloc_ex.addr );
+         size = call->virtual_alloc_ex.size;
+         if ((ULONG_PTR)addr != call->virtual_alloc_ex.addr || size != call->virtual_alloc_ex.size)
+@@ -487,7 +487,7 @@ static void invoke_system_apc( const union apc_call *call, union apc_result *res
+         break;
+     }
+     case APC_VIRTUAL_FREE:
+-        result->type = call->type;
++        result->type = call->common.type;
+         addr = wine_server_get_ptr( call->virtual_free.addr );
+         size = call->virtual_free.size;
+         if ((ULONG_PTR)addr == call->virtual_free.addr && size == call->virtual_free.size)
+@@ -502,7 +502,7 @@ static void invoke_system_apc( const union apc_call *call, union apc_result *res
+     case APC_VIRTUAL_QUERY:
+     {
+         MEMORY_BASIC_INFORMATION info;
+-        result->type = call->type;
++        result->type = call->common.type;
+         addr = wine_server_get_ptr( call->virtual_query.addr );
+         if ((ULONG_PTR)addr == call->virtual_query.addr)
+             result->virtual_query.status = NtQueryVirtualMemory( NtCurrentProcess(),
+@@ -524,7 +524,7 @@ static void invoke_system_apc( const union apc_call *call, union apc_result *res
+         break;
+     }
+     case APC_VIRTUAL_PROTECT:
+-        result->type = call->type;
++        result->type = call->common.type;
+         addr = wine_server_get_ptr( call->virtual_protect.addr );
+         size = call->virtual_protect.size;
+         if ((ULONG_PTR)addr == call->virtual_protect.addr && size == call->virtual_protect.size)
+@@ -539,7 +539,7 @@ static void invoke_system_apc( const union apc_call *call, union apc_result *res
+         else result->virtual_protect.status = STATUS_INVALID_PARAMETER;
+         break;
+     case APC_VIRTUAL_FLUSH:
+-        result->type = call->type;
++        result->type = call->common.type;
+         addr = wine_server_get_ptr( call->virtual_flush.addr );
+         size = call->virtual_flush.size;
+         if ((ULONG_PTR)addr == call->virtual_flush.addr && size == call->virtual_flush.size)
+@@ -552,7 +552,7 @@ static void invoke_system_apc( const union apc_call *call, union apc_result *res
+         else result->virtual_flush.status = STATUS_INVALID_PARAMETER;
+         break;
+     case APC_VIRTUAL_LOCK:
+-        result->type = call->type;
++        result->type = call->common.type;
+         addr = wine_server_get_ptr( call->virtual_lock.addr );
+         size = call->virtual_lock.size;
+         if ((ULONG_PTR)addr == call->virtual_lock.addr && size == call->virtual_lock.size)
+@@ -564,7 +564,7 @@ static void invoke_system_apc( const union apc_call *call, union apc_result *res
+         else result->virtual_lock.status = STATUS_INVALID_PARAMETER;
+         break;
+     case APC_VIRTUAL_UNLOCK:
+-        result->type = call->type;
++        result->type = call->common.type;
+         addr = wine_server_get_ptr( call->virtual_unlock.addr );
+         size = call->virtual_unlock.size;
+         if ((ULONG_PTR)addr == call->virtual_unlock.addr && size == call->virtual_unlock.size)
+@@ -576,7 +576,7 @@ static void invoke_system_apc( const union apc_call *call, union apc_result *res
+         else result->virtual_unlock.status = STATUS_INVALID_PARAMETER;
+         break;
+     case APC_MAP_VIEW:
+-        result->type = call->type;
++        result->type = call->common.type;
+         addr = wine_server_get_ptr( call->map_view.addr );
+         size = call->map_view.size;
+         bits = call->map_view.zero_bits;
+@@ -603,7 +603,7 @@ static void invoke_system_apc( const union apc_call *call, union apc_result *res
+         LARGE_INTEGER offset;
+         ULONG_PTR limit_low, limit_high;
+ 
+-        result->type = call->type;
++        result->type = call->common.type;
+         addr = wine_server_get_ptr( call->map_view_ex.addr );
+         size = call->map_view_ex.size;
+         offset.QuadPart = call->map_view_ex.offset;
+@@ -643,7 +643,7 @@ static void invoke_system_apc( const union apc_call *call, union apc_result *res
+         break;
+     }
+     case APC_UNMAP_VIEW:
+-        result->type = call->type;
++        result->type = call->common.type;
+         addr = wine_server_get_ptr( call->unmap_view.addr );
+         if ((ULONG_PTR)addr == call->unmap_view.addr)
+             result->unmap_view.status = NtUnmapViewOfSectionEx( NtCurrentProcess(), addr, call->unmap_view.flags );
+@@ -663,7 +663,7 @@ static void invoke_system_apc( const union apc_call *call, union apc_result *res
+         void *func = wine_server_get_ptr( call->create_thread.func );
+         void *arg  = wine_server_get_ptr( call->create_thread.arg );
+ 
+-        result->type = call->type;
++        result->type = call->common.type;
+         if (reserve == call->create_thread.reserve && commit == call->create_thread.commit &&
+             (ULONG_PTR)func == call->create_thread.func && (ULONG_PTR)arg == call->create_thread.arg)
+         {
+@@ -694,7 +694,7 @@ static void invoke_system_apc( const union apc_call *call, union apc_result *res
+     {
+         HANDLE dst_handle = NULL;
+ 
+-        result->type = call->type;
++        result->type = call->common.type;
+ 
+         result->dup_handle.status = NtDuplicateObject( NtCurrentProcess(),
+                                                        wine_server_ptr_handle(call->dup_handle.src_handle),
+@@ -706,7 +706,7 @@ static void invoke_system_apc( const union apc_call *call, union apc_result *res
+         break;
+     }
+     default:
+-        server_protocol_error( "get_apc_request: bad type %d\n", call->type );
++        server_protocol_error( "get_apc_request: bad type %d\n", call->common.type );
+         break;
+     }
+ }
+diff --git a/dlls/ntdll/unix/thread.c b/dlls/ntdll/unix/thread.c
+index 1958807d3fc..9613736649e 100644
+--- a/dlls/ntdll/unix/thread.c
++++ b/dlls/ntdll/unix/thread.c
+@@ -1763,7 +1763,7 @@ NTSTATUS WINAPI NtQueueApcThreadEx2( HANDLE handle, HANDLE reserve_handle, ULONG
+         req->reserve_handle = wine_server_obj_handle( reserve_handle );
+         if (func)
+         {
+-            call.type         = APC_USER;
++            call.user.type    = APC_USER;
+             call.user.func    = wine_server_client_ptr( func );
+             call.user.flags = 0;
+             if (flags & QUEUE_USER_APC_FLAGS_SPECIAL_USER_APC) call.user.flags |= SERVER_USER_APC_SPECIAL;
+diff --git a/include/wine/server_protocol.h b/include/wine/server_protocol.h
+index 85f636dd995..1594f964b10 100644
+--- a/include/wine/server_protocol.h
++++ b/include/wine/server_protocol.h
+@@ -502,7 +502,10 @@ struct user_apc
+ 
+ union apc_call
+ {
+-    enum apc_type type;
++    struct
++    {
++        enum apc_type type;
++    } common;
+     struct user_apc user;
+     struct
+     {
+diff --git a/server/async.c b/server/async.c
+index d7f665ba10b..f24bc1e2816 100644
+--- a/server/async.c
++++ b/server/async.c
+@@ -260,7 +260,7 @@ void async_terminate( struct async *async, unsigned int status )
+         union apc_call data;
+ 
+         memset( &data, 0, sizeof(data) );
+-        data.type            = APC_ASYNC_IO;
++        data.async_io.type            = APC_ASYNC_IO;
+         data.async_io.user   = async->data.user;
+         data.async_io.result = iosb ? iosb->result : 0;
+ 
+@@ -609,7 +609,7 @@ void async_set_result( struct object *obj, unsigned int status, apc_param_t tota
+             {
+                 union apc_call data;
+                 memset( &data, 0, sizeof(data) );
+-                data.type         = APC_USER;
++                data.user.type         = APC_USER;
+                 data.user.flags   = 0;
+                 data.user.func    = async->data.apc;
+                 data.user.args[0] = async->data.apc_context;
+diff --git a/server/protocol.def b/server/protocol.def
+index 5bca381fd91..fa7b6837e80 100644
+--- a/server/protocol.def
++++ b/server/protocol.def
+@@ -518,7 +518,10 @@ struct user_apc
+ 
+ union apc_call
+ {
+-    enum apc_type type;
++    struct
++    {
++        enum apc_type type;
++    } common;
+     struct user_apc user;
+     struct
+     {
+diff --git a/server/thread.c b/server/thread.c
+index 7207f918400..c5b58cdfbd8 100644
+--- a/server/thread.c
++++ b/server/thread.c
+@@ -692,7 +692,7 @@ static void dump_thread_apc( struct object *obj, int verbose )
+     struct thread_apc *apc = (struct thread_apc *)obj;
+     assert( obj->ops == &thread_apc_ops );
+ 
+-    fprintf( stderr, "APC owner=%p type=%u\n", apc->owner, apc->call.type );
++    fprintf( stderr, "APC owner=%p type=%u\n", apc->owner, apc->call.common.type );
+ }
+ 
+ static struct object *thread_apc_get_sync( struct object *obj )
+@@ -711,7 +711,7 @@ static void thread_apc_destroy( struct object *obj )
+     {
+         if (apc->result.type == APC_ASYNC_IO)
+             async_set_result( apc->owner, apc->result.async_io.status, apc->result.async_io.total );
+-        else if (apc->call.type == APC_ASYNC_IO)
++        else if (apc->call.common.type == APC_ASYNC_IO)
+             async_set_result( apc->owner, apc->call.async_io.status, 0 );
+         release_object( apc->owner );
+     }
+@@ -728,7 +728,7 @@ static struct thread_apc *create_apc( struct object *owner, const union apc_call
+     {
+         apc->sync        = NULL;
+         if (call_data) apc->call = *call_data;
+-        else apc->call.type = APC_NONE;
++        else apc->call.common.type = APC_NONE;
+         apc->caller      = NULL;
+         apc->owner       = owner;
+         apc->reserve     = NULL;
+@@ -1454,26 +1454,26 @@ static int queue_apc( struct process *process, struct thread *thread, struct thr
+             }
+         }
+         if (!thread) return 0;  /* nothing found */
+-        if (!(queue = get_apc_queue( thread, apc->call.type ))) return 1;
++        if (!(queue = get_apc_queue( thread, apc->call.common.type ))) return 1;
+     }
+     else
+     {
+         if (thread->state == TERMINATED) return 0;
+-        if (!(queue = get_apc_queue( thread, apc->call.type ))) return 1;
++        if (!(queue = get_apc_queue( thread, apc->call.common.type ))) return 1;
+         /* send signal for system APCs if needed */
+         if (queue == &thread->system_apc && list_empty( queue ) && !is_in_apc_wait( thread ))
+         {
+             if (!send_thread_signal( thread, SIGUSR1 )) return 0;
+         }
+         /* cancel a possible previous APC with the same owner */
+-        if (apc->owner) thread_cancel_apc( thread, apc->owner, apc->call.type );
++        if (apc->owner) thread_cancel_apc( thread, apc->owner, apc->call.common.type );
+     }
+ 
+     grab_object( apc );
+     list_add_tail( queue, &apc->entry );
+     if (!list_prev( queue, &apc->entry ))  /* first one */
+     {
+-        if (apc->call.type == APC_USER && thread->alert_sync)
++        if (apc->call.common.type == APC_USER && thread->alert_sync)
+             signal_inproc_sync( thread->alert_sync );
+         wake_thread( thread );
+     }
+@@ -2076,7 +2076,7 @@ DECL_HANDLER(queue_apc)
+ 
+     if (!(apc = create_apc( NULL, call ))) return;
+ 
+-    switch (apc->call.type)
++    switch (apc->call.common.type)
+     {
+     case APC_NONE:
+     case APC_USER:
+diff --git a/server/timer.c b/server/timer.c
+index 4e3a14c4a18..e9eadad2bac 100644
+--- a/server/timer.c
++++ b/server/timer.c
+@@ -134,7 +134,7 @@ static void timer_callback( void *private )
+ 
+         assert (timer->callback);
+         memset( &data, 0, sizeof(data) );
+-        data.type         = APC_USER;
++        data.user.type         = APC_USER;
+         data.user.flags   = 0;
+         data.user.func    = timer->callback;
+         data.user.args[0] = timer->arg;
+diff --git a/server/trace.c b/server/trace.c
+index c9812d818bd..6581c4c1110 100644
+--- a/server/trace.c
++++ b/server/trace.c
+@@ -214,7 +214,7 @@ static void dump_ioctl_code( const char *prefix, const ioctl_code_t *code )
+ static void dump_apc_call( const char *prefix, const union apc_call *call )
+ {
+     fprintf( stderr, "%s{", prefix );
+-    switch(call->type)
++    switch(call->common.type)
+     {
+     case APC_NONE:
+         fprintf( stderr, "APC_NONE" );
+@@ -304,7 +304,7 @@ static void dump_apc_call( const char *prefix, const union apc_call *call )
+                  call->dup_handle.attributes, call->dup_handle.options );
+         break;
+     default:
+-        fprintf( stderr, "type=%u", call->type );
++        fprintf( stderr, "type=%u", call->common.type );
+         break;
+     }
+     fputc( '}', stderr );
+-- 
+GitLab
+

@@ -1,0 +1,22 @@
+diff --git a/dlls/comdlg32/unixlib.c b/dlls/comdlg32/unixlib.c
+--- a/dlls/comdlg32/unixlib.c
++++ b/dlls/comdlg32/unixlib.c
+@@ -66,3 +66,18 @@
+ };
+ 
+ C_ASSERT( ARRAYSIZE(__wine_unix_call_funcs) == unix_portal_is_available + 1 );
++
++/* 32-bit (wow64) processes look up __wine_unix_call_wow64_funcs instead of
++ * __wine_unix_call_funcs.  The portal params structs contain only inline
++ * arrays and scalars (no pointers) and have identical layout in 32/64-bit
++ * builds, so the same entry points can be used directly. */
++#ifdef _WIN64
++const unixlib_entry_t __wine_unix_call_wow64_funcs[] =
++{
++    unix_portal_open_file_wrapper,
++    unix_portal_save_file_wrapper,
++    unix_portal_is_available_wrapper,
++};
++
++C_ASSERT( ARRAYSIZE(__wine_unix_call_wow64_funcs) == unix_portal_is_available + 1 );
++#endif

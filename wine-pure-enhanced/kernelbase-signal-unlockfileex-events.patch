@@ -1,0 +1,33 @@
+diff --git a/dlls/kernelbase/file.c b/dlls/kernelbase/file.c
+index e271b03de1f..d67b04f2542 100644
+--- a/dlls/kernelbase/file.c
++++ b/dlls/kernelbase/file.c
+@@ -3974,14 +3974,26 @@ BOOL WINAPI DECLSPEC_HOTPATCH UnlockFile( HANDLE file, DWORD offset_low, DWORD o
+ BOOL WINAPI DECLSPEC_HOTPATCH UnlockFileEx( HANDLE file, DWORD reserved,
+                                             DWORD count_low, DWORD count_high, LPOVERLAPPED overlapped )
+ {
++    LARGE_INTEGER count, offset;
++    NTSTATUS status;
++
+     if (reserved)
+     {
+         SetLastError( ERROR_INVALID_PARAMETER );
+         return FALSE;
+     }
+-    if (overlapped->hEvent) FIXME("Unimplemented overlapped operation\n");
+ 
+-    return UnlockFile( file, overlapped->Offset, overlapped->OffsetHigh, count_low, count_high );
++    count.u.LowPart = count_low;
++    count.u.HighPart = count_high;
++    offset.u.LowPart = overlapped->Offset;
++    offset.u.HighPart = overlapped->OffsetHigh;
++
++    status = NtUnlockFile( file, (PIO_STATUS_BLOCK)overlapped, &offset, &count, NULL );
++
++    if (overlapped->hEvent)
++        SetEvent( (HANDLE)((ULONG_PTR)overlapped->hEvent & ~(ULONG_PTR)1) );
++
++    return set_ntstatus( status );
+ }
+ 
+ 

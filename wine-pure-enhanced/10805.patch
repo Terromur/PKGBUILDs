@@ -1,0 +1,33 @@
+From e8f4fa45365dab90cd1d2d05e40296644a4af061 Mon Sep 17 00:00:00 2001
+From: Stephan Seitz <stephan.seitz@fau.de>
+Date: Sat, 2 May 2026 18:52:24 +0200
+Subject: [PATCH] msvcrt: only convert _tolower_l if not exact match already
+
+This optimizations brought some speed-ups in
+https://gitlab.winehq.org/wine/wine/-/merge_requests/10804 for the
+equivalent `memicmp_strW` function.
+---
+ dlls/msvcrt/string.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/dlls/msvcrt/string.c b/dlls/msvcrt/string.c
+index 6b4ffbf45b5..2719ab37e9c 100644
+--- a/dlls/msvcrt/string.c
++++ b/dlls/msvcrt/string.c
+@@ -3435,8 +3435,11 @@ int __cdecl _memicmp_l(const void *v1, const void *v2, size_t len, _locale_t loc
+ 
+     while (len--)
+     {
+-        if ((ret = _tolower_l(*s1, locale) - _tolower_l(*s2, locale)))
+-            break;
++        if (*s1 != *s2) {
++            /* only convert _tolower_l if not exact match already */
++            if ((ret = _tolower_l(*s1, locale) - _tolower_l(*s2, locale)))
++                break;
++        }
+         s1++;
+         s2++;
+     }
+-- 
+GitLab
+

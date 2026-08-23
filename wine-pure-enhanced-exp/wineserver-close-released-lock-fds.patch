@@ -1,0 +1,26 @@
+diff --git a/server/fd.c b/server/fd.c
+index f70bec3..196a4ba 100644
+--- a/server/fd.c
++++ b/server/fd.c
+@@ -1210,7 +1210,20 @@ static void inode_add_closed_fd( struct inode *inode, struct closed_fd *fd )
+ {
+     if (!list_empty( &inode->locks ))
+     {
+-        list_add_head( &inode->closed, &fd->entry );
++        /* Close the unix FD immediately to prevent FD leak under lock contention.
++         * The closed FD belongs to a handle being released, not the lock owner's FD,
++         * so fcntl() lock operations are unaffected. Keep the struct only if an
++         * unlink is pending (FILE_DISPOSITION_DELETE) so inode_close_pending() can
++         * perform it when all locks are finally released. */
++        if (fd->unix_fd != -1) close( fd->unix_fd );
++        fd->unix_fd = -1;
++        if (fd->disp_flags & FILE_DISPOSITION_DELETE)
++            list_add_head( &inode->closed, &fd->entry );
++        else
++        {
++            free( fd->unix_name );
++            free( fd );
++        }
+     }
+     else if ((fd->disp_flags & FILE_DISPOSITION_DELETE) &&
+         (fd->disp_flags & FILE_DISPOSITION_POSIX_SEMANTICS))

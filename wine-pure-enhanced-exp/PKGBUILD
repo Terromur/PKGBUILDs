@@ -1,0 +1,472 @@
+# Maintainer: Terromur <terromuroz@proton.me>
+
+pkgname=wine-pure-enhanced-exp
+pkgver=11.16.r0
+pkgrel=1
+source=(
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=8da89f8493b21ebfbe344a54dbef0cde23c7ea59"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=f1936f02ba06b5012f89f75901944e8c2d26951c"
+  "git+https://github.com/GloriousEggroll/proton-ge-custom.git"
+  "git+https://github.com/elgabo86/gwine.git"
+  "git+https://github.com/starcitizen-lug/patches.git"
+  "git+https://github.com/NelloKudo/spritz-wine.git"
+  "git+https://github.com/whrvt/wine-osu-patches.git#branch=winello"
+  30-win32-aliases.conf
+  wine-binfmt.conf
+  0001-HACK-wine.inf-Add-native-builtin-overrides-for-msvcr.patch
+  0002-wine.inf-Set-a-valid-Win10-ProductId.patch
+  0003-wineboot-On-prefix-upgrade-update-win10-build-number.patch
+  0004-wineboot-Generate-better-DigitalProductId.patch
+  0005-wineboot-Load-root-certificates-on-prefix-update.patch
+  Disable-optimization-of-some-functions.patch
+  winecfg-Add-tweaks-tab-page.patch
+  ntdll-loader-add-support-for-overriding-IMAGE_FILE_L.patch
+  Add-workarounds-for-game-launchers.patch
+  0001-HACK-ws2_32-Block-first-internet-connection-for-some.patch
+  Configure-Enforce-4-byte-stack-alignment-on-clang-for-PE-builds.patch
+  10108.patch
+  10829.patch
+  10864.patch
+  kernelbase-Handle-misaligned-stack-in-OpenThread.patch
+  joystick.patch
+  no-winemenubuilder.patch
+  access-alignment-property.patch
+  10892.patch
+  10805.patch
+  10547.patch
+  10471.patch
+  9640.patch
+  8484.patch
+  4908.patch
+  kernel32-tests-expand-locking-coverage.patch
+  kernelbase-signal-unlockfileex-events.patch
+  win32u-map-oem-charset.patch
+  wineserver-close-released-lock-fds.patch
+  wine-msvcrt-binary-ccs-utf8-bom.patch
+  wine-msvcrt-narrow-open-createfilea.patch
+  wine-pipe-file-position.patch
+  0006-comdlg32-use-XDG-Desktop-Portal-for-native-file-dial.patch
+  0007-comdlg32-fix-portal-dialog-compatibility-and-respons.patch
+  0008-comdlg32-add-wow64-unix-call-table-for-32-bit.patch
+)
+
+sha256sums=(
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
+)
+
+pkgdesc="Bleeding-edge Wine build (Staging, WoW64, Wayland) with enhanced patches (proton-ge-custom, wine-osu-patches and more)"
+url="https://github.com/ventureoo/PKGBUILDs"
+arch=(x86_64)
+options=(!lto)
+license=(LGPL-2.1-or-later)
+depends=(
+  desktop-file-utils
+  fontconfig
+  freetype2
+  gcc-libs
+  gettext
+  libxcursor
+  libxkbcommon
+  libxi
+  libxrandr
+  wayland
+  ffmpeg
+  unixodbc
+)
+makedepends=(
+  git
+  alsa-lib
+  gnutls
+  gst-plugins-base-libs
+  libpulse
+  libxcomposite
+  mesa
+  opencl-headers
+  opencl-icd-loader
+  sdl2
+  vulkan-headers
+  vulkan-icd-loader
+  clang
+  llvm
+  lld
+  "linux-api-headers>=6.14"
+)
+optdepends=(
+  alsa-lib
+  alsa-plugins
+  gnutls
+  gst-plugins-bad
+  gst-plugins-base
+  gst-plugins-base-libs
+  gst-plugins-good
+  gst-plugins-ugly
+  libpulse
+  libxcomposite
+  opencl-icd-loader
+  sdl2
+  wine-gecko
+  wine-mono
+)
+provides=("wine-staging" "wine" "wine-pure-git" "wine-wow64" "wine=${pkgver%.r*}")
+conflicts=("wine" "wine-pure-git" "wine-pure-enhanced")
+install=wine.install
+
+pkgver() {
+  git -C wine describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/^wine.//;s/^v//;s/\.rc/rc/'
+}
+
+prepare() {
+  # Get rid of old build dirs
+  rm -rf "$pkgname-build"
+  mkdir "$pkgname-build"
+
+  cd wine
+
+  # apply wine-staging patchset
+  ../wine-staging/staging/patchinstall.py --backend=git-apply --all
+
+  # Use native Visual C++ DLLs, fix Windows product version
+  patch -Np1 -i "${srcdir}/0001-HACK-wine.inf-Add-native-builtin-overrides-for-msvcr.patch"
+  patch -Np1 -i "${srcdir}/0002-wine.inf-Set-a-valid-Win10-ProductId.patch"
+  patch -Np1 -i "${srcdir}/0003-wineboot-On-prefix-upgrade-update-win10-build-number.patch"
+  patch -Np1 -i "${srcdir}/0004-wineboot-Generate-better-DigitalProductId.patch"
+  patch -Np1 -i "${srcdir}/0005-wineboot-Load-root-certificates-on-prefix-update.patch"
+
+  # Disable optimization of some functions on Clang, as this breaks some games
+  # TODO: Understand root causes and check latest Clang
+  # Fixes: Hogwarts Legacy by Empress
+  patch -Np1 -i "${srcdir}/Disable-optimization-of-some-functions.patch"
+
+  # Add tweaks tab page in winecfg
+  patch -Np1 -i "${srcdir}/winecfg-Add-tweaks-tab-page.patch"
+
+  # Patch from Proton. Works only if WINE_LARGE_ADDRESS_AWARE environment
+  # variable is specified.
+  patch -Np1 -i "${srcdir}/ntdll-loader-add-support-for-overriding-IMAGE_FILE_L.patch"
+
+  # Fix black windows in some launchers when using winewayland
+  patch -Np1 -i "${srcdir}/Add-workarounds-for-game-launchers.patch"
+
+  # Fixes anti-cheat bypass for Mihoyo games
+  # Patch by @NelloKudo
+  patch -Np1 -i "${srcdir}/0001-HACK-ws2_32-Block-first-internet-connection-for-some.patch"
+
+  # Clang specific fix
+  patch -Np1 -i "${srcdir}/Configure-Enforce-4-byte-stack-alignment-on-clang-for-PE-builds.patch"
+
+  # ntdll: Never use CLOCK_REALTIME_COARSE
+  # https://gitlab.winehq.org/wine/wine/-/merge_requests/10108
+  patch -Np1 -i "${srcdir}/10108.patch"
+
+  # Futex optimizations
+  # https://gitlab.winehq.org/wine/wine/-/merge_requests/10829
+  patch -Np1 -i "${srcdir}/10829.patch"
+
+  # winegstreamer: Normalize PTS values so the stream starts at zero.
+  # https://gitlab.winehq.org/wine/wine/-/merge_requests/10864
+  patch -Np1 -i "${srcdir}/10864.patch"
+
+  # kernelbase: Handle misaligned stack in OpenThread
+  # https://gitlab.winehq.org/wine/wine/-/merge_requests/11069
+  patch -Np1 -i "${srcdir}/kernelbase-Handle-misaligned-stack-in-OpenThread.patch"
+  
+  # Other patches
+  patch -Np1 -i "${srcdir}/joystick.patch"
+  patch -Np1 -i "${srcdir}/no-winemenubuilder.patch"
+  patch -Np1 -i "${srcdir}/access-alignment-property.patch"
+  patch -Np1 -i "${srcdir}/kernel32-tests-expand-locking-coverage.patch"
+  patch -Np1 -i "${srcdir}/kernelbase-signal-unlockfileex-events.patch"
+  patch -Np1 -i "${srcdir}/win32u-map-oem-charset.patch"
+  patch -Np1 -i "${srcdir}/wineserver-close-released-lock-fds.patch"
+  patch -Np1 -i "${srcdir}/wine-msvcrt-binary-ccs-utf8-bom.patch"
+  patch -Np1 -i "${srcdir}/wine-msvcrt-narrow-open-createfilea.patch"
+  patch -Np1 -i "${srcdir}/wine-pipe-file-position.patch"
+  patch -Np1 -i "${srcdir}/0006-comdlg32-use-XDG-Desktop-Portal-for-native-file-dial.patch"
+  patch -Np1 -i "${srcdir}/0007-comdlg32-fix-portal-dialog-compatibility-and-respons.patch"
+  patch -Np1 -i "${srcdir}/0008-comdlg32-add-wow64-unix-call-table-for-32-bit.patch"
+  patch -Np1 -i "${srcdir}/10892.patch"
+  patch -Np1 -i "${srcdir}/10805.patch"
+  patch -Np1 -i "${srcdir}/10547.patch"
+  patch -Np1 -i "${srcdir}/10471.patch"
+  patch -Np1 -i "${srcdir}/9640.patch"
+  patch -Np1 -i "${srcdir}/8484.patch"
+  patch -Np1 -i "${srcdir}/4908.patch"
+
+  ./dlls/winevulkan/make_vulkan
+  ./tools/make_requests
+  ./tools/make_specfiles
+  
+        local wine_osu_patches_dir="${srcdir}/wine-osu-patches"
+if [ -d "${wine_osu_patches_dir}" ]; then
+  while IFS= read -r -d '' patch; do
+    msg2 "Applying wine-osu-patches patches: ${p#${wine_osu_patches_dir}/}"
+    patch -Np1 < "$patch"
+  done < <(find "${wine_osu_patches_dir}" \
+    -type f \
+    -name "*.patch" \
+        -not -path "${wine_osu_patches_dir}/0003-pending-mrs-and-backports/*" \
+        -not -path "${wine_osu_patches_dir}/0003-build-fix-undebug-optimize/0005-configure-Enforce-4-byte-stack-alignment-on-clang-fo.patch" \
+        -not -path "${wine_osu_patches_dir}/0003-build-fix-undebug-optimize/0007-include-Prefer-builtin-atomics.patch" \
+        -not -path "${wine_osu_patches_dir}/0004-proton-fsync/*" \
+        -not -path "${wine_osu_patches_dir}/0005-windowing-system-integration/0001-misc/0013-winex11.drv-Do-not-enable-disable-XInput2-when-clipp.patch" \
+        -not -path "${wine_osu_patches_dir}/0005-windowing-system-integration/0001-misc/0014-winecfg-Add-a-checkbox-to-enable-virtual-desktop-tas.patch" \
+        -not -path "${wine_osu_patches_dir}/0005-windowing-system-integration/0002-proton/0008-winex11.drv-Only-process-raw-input-in-default-winsta.patch" \
+        -not -path "${wine_osu_patches_dir}/0006-audio/0005-alsa-pulse-mmdevapi-Support-custom-period-and-buffer-sizes.patch" \
+        -not -path "${wine_osu_patches_dir}/0006-audio/0008-pulse-mmdevapi-Some-simplifications-and-stability-im.patch" \
+        -not -path "${wine_osu_patches_dir}/0006-audio/0010-winepulse-Stop-forcing-period-to-twice-the-minimum-s.patch" \
+        -not -path "${wine_osu_patches_dir}/0007-proton-additions/0013-server-user32-Backport-more-raw-input-changes-from-P.patch" \
+        -not -path "${wine_osu_patches_dir}/0008-winewayland-additions/*" \
+        -not -path "${wine_osu_patches_dir}/9000-misc-additions/0009-win32u-Add-WINE_DISABLE_IME.patch" \
+        -not -path "${wine_osu_patches_dir}/9000-misc-additions/0016-HACK-proton-server-Close-desktop-immediately-when-la.patch" \
+        -not -path "${wine_osu_patches_dir}/9000-misc-additions/0036-winex11-Uninit-winattrs-fix.patch" \
+        -not -path "${wine_osu_patches_dir}/9000-misc-additions/0043-winex11-Custom-frame-limiter-for-OpenGL.patch" \
+        -not -path "${wine_osu_patches_dir}/9000-misc-additions/0046-winex11-winewayland-Add-an-opt-in-absolute-tablet-in.patch" \
+        -not -path "${wine_osu_patches_dir}/9000-misc-additions/0014-appwiz-Add-env.-vars-to-skip-mono-gecko-installation.patch" \
+        -print0 | sort -z)
+fi  
+  
+          local proton_patches_dir="${srcdir}/proton-ge-custom/patches"
+if [ -d "${proton_patches_dir}" ]; then
+  while IFS= read -r -d '' patch; do
+    msg2 "Applying proton-ge-custom patches: ${patch#${proton_patches_dir}/}"
+    patch -Np1 < "$patch"
+  done < <(find "${proton_patches_dir}" \
+    -type f \
+    -name "*.patch" \
+        -not -path "${proton_patches_dir}/discordrpc/*" \
+        -not -path "${proton_patches_dir}/dxvk/*" \
+        -not -path "${proton_patches_dir}/game-patches/layered-overlay-wine.patch" \
+        -not -path "${proton_patches_dir}/game-patches/maplestory-kernelbase-charprev-null.patch" \
+        -not -path "${proton_patches_dir}/ge-video-rework/*" \
+        -not -path "${proton_patches_dir}/lsteamclient/*" \
+        -not -path "${proton_patches_dir}/pipewire/*" \
+        -not -path "${proton_patches_dir}/proton-ds5-haptic/*" \
+        -not -path "${proton_patches_dir}/proton/0001-De-steamify-proton-s-WINE-so-it-can-be-used-as-a-sta.patch" \
+        -not -path "${proton_patches_dir}/proton/winealsa-override-channel-count.patch" \
+        -not -path "${proton_patches_dir}/proton/0001-HACK-kernelbase-allow-overriding-dlls-for-DLSS-XeSS-.patch" \
+        -not -path "${proton_patches_dir}/proton/0001-fshack-Implement-AMD-FSR-upscaler-for-fullscreen-hac.patch" \
+        -not -path "${proton_patches_dir}/proton/0001-win32u-Implement-NtGdiDdDDIQueryAdapterInfo-cases.patch" \
+        -not -path "${proton_patches_dir}/proton/0001-win32u-add-env-switch-to-disable-wm-decorations.patch" \
+        -not -path "${proton_patches_dir}/proton/83-nv_low_latency_wine.patch" \
+        -not -path "${proton_patches_dir}/proton/0002-HACK-ntdll-add-optiscaler-inection-hack.patch" \
+        -not -path "${proton_patches_dir}/proton/wine_host_block_envvar.patch" \
+        -not -path "${proton_patches_dir}/proton/winex11-mutter-cinnamon.patch" \
+        -not -path "${proton_patches_dir}/protonfixes/*" \
+        -not -path "${proton_patches_dir}/vkd3d-proton/*" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/disabled/0210-winedmo-Handle-demuxer-URLs-without-an-extension.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/em-fixups/*" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/pending/0001-decouple-wineopenxr-from-steamvr-and-integrate-it-in.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/pending/0001-server-Dynamically-relocate-.exes-by-default-too.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/pending/0002-ntdll-allow-disabling-executable-ASLR.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/pending/icuuc-icuin-forwarder-dlls.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/pending/ntdll-prefer-native-version-resource-heuristics.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/pending/secur32-fallback-without-no-shuffle-extensions.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/pending/0009-HACK-kernel32-Spoof-GetProcAddress-of-KiUserApcDispa.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/pending/ntdll-reserve-top-down-space-for-large-address-aware-wow64.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/pending/ntdll-remove-redundant-packed-split-lock.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/pending/winex11-use-x11-drawables-for-steam-opengl-overlay.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/comctl32_animate_avi/*" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/mmsystem.dll16-MIDIHDR_Refcount/*" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/windowscodecs-TIFF_Support/*" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/winex11-Fixed-scancodes/*" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/winex11-ime-check-thread-data/*" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/wine-wayland/*" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/wineland-child-rendering/*" \
+        -not -path "${proton_patches_dir}/wineopenxr/*" \
+        -print0 | sort -z)
+fi
+  
+            local spritz_patches_dir="${srcdir}/spritz-wine/patches"
+if [ -d "${spritz_patches_dir}" ]; then
+  while IFS= read -r -d '' patch; do
+    msg2 "Applying spritz patches: ${patch#${spritz_patches_dir}/}"
+    patch -Np1 < "$patch"
+  done < <(find "${spritz_patches_dir}" \
+    -type f \
+    -name "*.patch" \
+        -not -path "${spritz_patches_dir}/0001-spritz/0002-HACK-ws2_32-Block-first-internet-connection-for-some.patch" \
+        -not -path "${spritz_patches_dir}/0001-spritz/0007-loader-Copy-arial.ttf-to-fonts.patch" \
+        -not -path "${spritz_patches_dir}/0001-spritz/0006-HACK-winex11-Make-WM-focus-the-window-by-default.patch" \
+        -not -path "${spritz_patches_dir}/0001-spritz/0008-winex11-Ignore-XI_BadDevice-errors-on-X_OpenDevice-w.patch" \
+        -not -path "${spritz_patches_dir}/0002-proton-controllers/0003-winebus-Disable-Hidraw-by-default-add-log-message.patch" \
+        -not -path "${spritz_patches_dir}/0003-tkg/0001-ntdll-loader-add-support-for-overriding-IMAGE_FILE_L.patch" \
+        -not -path "${spritz_patches_dir}/0003-tkg/0003-user32-Update-system-colors.patch" \
+        -not -path "${spritz_patches_dir}/0003-tkg/0004-comctl32-Remove-rounded-edges-from-tabs.patch" \
+        -not -path "${spritz_patches_dir}/0003-tkg/0005-user32-Draw-buttons-as-flat-by-default.patch" \
+        -not -path "${spritz_patches_dir}/0003-tkg/0006-comctl32-Don-t-use-a-dotty-pen-for-treeview.patch" \
+        -not -path "${spritz_patches_dir}/0003-tkg/0007-user32-Draw-focus-rects-in-solid-blue.patch" \
+        -not -path "${spritz_patches_dir}/0004-proton-fsync/*" \
+        -not -path "${spritz_patches_dir}/0006-misc/0004-ntdll-Never-use-CLOCK_REALTIME_COARSE.patch" \
+        -not -path "${spritz_patches_dir}/0006-misc/0009-ntoskrnl.exe-Add-stub-for-KeGetCurrentIrql.patch" \
+        -not -path "${spritz_patches_dir}/0006-misc/0001-HACK-winex11.drv-Workaround-focusing-out-of-exclusiv.patch" \
+        -not -path "${spritz_patches_dir}/0006-misc/0010-winex11-Keep-track-of-the-window-manager-name.patch" \
+        -not -path "${spritz_patches_dir}/0006-misc/0011-win32u-Add-a-new-driver-entry-to-check-window-manage.patch" \
+        -not -path "${spritz_patches_dir}/0006-misc/0012-winex11-Add-Muffin-Cinnamon-to-Mutter-detection.patch" \
+        -not -path "${spritz_patches_dir}/0008-pending-MR/10829-Futex-optimizations/*" \
+        -not -path "${spritz_patches_dir}/0008-pending-MR/11339-winegstreamer-wma-decoder-Implement-Get-Input-Output-CurrentType/*" \
+        -not -path "${spritz_patches_dir}/0008-pending-MR/9866-Revert-ntdll-Switch-to-CLOCK-BOOTTIME-for-monotonic-counters-when-available-/*" \
+        -not -path "${spritz_patches_dir}/0009-media/*" \
+        -print0 | sort -z)
+fi
+
+    local starcitizen_lug_dir="${srcdir}/patches"
+    if [ -d "${starcitizen_lug_dir}" ]; then
+      while IFS= read -r -d '' patch; do
+        msg2 "Applying starcitizen_lug patches: ${p#${starcitizen_lug_dir}/}"
+        patch -Np1 < "$patch"
+      done < <(find "${starcitizen_lug_dir}" \
+        -type f \
+        -name "*.patch" \
+        -not -path "${starcitizen_lug_dir}/mesa/*" \
+        -not -path "${starcitizen_lug_dir}/proton/*" \
+        -not -path "${starcitizen_lug_dir}/vkd3d-proton/*" \
+        -not -path "${starcitizen_lug_dir}/xorg/*" \
+        -not -path "${starcitizen_lug_dir}/wine/10.2+_eac_fix.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/printkey_x11-staging.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/eac_60101_timeout.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/9196_process_idle_event_client_side.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/append_cmd_override.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/hidewineexports.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/reg_show_wine.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/revert-egl-default.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/winefacewarehacks-minimal.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/wineland_pointer_warping.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/winewayland-no-enter-move-if-relative.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/real_path.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/0001-wineopenxr_add.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/0002-wineopenxr_enable.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/silence-sc-unsupported-os.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/default-to-wayland.patch" \
+        -print0 | sort -z)
+    fi
+
+        local gwine_patches_dir="${srcdir}/gwine"
+if [ -d "${gwine_patches_dir}" ]; then
+  while IFS= read -r -d '' patch; do
+    msg2 "Applying gwine-patches patches: ${p#${gwine_patches_dir}/}"
+    patch -Np1 < "$patch"
+  done < <(find "${gwine_patches_dir}" \
+    -type f \
+    -name "*.patch" \
+        -not -path "${gwine_patches_dir}/cpuid_fault_handler.mypatch" \
+        -not -path "${gwine_patches_dir}/disable_mediaconv_fallback.mypatch" \
+        -not -path "${gwine_patches_dir}/faketime.mypatch" \
+        -not -path "${gwine_patches_dir}/mpeg4_m4s2_decoder_fix.mypatch" \
+        -not -path "${gwine_patches_dir}/use_real_username.mypatch" \
+        -not -path "${gwine_patches_dir}/winewayland-keep-toplevel-for-client-surfaces.mypatch" \
+        -not -path "${gwine_patches_dir}/wmadec_getcurrenttype.mypatch" \
+        -print0 | sort -z)
+fi
+  autoreconf -f
+}
+
+build() {
+  # Apply flags for cross-compilation
+    export CC="clang" CXX="clang++"
+    export AR=llvm-ar
+    export RANLIB=llvm-ranlib
+    export NM=llvm-nm
+    local _base_flags="-march=native -O2 -pipe -fno-stack-protector -fno-stack-check -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -mharden-sls=none -fno-ident"
+    export CFLAGS="${_base_flags} -D_FILE_OFFSET_BITS=64 -D_FORTIFY_SOURCE=0"
+    export CXXFLAGS="${CFLAGS} -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
+    export CROSSCFLAGS="${_base_flags} -D_FORTIFY_SOURCE=0" 
+    export CROSSCXXFLAGS="${CROSSCFLAGS} -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
+    export CROSSLDFLAGS="-Wl,/FILEALIGN:4096,/INCREMENTAL:NO,/LTCG,/OPT:REF,/OPT:ICF=3"
+    export LDFLAGS="-fuse-ld=lld -flto=auto -O3 -Wl,--lto-O3 -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs -Wl,--strip-all -Wl,--icf=safe -Wl,--build-id=none -Wl,-z,norelro"
+
+  cd "$pkgname-build"
+  ../wine/configure \
+    --disable-tests \
+    --disable-win16 \
+    --prefix=/usr \
+    --libdir=/usr/lib \
+    --with-x \
+    --with-wayland \
+    --with-gstreamer \
+    --with-ffmpeg \
+    --without-oss \
+    --without-sane \
+    --without-v4l2 \
+    --without-cups \
+    --without-gphoto \
+    --without-xinerama \
+    --without-pcsclite \
+    --without-xxf86vm \
+    --without-pcap \
+    --without-ldap \
+    --without-capi \
+    --without-gsm \
+    --without-krb5 \
+    --with-mingw=clang \
+    --enable-archs=x86_64,i386
+
+  make
+}
+
+package() {
+  cd "$pkgname-build"
+  make prefix="$pkgdir/usr" \
+    libdir="$pkgdir/usr/lib" \
+    dlldir="$pkgdir/usr/lib/wine" install
+
+  # Symlink for comptability with older scripts such as winetricks/setup_dxvk
+  ln -sf /usr/bin/wine "$pkgdir"/usr/bin/wine64
+
+  # Strip Windows binaries
+  i686-w64-mingw32-strip --strip-debug "$pkgdir"/usr/lib/wine/i386-windows/*.dll
+  x86_64-w64-mingw32-strip --strip-debug "$pkgdir"/usr/lib/wine/x86_64-windows/*.dll
+
+  # Font aliasing settings for Win32 applications
+  install -d "$pkgdir"/usr/share/fontconfig/conf.{avail,default}
+  install -m644 "$srcdir/30-win32-aliases.conf" "$pkgdir/usr/share/fontconfig/conf.avail"
+  ln -s ../conf.avail/30-win32-aliases.conf "$pkgdir/usr/share/fontconfig/conf.default/30-win32-aliases.conf"
+  install -Dm 644 "$srcdir/wine-binfmt.conf" "$pkgdir/usr/lib/binfmt.d/wine.conf"
+
+  # NTSync additions
+  echo "ntsync" | install -Dm644 /dev/stdin "$pkgdir/usr/lib/modules-load.d/wine-pure.conf"
+}
+
+# vim:set ts=8 sts=2 sw=2 et:

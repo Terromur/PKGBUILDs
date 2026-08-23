@@ -1,0 +1,96 @@
+From 7b88fa74491fb4da8b8d558dc0eb9b784b4470dd Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Gabriel=20Iv=C4=83ncescu?= <gabrielopcode@gmail.com>
+Date: Thu, 10 Apr 2025 22:56:54 +0300
+Subject: [PATCH 1/2] tools/winebuild: Try gcc-* prefixed utils first.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+For Link-Time Optimization (LTO) it is required to use gcc-* prefixed utils
+(gcc-ar, gcc-ranlib, gcc-nm) to invoke the plugin properly, and since they're
+a superset of the standard utils, we can simply always use them if available.
+
+Signed-off-by: Gabriel Ivăncescu <gabrielopcode@gmail.com>
+---
+ tools/winebuild/import.c | 6 ++++--
+ tools/winebuild/utils.c  | 2 +-
+ 2 files changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/tools/winebuild/import.c b/tools/winebuild/import.c
+index eba74bb9660..a5dd092e342 100644
+--- a/tools/winebuild/import.c
++++ b/tools/winebuild/import.c
+@@ -1245,7 +1245,8 @@ void output_static_lib( const char *output_name, struct strarray files, int crea
+ 
+     if (!create || target.platform != PLATFORM_WINDOWS)
+     {
+-        args = find_tool( "ar", NULL );
++        static const char * const commands[] = { "gcc-ar", "ar", NULL };
++        args = find_tool( "ar", commands );
+         strarray_add( &args, create ? "rc" : "r" );
+         strarray_add( &args, output_name );
+     }
+@@ -1263,7 +1264,8 @@ void output_static_lib( const char *output_name, struct strarray files, int crea
+ 
+     if (target.platform != PLATFORM_WINDOWS)
+     {
+-        struct strarray ranlib = find_tool( "ranlib", NULL );
++        static const char * const commands[] = { "gcc-ranlib", "ranlib", NULL };
++        struct strarray ranlib = find_tool( "ranlib", commands );
+         strarray_add( &ranlib, output_name );
+         spawn( ranlib );
+     }
+diff --git a/tools/winebuild/utils.c b/tools/winebuild/utils.c
+index 62b76775b37..3167f6e43ab 100644
+--- a/tools/winebuild/utils.c
++++ b/tools/winebuild/utils.c
+@@ -380,7 +380,7 @@ const char *get_nm_command(void)
+ {
+     if (!nm_command.count)
+     {
+-        static const char * const commands[] = { "nm", "gnm", NULL };
++        static const char * const commands[] = { "gcc-nm", "nm", "gnm", NULL };
+         nm_command = find_tool( "nm", commands );
+     }
+     if (nm_command.count > 1)
+-- 
+GitLab
+
+
+From 5bde653c831f3d3ab650fc2f07722947e17905c0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Gabriel=20Iv=C4=83ncescu?= <gabrielopcode@gmail.com>
+Date: Thu, 10 Apr 2025 22:56:54 +0300
+Subject: [PATCH 2/2] tools/winegcc: Pass relevant LTO options also to the
+ linker.
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+-ffat-lto-objects wasn't included since it's not necessary for linking.
+
+Signed-off-by: Gabriel Ivăncescu <gabrielopcode@gmail.com>
+---
+ tools/winegcc/winegcc.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/tools/winegcc/winegcc.c b/tools/winegcc/winegcc.c
+index a657d8d6229..220cfa9cee4 100644
+--- a/tools/winegcc/winegcc.c
++++ b/tools/winegcc/winegcc.c
+@@ -1752,6 +1752,13 @@ int main(int argc, char **argv)
+                         use_pic = true;
+                     else if (!strcmp("-fno-PIC", args.str[i]) || !strcmp("-fno-pic", args.str[i]))
+                         use_pic = false;
++                    /* LTO options are available for both the compiler and the linker */
++                    else if ((!strncmp("-flto", args.str[i], 5) && (!args.str[i][5] || args.str[i][5] == '=')) || !strcmp("-fno-lto", args.str[i]))
++                        raw_linker_arg = 1;
++                    else if (!strncmp("-flto-partition=", args.str[i], 16))
++                        raw_linker_arg = 1;
++                    else if (!strcmp("-fuse-linker-plugin", args.str[i]) || !strcmp("-fno-use-linker-plugin", args.str[i]))
++                        raw_linker_arg = 1;
+ 		    break;
+                 case 'i':
+                     if (!strcmp( "-isysroot", args.str[i] )) isysroot = args.str[i + 1];
+-- 
+GitLab
+

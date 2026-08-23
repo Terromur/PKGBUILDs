@@ -1,0 +1,604 @@
+From 049c51a711d128e9ecbdc318fe4131256cb46a9b Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mircea=20Roat=C4=83-Palade?= <mircearoatapalade@gmail.com>
+Date: Wed, 26 Nov 2025 19:32:51 +0100
+Subject: [PATCH 1/3] oleaut32/tests: Test typelib load mode flags.
+
+---
+ dlls/oleaut32/tests/typelib.c | 60 +++++++++++++++++++++++++++++++++++
+ 1 file changed, 60 insertions(+)
+
+diff --git a/dlls/oleaut32/tests/typelib.c b/dlls/oleaut32/tests/typelib.c
+index 153964e17d5..8872ae0dc91 100644
+--- a/dlls/oleaut32/tests/typelib.c
++++ b/dlls/oleaut32/tests/typelib.c
+@@ -8763,6 +8763,64 @@ static void test_DeleteFuncDesc(void)
+     DeleteFileW(filenameW);
+ }
+ 
++static void test_LoadTypeLibEx(SYSKIND sys)
++{
++    ITypeLib *tl;
++    ITypeInfo *ti;
++    TYPEATTR *typeattr;
++    FUNCDESC *funcdesc;
++    HRESULT hr;
++    const WCHAR *filename;
++    int load_mode;
++    int ptr_size;
++
++    switch(sys)
++    {
++        case SYS_WIN32:
++            winetest_push_context("win32");
++            load_mode = LOAD_TLB_AS_32BIT;
++            ptr_size = 4;
++            break;
++        case SYS_WIN64:
++            winetest_push_context("win64");
++            load_mode = LOAD_TLB_AS_64BIT;
++            ptr_size = 8;
++            break;
++        default:
++            return;
++    }
++
++    filename = create_test_typelib(4);
++
++    hr = LoadTypeLibEx(filename, REGKIND_NONE | load_mode, &tl);
++    ok(hr == S_OK, "got %08lx\n", hr);
++
++    hr = ITypeLib_GetTypeInfoOfGuid(tl, &IID_IBaseIface, &ti);
++    ok(hr == S_OK, "got %08lx\n", hr);
++
++    hr = ITypeInfo_GetTypeAttr(ti, &typeattr);
++    ok(hr == S_OK, "got %08lx\n", hr);
++
++    ok(typeattr->cbSizeVft == 8 * ptr_size, "got %u\n", typeattr->cbSizeVft);
++    ok(typeattr->cbAlignment == ptr_size, "got %u\n", typeattr->cbAlignment);
++    ok(typeattr->cbSizeInstance == ptr_size, "got %lu\n", typeattr->cbSizeInstance);
++
++    ITypeInfo_ReleaseTypeAttr(ti, typeattr);
++
++    hr = ITypeInfo_GetFuncDesc(ti, 0, &funcdesc);
++    ok(hr == S_OK, "got %08lx\n", hr);
++
++    ok(funcdesc->oVft == 7 * ptr_size, "got %u\n", funcdesc->oVft);
++
++    ITypeInfo_ReleaseFuncDesc(ti, funcdesc);
++
++    ITypeInfo_Release(ti);
++    ITypeLib_Release(tl);
++
++    DeleteFileW(filename);
++    winetest_pop_context();
++}
++
+ START_TEST(typelib)
+ {
+     const WCHAR *filename;
+@@ -8806,4 +8864,6 @@ START_TEST(typelib)
+     test_stub();
+     test_DeleteImplType();
+     test_DeleteFuncDesc();
++    test_LoadTypeLibEx(SYS_WIN32);
++    test_LoadTypeLibEx(SYS_WIN64);
+ }
+-- 
+GitLab
+
+
+From 060f6dfe27b49aa87d4e98740666177c93859e74 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mircea=20Roat=C4=83-Palade?= <mircearoatapalade@gmail.com>
+Date: Wed, 26 Nov 2025 19:34:12 +0100
+Subject: [PATCH 2/3] oleaut32: Handle typelib load mode flags.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=39101
+---
+ dlls/oleaut32/typelib.c | 75 ++++++++++++++++++++++++++++-------------
+ 1 file changed, 51 insertions(+), 24 deletions(-)
+
+diff --git a/dlls/oleaut32/typelib.c b/dlls/oleaut32/typelib.c
+index c4f00ca5bea..e5ba5f795bb 100644
+--- a/dlls/oleaut32/typelib.c
++++ b/dlls/oleaut32/typelib.c
+@@ -269,7 +269,7 @@ static WCHAR *get_lcid_subkey( LCID lcid, SYSKIND syskind, WCHAR *buffer )
+     return buffer;
+ }
+ 
+-static HRESULT TLB_ReadTypeLib(LPCWSTR pszFileName, LPWSTR pszPath, UINT cchPath, ITypeLib2 **ppTypeLib);
++static HRESULT TLB_ReadTypeLib(LPCWSTR pszFileName, LPWSTR pszPath, UINT cchPath, ITypeLib2 **ppTypeLib, int target_ptr_size);
+ 
+ struct tlibredirect_data
+ {
+@@ -453,6 +453,7 @@ HRESULT WINAPI LoadTypeLibEx(
+ {
+     WCHAR szPath[MAX_PATH+1];
+     HRESULT res;
++    int target_ptr_size = sizeof(void*);
+ 
+     TRACE("(%s,%d,%p)\n",debugstr_w(szFile), regkind, pptLib);
+ 
+@@ -461,10 +462,15 @@ HRESULT WINAPI LoadTypeLibEx(
+ 
+     *pptLib = NULL;
+ 
+-    res = TLB_ReadTypeLib(szFile, szPath, MAX_PATH + 1, (ITypeLib2**)pptLib);
++    if (regkind & LOAD_TLB_AS_32BIT)
++        target_ptr_size = 4;
++    else if (regkind & LOAD_TLB_AS_64BIT)
++        target_ptr_size = 8;
++
++    res = TLB_ReadTypeLib(szFile, szPath, MAX_PATH + 1, (ITypeLib2**)pptLib, target_ptr_size);
+ 
+     if (SUCCEEDED(res))
+-        switch(regkind)
++        switch(regkind & MASK_TO_RESET_TLB_BITS)
+         {
+             case REGKIND_DEFAULT:
+                 /* don't register typelibs supplied with full path. Experimentation confirms the following */
+@@ -1133,8 +1139,8 @@ static inline ITypeLibImpl *impl_from_ICreateTypeLib2( ICreateTypeLib2 *iface )
+ }
+ 
+ /* ITypeLib methods */
+-static ITypeLib2* ITypeLib2_Constructor_MSFT(LPVOID pLib, DWORD dwTLBLength);
+-static ITypeLib2* ITypeLib2_Constructor_SLTG(LPVOID pLib, DWORD dwTLBLength);
++static ITypeLib2* ITypeLib2_Constructor_MSFT(LPVOID pLib, DWORD dwTLBLength, int target_ptr_size);
++static ITypeLib2* ITypeLib2_Constructor_SLTG(LPVOID pLib, DWORD dwTLBLength, int target_ptr_size);
+ 
+ /*======================= ITypeInfo implementation =======================*/
+ 
+@@ -2431,7 +2437,7 @@ MSFT_DoFuncs(TLBContext*     pcx,
+         if (ptfd->funcdesc.funckind == FUNC_DISPATCH)
+             ptfd->funcdesc.oVft   =   0;
+         else
+-            ptfd->funcdesc.oVft   =   (unsigned short)(pFuncRec->VtableOffset & ~1) * sizeof(void *) / pTI->pTypeLib->ptr_size;
++            ptfd->funcdesc.oVft   =   pFuncRec->VtableOffset & ~1;
+         ptfd->funcdesc.wFuncFlags =   LOWORD(pFuncRec->Flags) ;
+ 
+         /* nameoffset is sometimes -1 on the second half of a propget/propput
+@@ -2611,8 +2617,10 @@ static void MSFT_DoImplTypes(TLBContext *pcx, ITypeInfoImpl *pTI, int count,
+ 
+ /* when a typelib is loaded in a different 32/64-bit mode, we need to resize pointers
+  * and some structures, and fix the alignment */
+-static void TLB_fix_typeinfo_ptr_size(ITypeInfoImpl *info)
++static void TLB_fix_typeinfo_ptr_size(ITypeInfoImpl *info, int target_ptr_size)
+ {
++    int i;
++
+     if(info->typeattr.typekind == TKIND_ALIAS){
+         switch(info->tdescAlias->vt){
+         case VT_BSTR:
+@@ -2622,30 +2630,39 @@ static void TLB_fix_typeinfo_ptr_size(ITypeInfoImpl *info)
+         case VT_SAFEARRAY:
+         case VT_LPSTR:
+         case VT_LPWSTR:
+-            info->typeattr.cbSizeInstance = sizeof(void*);
+-            info->typeattr.cbAlignment = sizeof(void*);
++            info->typeattr.cbSizeInstance = target_ptr_size;
++            info->typeattr.cbAlignment = target_ptr_size;
+             break;
+         case VT_CARRAY:
+         case VT_USERDEFINED:
+-            TLB_size_instance(info, is_win64 ? SYS_WIN64 : SYS_WIN32, info->tdescAlias,
++            TLB_size_instance(info, target_ptr_size == 8 ? SYS_WIN64 : SYS_WIN32, info->tdescAlias,
+                               &info->typeattr.cbSizeInstance, &info->typeattr.cbAlignment);
+             break;
+         case VT_VARIANT:
+             info->typeattr.cbSizeInstance = sizeof(VARIANT);
+-            info->typeattr.cbAlignment = sizeof(void *);
++            if(target_ptr_size != sizeof(void*))
++                info->typeattr.cbSizeInstance += is_win64 ? -8 : 8; /* 32-bit VARIANT is 8 bytes smaller than 64-bit VARIANT */
++            info->typeattr.cbAlignment = target_ptr_size;
+             break;
+         default:
+-            if(info->typeattr.cbSizeInstance < sizeof(void*))
++            if(info->typeattr.cbSizeInstance < target_ptr_size)
+                 info->typeattr.cbAlignment = info->typeattr.cbSizeInstance;
+             else
+-                info->typeattr.cbAlignment = sizeof(void*);
++                info->typeattr.cbAlignment = target_ptr_size;
+             break;
+         }
+     }else if(info->typeattr.typekind == TKIND_INTERFACE ||
+             info->typeattr.typekind == TKIND_DISPATCH ||
+             info->typeattr.typekind == TKIND_COCLASS){
+-        info->typeattr.cbSizeInstance = sizeof(void*);
+-        info->typeattr.cbAlignment = sizeof(void*);
++        info->typeattr.cbSizeInstance = target_ptr_size;
++        info->typeattr.cbAlignment = target_ptr_size;
++    }
++
++    info->typeattr.cbSizeVft = (unsigned short)(info->typeattr.cbSizeVft) * target_ptr_size / info->pTypeLib->ptr_size;
++
++    for (i = 0; i < info->typeattr.cFuncs; ++i)
++    {
++        info->funcdescs[i].funcdesc.oVft = (unsigned short)(info->funcdescs[i].funcdesc.oVft) * target_ptr_size / info->pTypeLib->ptr_size;
+     }
+ }
+ 
+@@ -3279,7 +3296,7 @@ static HRESULT TLB_Mapping_Open(LPCWSTR path, LPVOID *ppBase, DWORD *pdwTLBLengt
+  */
+ 
+ #define SLTG_SIGNATURE 0x47544c53 /* "SLTG" */
+-static HRESULT TLB_ReadTypeLib(LPCWSTR pszFileName, LPWSTR pszPath, UINT cchPath, ITypeLib2 **ppTypeLib)
++static HRESULT TLB_ReadTypeLib(LPCWSTR pszFileName, LPWSTR pszPath, UINT cchPath, ITypeLib2 **ppTypeLib, int target_ptr_size)
+ {
+     ITypeLibImpl *entry;
+     HRESULT ret;
+@@ -3335,7 +3352,7 @@ static HRESULT TLB_ReadTypeLib(LPCWSTR pszFileName, LPWSTR pszPath, UINT cchPath
+     EnterCriticalSection(&cache_section);
+     LIST_FOR_EACH_ENTRY(entry, &tlb_cache, ITypeLibImpl, entry)
+     {
+-        if (!wcsicmp(entry->path, pszPath) && entry->index == index)
++        if (!wcsicmp(entry->path, pszPath) && entry->index == index && entry->ptr_size == target_ptr_size)
+         {
+             TRACE("cache hit\n");
+             *ppTypeLib = &entry->ITypeLib2_iface;
+@@ -3359,9 +3376,9 @@ static HRESULT TLB_ReadTypeLib(LPCWSTR pszFileName, LPWSTR pszPath, UINT cchPath
+         {
+             DWORD dwSignature = FromLEDWord(*((DWORD*) pBase));
+             if (dwSignature == MSFT_SIGNATURE)
+-                *ppTypeLib = ITypeLib2_Constructor_MSFT(pBase, dwTLBLength);
++                *ppTypeLib = ITypeLib2_Constructor_MSFT(pBase, dwTLBLength, target_ptr_size);
+             else if (dwSignature == SLTG_SIGNATURE)
+-                *ppTypeLib = ITypeLib2_Constructor_SLTG(pBase, dwTLBLength);
++                *ppTypeLib = ITypeLib2_Constructor_SLTG(pBase, dwTLBLength, target_ptr_size);
+             else
+             {
+                 FIXME("Header type magic %#lx not supported.\n", dwSignature);
+@@ -3429,7 +3446,7 @@ static ITypeLibImpl* TypeLibImpl_Constructor(void)
+  *
+  * loading an MSFT typelib from an in-memory image
+  */
+-static ITypeLib2* ITypeLib2_Constructor_MSFT(LPVOID pLib, DWORD dwTLBLength)
++static ITypeLib2* ITypeLib2_Constructor_MSFT(LPVOID pLib, DWORD dwTLBLength, int target_ptr_size)
+ {
+     TLBContext cx;
+     LONG lPSegDir;
+@@ -3634,12 +3651,14 @@ static ITypeLib2* ITypeLib2_Constructor_MSFT(LPVOID pLib, DWORD dwTLBLength)
+         }
+     }
+ 
+-    if (pTypeLibImpl->ptr_size != sizeof(void *))
++    if (pTypeLibImpl->ptr_size != target_ptr_size)
+     {
+         for(i = 0; i < pTypeLibImpl->TypeInfoCount; ++i)
+-            TLB_fix_typeinfo_ptr_size(pTypeLibImpl->typeinfos[i]);
++            TLB_fix_typeinfo_ptr_size(pTypeLibImpl->typeinfos[i], target_ptr_size);
+     }
+ 
++    pTypeLibImpl->ptr_size = target_ptr_size;
++
+     TRACE("(%p)\n", pTypeLibImpl);
+     return &pTypeLibImpl->ITypeLib2_iface;
+ }
+@@ -4237,7 +4256,7 @@ static void SLTG_DoFuncs(char *pBlk, char *pFirstItem, ITypeInfoImpl *pTI,
+ 	if (pFuncDesc->funcdesc.funckind == FUNC_DISPATCH)
+ 	    pFuncDesc->funcdesc.oVft = 0;
+         else
+-	    pFuncDesc->funcdesc.oVft = (unsigned short)(pFunc->vtblpos & ~1) * sizeof(void *) / pTI->pTypeLib->ptr_size;
++	    pFuncDesc->funcdesc.oVft = pFunc->vtblpos & ~1;
+ 
+ 	if (pFunc->helpstring != 0xffff)
+ 	    pFuncDesc->HelpString = decode_string(hlp_strings, pBlk + pFunc->helpstring, pNameTable - pBlk, pTI->pTypeLib);
+@@ -4451,7 +4470,7 @@ typedef struct {
+  *
+  * loading a SLTG typelib from an in-memory image
+  */
+-static ITypeLib2* ITypeLib2_Constructor_SLTG(LPVOID pLib, DWORD dwTLBLength)
++static ITypeLib2* ITypeLib2_Constructor_SLTG(LPVOID pLib, DWORD dwTLBLength, int target_ptr_size)
+ {
+     ITypeLibImpl *pTypeLibImpl;
+     SLTG_Header *pHeader;
+@@ -4739,6 +4758,14 @@ static ITypeLib2* ITypeLib2_Constructor_SLTG(LPVOID pLib, DWORD dwTLBLength)
+       return NULL;
+     }
+ 
++    if (pTypeLibImpl->ptr_size != target_ptr_size)
++    {
++        for(i = 0; i < pTypeLibImpl->TypeInfoCount; ++i)
++            TLB_fix_typeinfo_ptr_size(pTypeLibImpl->typeinfos[i], target_ptr_size);
++    }
++
++    pTypeLibImpl->ptr_size = target_ptr_size;
++
+     free(pOtherTypeInfoBlks);
+     return &pTypeLibImpl->ITypeLib2_iface;
+ }
+-- 
+GitLab
+
+
+From d6caa0cee78de102932c684587899b2e0a405b08 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Mircea=20Roat=C4=83-Palade?= <mircearoatapalade@gmail.com>
+Date: Wed, 26 Nov 2025 19:35:32 +0100
+Subject: [PATCH 3/3] oleaut32: Load referenced typelib with the same pointer
+ size.
+
+Fixes test failures on 64-bit.
+---
+ dlls/oleaut32/tests/typelib.c | 31 -------------------------------
+ dlls/oleaut32/typelib.c       |  7 +++++--
+ 2 files changed, 5 insertions(+), 33 deletions(-)
+
+diff --git a/dlls/oleaut32/tests/typelib.c b/dlls/oleaut32/tests/typelib.c
+index 8872ae0dc91..05c3a8e0724 100644
+--- a/dlls/oleaut32/tests/typelib.c
++++ b/dlls/oleaut32/tests/typelib.c
+@@ -2185,7 +2185,6 @@ static void test_CreateTypeLib(SYSKIND sys) {
+     TYPEKIND kind;
+     DESCKIND desckind;
+     BINDPTR bindptr;
+-    SYSKIND native_sys = is_win64 ? SYS_WIN64 : SYS_WIN32;
+ 
+     switch(sys){
+     case SYS_WIN32:
+@@ -2368,9 +2367,7 @@ static void test_CreateTypeLib(SYSKIND sys) {
+ 
+     hres = ITypeInfo_GetTypeAttr(ti, &typeattr);
+     ok(hres == S_OK, "got %08lx\n", hres);
+-    todo_wine_if(sys != native_sys)
+     ok(typeattr->cbSizeInstance == ptr_size, "retrieved IUnknown gave wrong cbSizeInstance: %lu\n", typeattr->cbSizeInstance);
+-    todo_wine_if(sys != native_sys)
+     ok(typeattr->cbSizeVft == 3 * ptr_size, "retrieved IUnknown gave wrong cbSizeVft: %u\n", typeattr->cbSizeVft);
+     ITypeInfo_ReleaseTypeAttr(ti, typeattr);
+ 
+@@ -2414,7 +2411,6 @@ static void test_CreateTypeLib(SYSKIND sys) {
+     ok(pfuncdesc->callconv == CC_STDCALL, "got 0x%x\n", pfuncdesc->callconv);
+     ok(pfuncdesc->cParams == 0, "got %d\n", pfuncdesc->cParams);
+     ok(pfuncdesc->cParamsOpt == 0, "got %d\n", pfuncdesc->cParamsOpt);
+-    todo_wine_if(sys != native_sys)
+     ok(pfuncdesc->oVft == 3 * ptr_size, "got %d\n", pfuncdesc->oVft);
+     ok(pfuncdesc->cScodes == 0, "got %d\n", pfuncdesc->cScodes);
+     ok(pfuncdesc->elemdescFunc.tdesc.vt == VT_BSTR, "got %d\n", pfuncdesc->elemdescFunc.tdesc.vt);
+@@ -2474,7 +2470,6 @@ static void test_CreateTypeLib(SYSKIND sys) {
+     ok(pfuncdesc->callconv == CC_STDCALL, "got 0x%x\n", pfuncdesc->callconv);
+     ok(pfuncdesc->cParams == 1, "got %d\n", pfuncdesc->cParams);
+     ok(pfuncdesc->cParamsOpt == 0, "got %d\n", pfuncdesc->cParamsOpt);
+-    todo_wine_if(sys != native_sys)
+     ok(pfuncdesc->oVft == 4 * ptr_size, "got %d\n", pfuncdesc->oVft);
+     ok(pfuncdesc->cScodes == 0, "got %d\n", pfuncdesc->cScodes);
+     ok(pfuncdesc->elemdescFunc.tdesc.vt == VT_VOID, "got %d\n", pfuncdesc->elemdescFunc.tdesc.vt);
+@@ -2517,7 +2512,6 @@ static void test_CreateTypeLib(SYSKIND sys) {
+     ok(pfuncdesc->callconv == CC_STDCALL, "got 0x%x\n", pfuncdesc->callconv);
+     ok(pfuncdesc->cParams == 0, "got %d\n", pfuncdesc->cParams);
+     ok(pfuncdesc->cParamsOpt == 0, "got %d\n", pfuncdesc->cParamsOpt);
+-    todo_wine_if(sys != native_sys)
+     ok(pfuncdesc->oVft == 4 * ptr_size, "got %d\n", pfuncdesc->oVft);
+     ok(pfuncdesc->cScodes == 0, "got %d\n", pfuncdesc->cScodes);
+     ok(pfuncdesc->elemdescFunc.tdesc.vt == VT_VOID, "got %d\n", pfuncdesc->elemdescFunc.tdesc.vt);
+@@ -2548,7 +2542,6 @@ static void test_CreateTypeLib(SYSKIND sys) {
+     ok(pfuncdesc->callconv == CC_STDCALL, "got 0x%x\n", pfuncdesc->callconv);
+     ok(pfuncdesc->cParams == 1, "got %d\n", pfuncdesc->cParams);
+     ok(pfuncdesc->cParamsOpt == 0, "got %d\n", pfuncdesc->cParamsOpt);
+-    todo_wine_if(sys != native_sys)
+     ok(pfuncdesc->oVft == 7 * ptr_size, "got %d\n", pfuncdesc->oVft);
+     ok(pfuncdesc->cScodes == 0, "got %d\n", pfuncdesc->cScodes);
+     ok(pfuncdesc->elemdescFunc.tdesc.vt == VT_VOID, "got %d\n", pfuncdesc->elemdescFunc.tdesc.vt);
+@@ -2580,7 +2573,6 @@ static void test_CreateTypeLib(SYSKIND sys) {
+     ok(pfuncdesc->callconv == CC_STDCALL, "got 0x%x\n", pfuncdesc->callconv);
+     ok(pfuncdesc->cParams == 1, "got %d\n", pfuncdesc->cParams);
+     ok(pfuncdesc->cParamsOpt == 0, "got %d\n", pfuncdesc->cParamsOpt);
+-    todo_wine_if(sys != native_sys)
+     ok(pfuncdesc->oVft == 7 * ptr_size, "got %d\n", pfuncdesc->oVft);
+     ok(pfuncdesc->cScodes == 0, "got %d\n", pfuncdesc->cScodes);
+     ok(pfuncdesc->elemdescFunc.tdesc.vt == VT_VOID, "got %d\n", pfuncdesc->elemdescFunc.tdesc.vt);
+@@ -2616,7 +2608,6 @@ static void test_CreateTypeLib(SYSKIND sys) {
+     ok(pfuncdesc->callconv == CC_STDCALL, "got 0x%x\n", pfuncdesc->callconv);
+     ok(pfuncdesc->cParams == 1, "got %d\n", pfuncdesc->cParams);
+     ok(pfuncdesc->cParamsOpt == 0, "got %d\n", pfuncdesc->cParamsOpt);
+-    todo_wine_if(sys != native_sys)
+     ok(pfuncdesc->oVft == 6 * ptr_size, "got %d\n", pfuncdesc->oVft);
+     ok(pfuncdesc->cScodes == 0, "got %d\n", pfuncdesc->cScodes);
+     ok(pfuncdesc->elemdescFunc.tdesc.vt == VT_VOID, "got %d\n", pfuncdesc->elemdescFunc.tdesc.vt);
+@@ -2657,7 +2648,6 @@ static void test_CreateTypeLib(SYSKIND sys) {
+     ok(pfuncdesc->callconv == CC_STDCALL, "got 0x%x\n", pfuncdesc->callconv);
+     ok(pfuncdesc->cParams == 2, "got %d\n", pfuncdesc->cParams);
+     ok(pfuncdesc->cParamsOpt == 0, "got %d\n", pfuncdesc->cParamsOpt);
+-    todo_wine_if(sys != native_sys)
+     ok(pfuncdesc->oVft == 6 * ptr_size, "got %d\n", pfuncdesc->oVft);
+     ok(pfuncdesc->cScodes == 0, "got %d\n", pfuncdesc->cScodes);
+     ok(pfuncdesc->elemdescFunc.tdesc.vt == VT_VOID, "got %d\n", pfuncdesc->elemdescFunc.tdesc.vt);
+@@ -2708,7 +2698,6 @@ static void test_CreateTypeLib(SYSKIND sys) {
+     ok(pfuncdesc->callconv == CC_STDCALL, "got 0x%x\n", pfuncdesc->callconv);
+     ok(pfuncdesc->cParams == 2, "got %d\n", pfuncdesc->cParams);
+     ok(pfuncdesc->cParamsOpt == 0, "got %d\n", pfuncdesc->cParamsOpt);
+-    todo_wine_if(sys != native_sys)
+     ok(pfuncdesc->oVft == 6 * ptr_size, "got %d\n", pfuncdesc->oVft);
+     ok(pfuncdesc->cScodes == 0, "got %d\n", pfuncdesc->cScodes);
+     ok(pfuncdesc->elemdescFunc.tdesc.vt == VT_VOID, "got %d\n", pfuncdesc->elemdescFunc.tdesc.vt);
+@@ -2766,7 +2755,6 @@ static void test_CreateTypeLib(SYSKIND sys) {
+     ok(pfuncdesc->callconv == CC_STDCALL, "got 0x%x\n", pfuncdesc->callconv);
+     ok(pfuncdesc->cParams == 1, "got %d\n", pfuncdesc->cParams);
+     ok(pfuncdesc->cParamsOpt == 0, "got %d\n", pfuncdesc->cParamsOpt);
+-    todo_wine_if(sys != native_sys)
+     ok(pfuncdesc->oVft == 8 * ptr_size, "got %d\n", pfuncdesc->oVft);
+     ok(pfuncdesc->cScodes == 0, "got %d\n", pfuncdesc->cScodes);
+     ok(pfuncdesc->elemdescFunc.tdesc.vt == VT_VOID, "got %d\n", pfuncdesc->elemdescFunc.tdesc.vt);
+@@ -2810,7 +2798,6 @@ static void test_CreateTypeLib(SYSKIND sys) {
+     ok(pfuncdesc->callconv == CC_STDCALL, "got 0x%x\n", pfuncdesc->callconv);
+     ok(pfuncdesc->cParams == 1, "got %d\n", pfuncdesc->cParams);
+     ok(pfuncdesc->cParamsOpt == 0, "got %d\n", pfuncdesc->cParamsOpt);
+-    todo_wine_if(sys != native_sys)
+     ok(pfuncdesc->oVft == 9 * ptr_size, "got %d\n", pfuncdesc->oVft);
+     ok(pfuncdesc->cScodes == 0, "got %d\n", pfuncdesc->cScodes);
+     ok(pfuncdesc->elemdescFunc.tdesc.vt == VT_VARIANT, "got %d\n", pfuncdesc->elemdescFunc.tdesc.vt);
+@@ -3130,7 +3117,6 @@ static void test_CreateTypeLib(SYSKIND sys) {
+     ok(typeattr->cFuncs == 1, "cFuncs = %d\n", typeattr->cFuncs);
+     ok(typeattr->cVars == 0, "cVars = %d\n", typeattr->cVars);
+     ok(typeattr->cImplTypes == 1, "cImplTypes = %d\n", typeattr->cImplTypes);
+-    todo_wine_if(sys != native_sys)
+     ok(typeattr->cbSizeVft == 8 * ptr_size, "cbSizeVft = %d\n", typeattr->cbSizeVft);
+     ok(typeattr->cbAlignment == 4, "cbAlignment = %d\n", typeattr->cbAlignment);
+     ok(typeattr->wTypeFlags == (TYPEFLAG_FDISPATCHABLE|TYPEFLAG_FDUAL), "wTypeFlags = %d\n", typeattr->wTypeFlags);
+@@ -3153,7 +3139,6 @@ static void test_CreateTypeLib(SYSKIND sys) {
+     ok(hres == S_OK, "got %08lx\n", hres);
+     ok(typeattr->cbSizeInstance == ptr_size, "cbSizeInstance = %ld\n", typeattr->cbSizeInstance);
+     ok(typeattr->typekind == TKIND_DISPATCH, "typekind = %d\n", typeattr->typekind);
+-    todo_wine_if(sys != native_sys)
+     ok(typeattr->cFuncs == 8, "cFuncs = %d\n", typeattr->cFuncs);
+     ok(typeattr->cVars == 0, "cVars = %d\n", typeattr->cVars);
+     ok(typeattr->cImplTypes == 1, "cImplTypes = %d\n", typeattr->cImplTypes);
+@@ -3191,7 +3176,6 @@ todo_wine {
+     ok(typeattr->cFuncs == 13, "cFuncs = %d\n", typeattr->cFuncs);
+     ok(typeattr->cVars == 0, "cVars = %d\n", typeattr->cVars);
+     ok(typeattr->cImplTypes == 1, "cImplTypes = %d\n", typeattr->cImplTypes);
+-    todo_wine_if(sys != native_sys)
+     ok(typeattr->cbSizeVft == 16 * ptr_size, "cbSizeVft = %d\n", typeattr->cbSizeVft);
+     ok(typeattr->cbAlignment == 4, "cbAlignment = %d\n", typeattr->cbAlignment);
+     ok(typeattr->wTypeFlags == 0, "wTypeFlags = %d\n", typeattr->wTypeFlags);
+@@ -3392,7 +3376,6 @@ todo_wine {
+     ok(typeattr->cFuncs == 13, "cFuncs = %d\n", typeattr->cFuncs);
+     ok(typeattr->cVars == 0, "cVars = %d\n", typeattr->cVars);
+     ok(typeattr->cImplTypes == 1, "cImplTypes = %d\n", typeattr->cImplTypes);
+-    todo_wine_if(sys != native_sys)
+         ok(typeattr->cbSizeVft == 16 * sizeof(void*), "cbSizeVft = %d\n", typeattr->cbSizeVft);
+     ok(typeattr->cbAlignment == alignment, "cbAlignment = %d\n", typeattr->cbAlignment);
+     ok(typeattr->wTypeFlags == 0, "wTypeFlags = %d\n", typeattr->wTypeFlags);
+@@ -3466,7 +3449,6 @@ todo_wine {
+     ok(pfuncdesc->callconv == CC_STDCALL, "got 0x%x\n", pfuncdesc->callconv);
+     ok(pfuncdesc->cParams == 0, "got %d\n", pfuncdesc->cParams);
+     ok(pfuncdesc->cParamsOpt == 0, "got %d\n", pfuncdesc->cParamsOpt);
+-    todo_wine_if(sys != native_sys)
+     ok(pfuncdesc->oVft == 4 * sizeof(void*), "got %d\n", pfuncdesc->oVft);
+     ok(pfuncdesc->cScodes == 0, "got %d\n", pfuncdesc->cScodes);
+     ok(pfuncdesc->elemdescFunc.tdesc.vt == VT_VOID, "got %d\n", pfuncdesc->elemdescFunc.tdesc.vt);
+@@ -3491,7 +3473,6 @@ todo_wine {
+     ok(pfuncdesc->callconv == CC_STDCALL, "got 0x%x\n", pfuncdesc->callconv);
+     ok(pfuncdesc->cParams == 0, "got %d\n", pfuncdesc->cParams);
+     ok(pfuncdesc->cParamsOpt == 0, "got %d\n", pfuncdesc->cParamsOpt);
+-    todo_wine_if(sys != native_sys)
+     ok(pfuncdesc->oVft == 5 * sizeof(void*), "got %d\n", pfuncdesc->oVft);
+     ok(pfuncdesc->cScodes == 0, "got %d\n", pfuncdesc->cScodes);
+     ok(pfuncdesc->elemdescFunc.tdesc.vt == VT_VOID, "got %d\n", pfuncdesc->elemdescFunc.tdesc.vt);
+@@ -3516,7 +3497,6 @@ todo_wine {
+     ok(pfuncdesc->callconv == CC_STDCALL, "got 0x%x\n", pfuncdesc->callconv);
+     ok(pfuncdesc->cParams == 2, "got %d\n", pfuncdesc->cParams);
+     ok(pfuncdesc->cParamsOpt == 0, "got %d\n", pfuncdesc->cParamsOpt);
+-    todo_wine_if(sys != native_sys)
+     ok(pfuncdesc->oVft == 6 * sizeof(void*), "got %d\n", pfuncdesc->oVft);
+     ok(pfuncdesc->cScodes == 0, "got %d\n", pfuncdesc->cScodes);
+     ok(pfuncdesc->elemdescFunc.tdesc.vt == VT_VOID, "got %d\n", pfuncdesc->elemdescFunc.tdesc.vt);
+@@ -3576,7 +3556,6 @@ todo_wine {
+     ok(pfuncdesc->callconv == CC_STDCALL, "got 0x%x\n", pfuncdesc->callconv);
+     ok(pfuncdesc->cParams == 2, "got %d\n", pfuncdesc->cParams);
+     ok(pfuncdesc->cParamsOpt == 0, "got %d\n", pfuncdesc->cParamsOpt);
+-    todo_wine_if(sys != native_sys)
+     ok(pfuncdesc->oVft == 7 * sizeof(void*), "got %d\n", pfuncdesc->oVft);
+     ok(pfuncdesc->cScodes == 0, "got %d\n", pfuncdesc->cScodes);
+     ok(pfuncdesc->elemdescFunc.tdesc.vt == VT_VOID, "got %d\n", pfuncdesc->elemdescFunc.tdesc.vt);
+@@ -3623,7 +3602,6 @@ todo_wine {
+     ok(pfuncdesc->callconv == CC_STDCALL, "got 0x%x\n", pfuncdesc->callconv);
+     ok(pfuncdesc->cParams == 1, "got %d\n", pfuncdesc->cParams);
+     ok(pfuncdesc->cParamsOpt == 0, "got %d\n", pfuncdesc->cParamsOpt);
+-    todo_wine_if(sys != native_sys)
+     ok(pfuncdesc->oVft == 8 * sizeof(void*), "got %d\n", pfuncdesc->oVft);
+     ok(pfuncdesc->cScodes == 0, "got %d\n", pfuncdesc->cScodes);
+     ok(pfuncdesc->elemdescFunc.tdesc.vt == VT_VOID, "got %d\n", pfuncdesc->elemdescFunc.tdesc.vt);
+@@ -3661,7 +3639,6 @@ todo_wine {
+     ok(pfuncdesc->callconv == CC_STDCALL, "got 0x%x\n", pfuncdesc->callconv);
+     ok(pfuncdesc->cParams == 1, "got %d\n", pfuncdesc->cParams);
+     ok(pfuncdesc->cParamsOpt == 0, "got %d\n", pfuncdesc->cParamsOpt);
+-    todo_wine_if(sys != native_sys)
+     ok(pfuncdesc->oVft == 9 * sizeof(void*), "got %d\n", pfuncdesc->oVft);
+     ok(pfuncdesc->cScodes == 0, "got %d\n", pfuncdesc->cScodes);
+     ok(pfuncdesc->elemdescFunc.tdesc.vt == VT_VARIANT, "got %d\n", pfuncdesc->elemdescFunc.tdesc.vt);
+@@ -3699,7 +3676,6 @@ todo_wine {
+     ok(pfuncdesc->callconv == CC_STDCALL, "got 0x%x\n", pfuncdesc->callconv);
+     ok(pfuncdesc->cParams == 2, "got %d\n", pfuncdesc->cParams);
+     ok(pfuncdesc->cParamsOpt == 0, "got %d\n", pfuncdesc->cParamsOpt);
+-    todo_wine_if(sys != native_sys)
+     ok(pfuncdesc->oVft == 10 * sizeof(void*), "got %d\n", pfuncdesc->oVft);
+     ok(pfuncdesc->cScodes == 0, "got %d\n", pfuncdesc->cScodes);
+     ok(pfuncdesc->elemdescFunc.tdesc.vt == VT_VOID, "got %d\n", pfuncdesc->elemdescFunc.tdesc.vt);
+@@ -3740,7 +3716,6 @@ todo_wine {
+     ok(pfuncdesc->callconv == CC_STDCALL, "got 0x%x\n", pfuncdesc->callconv);
+     ok(pfuncdesc->cParams == 1, "got %d\n", pfuncdesc->cParams);
+     ok(pfuncdesc->cParamsOpt == 0, "got %d\n", pfuncdesc->cParamsOpt);
+-    todo_wine_if(sys != native_sys)
+     ok(pfuncdesc->oVft == 11 * sizeof(void*), "got %d\n", pfuncdesc->oVft);
+     ok(pfuncdesc->cScodes == 0, "got %d\n", pfuncdesc->cScodes);
+     ok(pfuncdesc->elemdescFunc.tdesc.vt == VT_VOID, "got %d\n", pfuncdesc->elemdescFunc.tdesc.vt);
+@@ -3776,7 +3751,6 @@ todo_wine {
+     ok(pfuncdesc->callconv == CC_STDCALL, "got 0x%x\n", pfuncdesc->callconv);
+     ok(pfuncdesc->cParams == 0, "got %d\n", pfuncdesc->cParams);
+     ok(pfuncdesc->cParamsOpt == 0, "got %d\n", pfuncdesc->cParamsOpt);
+-    todo_wine_if(sys != native_sys)
+     ok(pfuncdesc->oVft == 12 * sizeof(void*), "got %d\n", pfuncdesc->oVft);
+     ok(pfuncdesc->cScodes == 0, "got %d\n", pfuncdesc->cScodes);
+     ok(pfuncdesc->elemdescFunc.tdesc.vt == VT_BSTR, "got %d\n", pfuncdesc->elemdescFunc.tdesc.vt);
+@@ -3808,7 +3782,6 @@ todo_wine {
+     ok(pfuncdesc->callconv == CC_STDCALL, "got 0x%x\n", pfuncdesc->callconv);
+     ok(pfuncdesc->cParams == 1, "got %d\n", pfuncdesc->cParams);
+     ok(pfuncdesc->cParamsOpt == 0, "got %d\n", pfuncdesc->cParamsOpt);
+-    todo_wine_if(sys != native_sys)
+     ok(pfuncdesc->oVft == 13 * sizeof(void*), "got %d\n", pfuncdesc->oVft);
+     ok(pfuncdesc->cScodes == 0, "got %d\n", pfuncdesc->cScodes);
+     ok(pfuncdesc->elemdescFunc.tdesc.vt == VT_VOID, "got %d\n", pfuncdesc->elemdescFunc.tdesc.vt);
+@@ -3842,7 +3815,6 @@ todo_wine {
+     ok(pfuncdesc->callconv == CC_STDCALL, "got 0x%x\n", pfuncdesc->callconv);
+     ok(pfuncdesc->cParams == 1, "got %d\n", pfuncdesc->cParams);
+     ok(pfuncdesc->cParamsOpt == 0, "got %d\n", pfuncdesc->cParamsOpt);
+-    todo_wine_if(sys != native_sys)
+     ok(pfuncdesc->oVft == 14 * sizeof(void*), "got %d\n", pfuncdesc->oVft);
+     ok(pfuncdesc->cScodes == 0, "got %d\n", pfuncdesc->cScodes);
+     ok(pfuncdesc->elemdescFunc.tdesc.vt == VT_VOID, "got %d\n", pfuncdesc->elemdescFunc.tdesc.vt);
+@@ -3874,7 +3846,6 @@ todo_wine {
+     ok(pfuncdesc->callconv == CC_STDCALL, "got 0x%x\n", pfuncdesc->callconv);
+     ok(pfuncdesc->cParams == 1, "got %d\n", pfuncdesc->cParams);
+     ok(pfuncdesc->cParamsOpt == 0, "got %d\n", pfuncdesc->cParamsOpt);
+-    todo_wine_if(sys != native_sys)
+     ok(pfuncdesc->oVft == 15 * sizeof(void*), "got %d\n", pfuncdesc->oVft);
+     ok(pfuncdesc->cScodes == 0, "got %d\n", pfuncdesc->cScodes);
+     ok(pfuncdesc->elemdescFunc.tdesc.vt == VT_VOID, "got %d\n", pfuncdesc->elemdescFunc.tdesc.vt);
+@@ -4076,7 +4047,6 @@ todo_wine {
+     ok(hres == S_OK, "got %08lx\n", hres);
+     ok(typeattr->cbSizeInstance == sizeof(void*), "cbSizeInstance = %ld\n", typeattr->cbSizeInstance);
+     ok(typeattr->typekind == TKIND_DISPATCH, "typekind = %d\n", typeattr->typekind);
+-    todo_wine_if(sys != native_sys)
+     ok(typeattr->cFuncs == 8, "cFuncs = %d\n", typeattr->cFuncs);
+     ok(typeattr->cVars == 0, "cVars = %d\n", typeattr->cVars);
+     ok(typeattr->cImplTypes == 1, "cImplTypes = %d\n", typeattr->cImplTypes);
+@@ -4129,7 +4099,6 @@ todo_wine {
+     ok(typeattr->cFuncs == 1, "cFuncs = %d\n", typeattr->cFuncs);
+     ok(typeattr->cVars == 0, "cVars = %d\n", typeattr->cVars);
+     ok(typeattr->cImplTypes == 1, "cImplTypes = %d\n", typeattr->cImplTypes);
+-    todo_wine_if(sys != native_sys)
+         ok(typeattr->cbSizeVft == 8 * sizeof(void*), "cbSizeVft = %d\n", typeattr->cbSizeVft);
+     ok(typeattr->cbAlignment == alignment, "cbAlignment = %d\n", typeattr->cbAlignment);
+     ok(typeattr->wTypeFlags == (TYPEFLAG_FDISPATCHABLE | TYPEFLAG_FDUAL), "wTypeFlags = 0x%x\n", typeattr->wTypeFlags);
+diff --git a/dlls/oleaut32/typelib.c b/dlls/oleaut32/typelib.c
+index e5ba5f795bb..dbc11d7fc60 100644
+--- a/dlls/oleaut32/typelib.c
++++ b/dlls/oleaut32/typelib.c
+@@ -7851,6 +7851,7 @@ static HRESULT WINAPI ITypeInfo_fnGetRefTypeInfo(
+     HRESULT result = E_FAIL;
+     TLBRefType *ref_type;
+     UINT i;
++    int load_mode;
+ 
+     if(!ppTInfo)
+         return E_INVALIDARG;
+@@ -7942,7 +7943,8 @@ static HRESULT WINAPI ITypeInfo_fnGetRefTypeInfo(
+                         && IsEqualIID(&entry->guid->guid, TLB_get_guid_null(ref_type->pImpTLInfo->guid))
+                         && entry->ver_major == ref_type->pImpTLInfo->wVersionMajor
+                         && entry->ver_minor == ref_type->pImpTLInfo->wVersionMinor
+-                        && entry->set_lcid == ref_type->pImpTLInfo->lcid)
++                        && entry->set_lcid == ref_type->pImpTLInfo->lcid
++                        && entry->ptr_size == This->pTypeLib->ptr_size)
+                     {
+                         TRACE("got cached %p\n", entry);
+                         pTLib = (ITypeLib*)&entry->ITypeLib2_iface;
+@@ -7966,7 +7968,8 @@ static HRESULT WINAPI ITypeInfo_fnGetRefTypeInfo(
+                     if (FAILED(result))
+                         libnam = SysAllocString(ref_type->pImpTLInfo->name);
+ 
+-                    result = LoadTypeLib(libnam, &pTLib);
++                    load_mode = This->pTypeLib->ptr_size == 8 ? LOAD_TLB_AS_64BIT : LOAD_TLB_AS_32BIT;
++                    result = LoadTypeLibEx(libnam, REGKIND_DEFAULT | load_mode, &pTLib);
+                     SysFreeString(libnam);
+                 }
+ 
+-- 
+GitLab
+

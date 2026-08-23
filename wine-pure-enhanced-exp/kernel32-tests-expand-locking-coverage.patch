@@ -1,0 +1,452 @@
+diff --git a/dlls/kernel32/tests/file.c b/dlls/kernel32/tests/file.c
+index d66ab2efe66..c31ddfd8cc7 100644
+--- a/dlls/kernel32/tests/file.c
++++ b/dlls/kernel32/tests/file.c
+@@ -2429,12 +2429,439 @@ static void test_LockFile(void)
+ 
+     ok( UnlockFile( handle, 100, 0, 0, 0 ), "UnlockFile 100,0 failed\n" );
+ 
++    /* test UnlockFileEx with overlapped event signaling */
++    {
++        HANDLE event = CreateEventA( NULL, TRUE, FALSE, NULL );
++        ok( event != NULL, "CreateEvent failed\n" );
++
++        overlapped.Offset = 0;
++        overlapped.OffsetHigh = 0;
++        overlapped.hEvent = event;
++
++        ok( LockFileEx( handle, LOCKFILE_EXCLUSIVE_LOCK, 0, 100, 0, &overlapped ),
++            "LockFileEx 0,100 failed\n" );
++
++        ResetEvent( event );
++        ok( UnlockFileEx( handle, 0, 100, 0, &overlapped ), "UnlockFileEx 0,100 failed\n" );
++        ret = WaitForSingleObject( event, 0 );
++        ok( ret == WAIT_OBJECT_0, "event not signaled after UnlockFileEx, got %ld\n", ret );
++
++        /* test with low bit set (skip IOCP notification flag) */
++        ok( LockFileEx( handle, LOCKFILE_EXCLUSIVE_LOCK, 0, 100, 0, &overlapped ),
++            "LockFileEx 0,100 failed\n" );
++
++        ResetEvent( event );
++        overlapped.hEvent = (HANDLE)((ULONG_PTR)event | 1);
++        ok( UnlockFileEx( handle, 0, 100, 0, &overlapped ), "UnlockFileEx 0,100 failed\n" );
++        ret = WaitForSingleObject( event, 0 );
++        ok( ret == WAIT_OBJECT_0, "event not signaled after UnlockFileEx with low bit set, got %ld\n", ret );
++
++        overlapped.hEvent = 0;
++        CloseHandle( event );
++    }
++
++    /* test LockFileEx posts I/O completion */
++    {
++        HANDLE iocp_file, port, event;
++        ULONG_PTR key_out;
++        DWORD bytes;
++        LPOVERLAPPED ov_out;
++
++        event = CreateEventA( NULL, TRUE, FALSE, NULL );
++        ok( event != NULL, "CreateEvent failed\n" );
++
++        iocp_file = CreateFileA( filename, GENERIC_READ | GENERIC_WRITE,
++                                 FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
++                                 OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0 );
++        ok( iocp_file != INVALID_HANDLE_VALUE, "CreateFile failed, err=%lu\n", GetLastError() );
++
++        port = CreateIoCompletionPort( iocp_file, NULL, 0x12345, 1 );
++        ok( port != NULL, "CreateIoCompletionPort failed, err=%lu\n", GetLastError() );
++
++        memset( &overlapped, 0, sizeof(overlapped) );
++        overlapped.hEvent = event;  /* low bit clear, post to IOCP */
++
++        ret = LockFileEx( iocp_file, LOCKFILE_EXCLUSIVE_LOCK, 0, 100, 0, &overlapped );
++        ok( ret, "LockFileEx failed, err=%lu\n", GetLastError() );
++
++        ov_out = NULL;
++        key_out = 0;
++        bytes = 0xdeadbeef;
++        ret = GetQueuedCompletionStatus( port, &bytes, &key_out, &ov_out, 0 );
++        ok( ret, "GetQueuedCompletionStatus failed, err=%lu\n", GetLastError() );
++        ok( key_out == 0x12345, "wrong key %lx\n", (unsigned long)key_out );
++        ok( ov_out == &overlapped, "wrong overlapped %p\n", ov_out );
++
++        ok( UnlockFileEx( iocp_file, 0, 100, 0, &overlapped ), "UnlockFileEx failed\n" );
++
++        /* low bit set on hEvent skips IOCP notification */
++        overlapped.hEvent = (HANDLE)((ULONG_PTR)event | 1);
++        ret = LockFileEx( iocp_file, LOCKFILE_EXCLUSIVE_LOCK, 0, 100, 0, &overlapped );
++        ok( ret, "LockFileEx failed, err=%lu\n", GetLastError() );
++
++        ov_out = NULL;
++        ret = GetQueuedCompletionStatus( port, &bytes, &key_out, &ov_out, 0 );
++        ok( !ret, "GetQueuedCompletionStatus should have failed (no completion expected)\n" );
++        ok( GetLastError() == WAIT_TIMEOUT, "expected WAIT_TIMEOUT, got %lu\n", GetLastError() );
++
++        overlapped.hEvent = 0;
++        ok( UnlockFileEx( iocp_file, 0, 100, 0, &overlapped ), "UnlockFileEx failed\n" );
++
++        CloseHandle( port );
++        CloseHandle( event );
++        CloseHandle( iocp_file );
++    }
++
+     CloseHandle( handle2 );
+ cleanup:
+     CloseHandle( handle );
+     DeleteFileA( filename );
+ }
+ 
++struct unlock_thread_data
++{
++    HANDLE file;
++    DWORD delay_ms;
++};
++
++static DWORD WINAPI unlock_thread_proc( void *arg )
++{
++    struct unlock_thread_data *data = arg;
++    OVERLAPPED ov = {0};
++    Sleep( data->delay_ms );
++    UnlockFileEx( data->file, 0, 100, 0, &ov );
++    return 0;
++}
++
++static LONG apc_count;
++static volatile ULONG_PTR apc_got_arg1;
++static volatile ULONG_PTR apc_got_arg2;
++
++static void CALLBACK lock_apc_callback( ULONG_PTR arg1, ULONG_PTR arg2, ULONG_PTR arg3 )
++{
++    apc_got_arg1 = arg1;
++    apc_got_arg2 = arg2;
++    InterlockedIncrement( &apc_count );
++}
++
++static void test_LockFile_async_contention(void)
++{
++    HANDLE handle, handle2, handle2_sync, event, thread, port;
++    OVERLAPPED overlapped;
++    LARGE_INTEGER count, offset;
++    IO_STATUS_BLOCK iosb;
++    NTSTATUS status;
++    ULONG key;
++    DWORD ret;
++    struct unlock_thread_data unlock_data;
++    ULONG_PTR key_out;
++    DWORD bytes;
++    LPOVERLAPPED ov_out;
++
++    handle = CreateFileA( filename, GENERIC_READ | GENERIC_WRITE,
++                          FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
++                          CREATE_ALWAYS, 0, 0 );
++    ok( handle != INVALID_HANDLE_VALUE, "CreateFile failed, err=%lu\n", GetLastError() );
++
++    handle2_sync = CreateFileA( filename, GENERIC_READ | GENERIC_WRITE,
++                                FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
++                                OPEN_EXISTING, 0, 0 );
++    ok( handle2_sync != INVALID_HANDLE_VALUE, "CreateFile handle2_sync failed, err=%lu\n", GetLastError() );
++
++    /* Test A: NtLockFile with io_status parameter, no contention */
++    offset.QuadPart = 0;
++    count.QuadPart = 100;
++    memset( &iosb, 0xcc, sizeof(iosb) );
++    status = NtLockFile( handle, NULL, NULL, NULL, &iosb, &offset, &count, NULL, FALSE, TRUE );
++    ok( status == STATUS_SUCCESS, "NtLockFile with io_status failed %#lx\n", status );
++    ok( iosb.Status == STATUS_SUCCESS, "io_status.Status = %#lx\n", iosb.Status );
++    ok( !iosb.Information, "io_status.Information = %Iu\n", iosb.Information );
++    status = NtUnlockFile( handle, &iosb, &offset, &count, NULL );
++    ok( !status, "NtUnlockFile failed %#lx\n", status );
++
++    /* Test B: NtLockFile and NtUnlockFile with key parameter */
++    key = 0x1234;
++    offset.QuadPart = 200;
++    count.QuadPart = 50;
++    status = NtLockFile( handle, NULL, NULL, NULL, NULL, &offset, &count, &key, FALSE, TRUE );
++    ok( status == STATUS_SUCCESS, "NtLockFile with key failed %#lx\n", status );
++    status = NtUnlockFile( handle, &iosb, &offset, &count, &key );
++    ok( !status, "NtUnlockFile with key failed %#lx\n", status );
++
++    /* Test C: Contested async lock with event signaling */
++    handle2 = CreateFileA( filename, GENERIC_READ | GENERIC_WRITE,
++                           FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
++                           OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0 );
++    ok( handle2 != INVALID_HANDLE_VALUE, "CreateFile overlapped failed, err=%lu\n", GetLastError() );
++
++    /* Lock via synchronous handle first */
++    offset.QuadPart = 0;
++    count.QuadPart = 100;
++    status = NtLockFile( handle, NULL, NULL, NULL, NULL, &offset, &count, NULL, FALSE, TRUE );
++    ok( !status, "NtLockFile failed %#lx\n", status );
++
++    event = CreateEventA( NULL, TRUE, FALSE, NULL );
++    ok( event != NULL, "CreateEvent failed\n" );
++
++    memset( &overlapped, 0, sizeof(overlapped) );
++    overlapped.hEvent = event;
++
++    /* Spawn thread to unlock after delay */
++    unlock_data.file = handle;
++    unlock_data.delay_ms = 200;
++    thread = CreateThread( NULL, 0, unlock_thread_proc, &unlock_data, 0, NULL );
++    ok( thread != NULL, "CreateThread failed\n" );
++
++    /* Contested lock on overlapped handle — should block briefly then succeed */
++    ret = LockFileEx( handle2, LOCKFILE_EXCLUSIVE_LOCK, 0, 100, 0, &overlapped );
++    ok( ret || GetLastError() == ERROR_IO_PENDING, "LockFileEx failed, err=%lu\n", GetLastError() );
++    if (!ret)
++    {
++        ret = WaitForSingleObject( event, 5000 );
++        ok( ret == WAIT_OBJECT_0, "event not signaled after contested lock, got %ld\n", ret );
++    }
++
++    WaitForSingleObject( thread, 5000 );
++    CloseHandle( thread );
++
++    overlapped.hEvent = 0;
++    UnlockFileEx( handle2, 0, 100, 0, &overlapped );
++    CloseHandle( event );
++    CloseHandle( handle2 );
++
++    /* Test D: Contested async lock with IOCP */
++    handle2 = CreateFileA( filename, GENERIC_READ | GENERIC_WRITE,
++                           FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
++                           OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0 );
++    ok( handle2 != INVALID_HANDLE_VALUE, "CreateFile overlapped failed, err=%lu\n", GetLastError() );
++
++    port = CreateIoCompletionPort( handle2, NULL, 0xabcd, 1 );
++    ok( port != NULL, "CreateIoCompletionPort failed, err=%lu\n", GetLastError() );
++
++    /* Lock via synchronous handle */
++    offset.QuadPart = 0;
++    count.QuadPart = 100;
++    status = NtLockFile( handle, NULL, NULL, NULL, NULL, &offset, &count, NULL, FALSE, TRUE );
++    ok( !status, "NtLockFile failed %#lx\n", status );
++
++    event = CreateEventA( NULL, TRUE, FALSE, NULL );
++    ok( event != NULL, "CreateEvent failed\n" );
++
++    memset( &overlapped, 0, sizeof(overlapped) );
++    overlapped.hEvent = (HANDLE)((ULONG_PTR)event);
++
++    unlock_data.file = handle;
++    unlock_data.delay_ms = 200;
++    thread = CreateThread( NULL, 0, unlock_thread_proc, &unlock_data, 0, NULL );
++    ok( thread != NULL, "CreateThread failed\n" );
++
++    ret = LockFileEx( handle2, LOCKFILE_EXCLUSIVE_LOCK, 0, 100, 0, &overlapped );
++    ok( ret || GetLastError() == ERROR_IO_PENDING, "LockFileEx failed, err=%lu\n", GetLastError() );
++    if (!ret)
++    {
++        ret = WaitForSingleObject( event, 5000 );
++        ok( ret == WAIT_OBJECT_0, "event not signaled, got %ld\n", ret );
++    }
++
++    ov_out = NULL;
++    key_out = 0;
++    bytes = 0xdeadbeef;
++    ret = GetQueuedCompletionStatus( port, &bytes, &key_out, &ov_out, 2000 );
++    ok( ret, "GetQueuedCompletionStatus failed, err=%lu\n", GetLastError() );
++    ok( key_out == 0xabcd, "wrong key %#lx\n", (unsigned long)key_out );
++    ok( ov_out == &overlapped, "wrong overlapped %p\n", ov_out );
++
++    WaitForSingleObject( thread, 5000 );
++    CloseHandle( thread );
++
++    overlapped.hEvent = 0;
++    UnlockFileEx( handle2, 0, 100, 0, &overlapped );
++    CloseHandle( port );
++    CloseHandle( event );
++    CloseHandle( handle2 );
++
++    /* Test E: APC delivery on uncontested lock */
++    apc_count = 0;
++    offset.QuadPart = 500;
++    count.QuadPart = 50;
++    status = NtLockFile( handle, NULL, (PIO_APC_ROUTINE)lock_apc_callback, NULL,
++                         NULL, &offset, &count, NULL, FALSE, TRUE );
++    ok( status == STATUS_SUCCESS, "NtLockFile with APC failed %#lx\n", status );
++    ok( !apc_count, "APC fired prematurely, count=%ld\n", apc_count );
++    ret = SleepEx( 0, TRUE );
++    ok( ret == WAIT_IO_COMPLETION, "SleepEx returned %ld\n", ret );
++    ok( apc_count == 1, "APC not delivered, count=%ld\n", apc_count );
++    status = NtUnlockFile( handle, &iosb, &offset, &count, NULL );
++    ok( !status, "NtUnlockFile failed %#lx\n", status );
++
++    /* Test F: io_status on lock conflict */
++    offset.QuadPart = 700;
++    count.QuadPart = 100;
++    status = NtLockFile( handle, NULL, NULL, NULL, NULL, &offset, &count, NULL, FALSE, TRUE );
++    ok( !status, "NtLockFile failed %#lx\n", status );
++    memset( &iosb, 0xcc, sizeof(iosb) );
++    status = NtLockFile( handle2_sync, NULL, NULL, NULL, &iosb, &offset, &count, NULL, FALSE, TRUE );
++    ok( status == STATUS_LOCK_NOT_GRANTED || status == STATUS_FILE_LOCK_CONFLICT,
++        "conflicting lock got %#lx\n", status );
++    status = NtUnlockFile( handle, &iosb, &offset, &count, NULL );
++    ok( !status, "NtUnlockFile failed %#lx\n", status );
++
++    /* Test G: NULL io_status succeeds */
++    offset.QuadPart = 800;
++    count.QuadPart = 50;
++    status = NtLockFile( handle, NULL, NULL, NULL, NULL, &offset, &count, NULL, FALSE, TRUE );
++    ok( !status, "NtLockFile with NULL io_status failed %#lx\n", status );
++    status = NtUnlockFile( handle, &iosb, &offset, &count, NULL );
++    ok( !status, "NtUnlockFile failed %#lx\n", status );
++
++    /* Test H: Key parameter variants */
++    key = 0xDEADBEEF;
++    offset.QuadPart = 900;
++    count.QuadPart = 25;
++    status = NtLockFile( handle, NULL, NULL, NULL, NULL, &offset, &count, &key, FALSE, TRUE );
++    ok( !status, "NtLockFile with key=0xDEADBEEF failed %#lx\n", status );
++    status = NtUnlockFile( handle, &iosb, &offset, &count, &key );
++    ok( !status, "NtUnlockFile with key=0xDEADBEEF failed %#lx\n", status );
++
++    key = 0;
++    offset.QuadPart = 950;
++    count.QuadPart = 25;
++    status = NtLockFile( handle, NULL, NULL, NULL, NULL, &offset, &count, &key, FALSE, TRUE );
++    ok( !status, "NtLockFile with key=0 ptr failed %#lx\n", status );
++    status = NtUnlockFile( handle, &iosb, &offset, &count, &key );
++    ok( !status, "NtUnlockFile with key=0 ptr failed %#lx\n", status );
++
++    offset.QuadPart = 1000;
++    count.QuadPart = 50;
++    status = NtLockFile( handle, NULL, NULL, NULL, NULL, &offset, &count, NULL, FALSE, TRUE );
++    ok( !status, "NtLockFile failed %#lx\n", status );
++    key = 0xFFFF;
++    status = NtUnlockFile( handle, &iosb, &offset, &count, &key );
++    ok( !status, "NtUnlockFile with mismatched key failed %#lx\n", status );
++
++    /* Test I: APC argument validation */
++    apc_count = 0;
++    apc_got_arg1 = 0;
++    apc_got_arg2 = 0;
++    offset.QuadPart = 1100;
++    count.QuadPart = 50;
++    memset( &iosb, 0xcc, sizeof(iosb) );
++    status = NtLockFile( handle, NULL, (PIO_APC_ROUTINE)lock_apc_callback,
++                         (void *)0xCAFE, &iosb, &offset, &count, NULL, FALSE, TRUE );
++    ok( !status, "NtLockFile with APC failed %#lx\n", status );
++    ok( !apc_count, "APC fired synchronously, count=%ld\n", apc_count );
++    ret = SleepEx( 0, TRUE );
++    ok( ret == WAIT_IO_COMPLETION, "SleepEx returned %ld\n", ret );
++    ok( apc_count == 1, "APC count=%ld\n", apc_count );
++    ok( apc_got_arg1 == 0xCAFE, "wrong APC context %#Ix\n", apc_got_arg1 );
++    ok( apc_got_arg2 == (ULONG_PTR)&iosb, "wrong APC iosb %#Ix\n", apc_got_arg2 );
++    status = NtUnlockFile( handle, &iosb, &offset, &count, NULL );
++    ok( !status, "NtUnlockFile failed %#lx\n", status );
++
++    apc_count = 0;
++    offset.QuadPart = 1150;
++    count.QuadPart = 50;
++    status = NtLockFile( handle, NULL, (PIO_APC_ROUTINE)lock_apc_callback,
++                         NULL, NULL, &offset, &count, NULL, FALSE, TRUE );
++    ok( !status, "NtLockFile APC + NULL io_status failed %#lx\n", status );
++    SleepEx( 0, TRUE );
++    ok( apc_count == 1, "APC not delivered with NULL iosb, count=%ld\n", apc_count );
++    status = NtUnlockFile( handle, &iosb, &offset, &count, NULL );
++    ok( !status, "NtUnlockFile failed %#lx\n", status );
++
++    /* Test J: Shared vs exclusive locks */
++    offset.QuadPart = 1200;
++    count.QuadPart = 100;
++    status = NtLockFile( handle, NULL, NULL, NULL, NULL, &offset, &count, NULL, FALSE, FALSE );
++    ok( !status, "shared lock on handle1 failed %#lx\n", status );
++    status = NtLockFile( handle2_sync, NULL, NULL, NULL, NULL, &offset, &count, NULL, FALSE, FALSE );
++    ok( !status, "shared lock on handle2 failed %#lx\n", status );
++    NtUnlockFile( handle, &iosb, &offset, &count, NULL );
++    NtUnlockFile( handle2_sync, &iosb, &offset, &count, NULL );
++
++    status = NtLockFile( handle, NULL, NULL, NULL, NULL, &offset, &count, NULL, FALSE, TRUE );
++    ok( !status, "exclusive lock failed %#lx\n", status );
++    status = NtLockFile( handle2_sync, NULL, NULL, NULL, NULL, &offset, &count, NULL, FALSE, FALSE );
++    ok( status == STATUS_LOCK_NOT_GRANTED || status == STATUS_FILE_LOCK_CONFLICT,
++        "shared not blocked by exclusive, got %#lx\n", status );
++    NtUnlockFile( handle, &iosb, &offset, &count, NULL );
++
++    status = NtLockFile( handle, NULL, NULL, NULL, NULL, &offset, &count, NULL, FALSE, TRUE );
++    ok( !status, "exclusive lock failed %#lx\n", status );
++    status = NtLockFile( handle2_sync, NULL, NULL, NULL, NULL, &offset, &count, NULL, FALSE, TRUE );
++    ok( status == STATUS_LOCK_NOT_GRANTED || status == STATUS_FILE_LOCK_CONFLICT,
++        "exclusive not blocked by exclusive, got %#lx\n", status );
++    NtUnlockFile( handle, &iosb, &offset, &count, NULL );
++
++    status = NtLockFile( handle, NULL, NULL, NULL, NULL, &offset, &count, NULL, FALSE, TRUE );
++    ok( !status, "exclusive [1200,1300) failed %#lx\n", status );
++    offset.QuadPart = 1250;
++    status = NtLockFile( handle2_sync, NULL, NULL, NULL, NULL, &offset, &count, NULL, FALSE, TRUE );
++    ok( status == STATUS_LOCK_NOT_GRANTED || status == STATUS_FILE_LOCK_CONFLICT,
++        "overlapping lock should fail, got %#lx\n", status );
++    offset.QuadPart = 1300;
++    status = NtLockFile( handle2_sync, NULL, NULL, NULL, NULL, &offset, &count, NULL, FALSE, TRUE );
++    ok( !status, "adjacent lock [1300,1400) failed %#lx\n", status );
++    offset.QuadPart = 1200;
++    NtUnlockFile( handle, &iosb, &offset, &count, NULL );
++    offset.QuadPart = 1300;
++    NtUnlockFile( handle2_sync, &iosb, &offset, &count, NULL );
++
++    /* Test K: Edge cases */
++    offset.QuadPart = 2000;
++    count.QuadPart = 0;
++    status = NtLockFile( handle, NULL, NULL, NULL, NULL, &offset, &count, NULL, FALSE, TRUE );
++    ok( !status, "zero-length lock failed %#lx\n", status );
++    NtUnlockFile( handle, &iosb, &offset, &count, NULL );
++
++    offset.QuadPart = 0x100000000LL;
++    count.QuadPart = 100;
++    status = NtLockFile( handle, NULL, NULL, NULL, NULL, &offset, &count, NULL, FALSE, TRUE );
++    ok( !status, "lock at >4GB failed %#lx\n", status );
++    NtUnlockFile( handle, &iosb, &offset, &count, NULL );
++
++    offset.QuadPart = 9999;
++    count.QuadPart = 1;
++    status = NtUnlockFile( handle, &iosb, &offset, &count, NULL );
++    ok( status == STATUS_RANGE_NOT_LOCKED || status == STATUS_FILE_LOCK_CONFLICT,
++        "unlock non-locked range got %#lx\n", status );
++
++    /* Combined: io_status + key + event */
++    {
++        HANDLE evt = CreateEventA( NULL, TRUE, FALSE, NULL );
++        key = 77;
++        memset( &iosb, 0xcc, sizeof(iosb) );
++        offset.QuadPart = 3000;
++        count.QuadPart = 50;
++        status = NtLockFile( handle, evt, NULL, NULL, &iosb, &offset, &count, &key, FALSE, TRUE );
++        ok( !status, "NtLockFile io_status+key+event failed %#lx\n", status );
++        ok( WaitForSingleObject( evt, 0 ) == WAIT_OBJECT_0, "event not signaled\n" );
++        ok( iosb.Status == STATUS_SUCCESS, "iosb.Status = %#lx\n", iosb.Status );
++        NtUnlockFile( handle, &iosb, &offset, &count, &key );
++        CloseHandle( evt );
++    }
++
++    /* Combined: io_status + key + apc */
++    {
++        key = 88;
++        apc_count = 0;
++        memset( &iosb, 0xcc, sizeof(iosb) );
++        offset.QuadPart = 3100;
++        count.QuadPart = 50;
++        status = NtLockFile( handle, NULL, (PIO_APC_ROUTINE)lock_apc_callback,
++                             NULL, &iosb, &offset, &count, &key, FALSE, TRUE );
++        ok( !status, "NtLockFile io_status+key+apc failed %#lx\n", status );
++        SleepEx( 0, TRUE );
++        ok( apc_count == 1, "APC count=%ld\n", apc_count );
++        ok( iosb.Status == STATUS_SUCCESS, "iosb.Status = %#lx\n", iosb.Status );
++        NtUnlockFile( handle, &iosb, &offset, &count, &key );
++    }
++
++    CloseHandle( handle2_sync );
++    CloseHandle( handle );
++    DeleteFileA( filename );
++}
++
+ static BOOL create_fake_dll( LPCSTR filename )
+ {
+     IMAGE_DOS_HEADER *dos;
+@@ -6943,6 +7370,7 @@ START_TEST(file)
+     test_FindFirstFileExA(FindExInfoStandard, FindExSearchLimitToDirectories, FIND_FIRST_EX_LARGE_FETCH);
+     test_FindFirstFileExA(FindExInfoBasic, FindExSearchLimitToDirectories, 0);
+     test_LockFile();
++    test_LockFile_async_contention();
+     test_file_sharing();
+     test_offset_in_overlapped_structure();
+     test_MapFile();

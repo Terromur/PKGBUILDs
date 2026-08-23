@@ -1,0 +1,164 @@
+From 009bb5af4c5b2db9aab518183b6380d4971e7661 Mon Sep 17 00:00:00 2001
+From: Safocl Stollmannovic <safocl88@gmail.com>
+Date: Fri, 27 Mar 2026 07:25:39 +0400
+Subject: [PATCH] unwind: fix some invalid `reinterpret_cast`s
+
+Some `reinterpret_cast`s were invalid.
+https://eel.is/c++draft/basic.compound#5
+https://eel.is/c++draft/basic.compound#6
+https://eel.is/c++draft/basic.lval#11
+https://eel.is/c++draft/expr.static.cast#12
+https://eel.is/c++draft/expr.reinterpret.cast#7
+https://en.cppreference.com/w/cpp/utility/launder.html
+---
+ libs/unwind/include/libunwind.h  |  8 +++++++-
+ libs/unwind/src/Unwind-seh.cpp   | 21 +++++++++------------
+ libs/unwind/src/UnwindCursor.hpp | 16 +++++++++++++---
+ libs/unwind/src/libunwind.cpp    |  9 ++++-----
+ 4 files changed, 33 insertions(+), 21 deletions(-)
+
+diff --git a/libs/unwind/include/libunwind.h b/libs/unwind/include/libunwind.h
+index df596ee0bfd..9d12be47ae2 100644
+--- a/libs/unwind/include/libunwind.h
++++ b/libs/unwind/include/libunwind.h
+@@ -68,7 +68,13 @@ struct unw_context_t {
+ typedef struct unw_context_t unw_context_t;
+ 
+ struct unw_cursor_t {
+-  uint64_t data[_LIBUNWIND_CURSOR_SIZE];
++    /* Only the “array of N unsigned char” or of type “array of N std::byte” types can used as
++    storage (https://eel.is/c++draft/intro.object#3) */
++  union {
++    unsigned char data[_LIBUNWIND_CURSOR_SIZE * sizeof(uint64_t)];
++    /* `aligner` exists only for alignment */
++    uint64_t aligner__[_LIBUNWIND_CURSOR_SIZE];
++  };
+ };
+ typedef struct unw_cursor_t unw_cursor_t;
+ 
+diff --git a/libs/unwind/src/Unwind-seh.cpp b/libs/unwind/src/Unwind-seh.cpp
+index 078edc97d03..588a9d4283c 100644
+--- a/libs/unwind/src/Unwind-seh.cpp
++++ b/libs/unwind/src/Unwind-seh.cpp
+@@ -442,21 +442,18 @@ _Unwind_GetRegionStart(struct _Unwind_Context *context) {
+ static int
+ _unw_init_seh(unw_cursor_t *cursor, CONTEXT *context) {
+ #ifdef _LIBUNWIND_TARGET_X86_64
+-  new ((void *)cursor) UnwindCursor<LocalAddressSpace, Registers_x86_64>(
++  auto *co = new (cursor->data) UnwindCursor<LocalAddressSpace, Registers_x86_64>(
+       context, LocalAddressSpace::sThisAddressSpace);
+-  auto *co = reinterpret_cast<AbstractUnwindCursor *>(cursor);
+   co->setInfoBasedOnIPRegister();
+   return UNW_ESUCCESS;
+ #elif defined(_LIBUNWIND_TARGET_ARM)
+-  new ((void *)cursor) UnwindCursor<LocalAddressSpace, Registers_arm>(
++  auto *co = new (cursor->data) UnwindCursor<LocalAddressSpace, Registers_arm>(
+       context, LocalAddressSpace::sThisAddressSpace);
+-  auto *co = reinterpret_cast<AbstractUnwindCursor *>(cursor);
+   co->setInfoBasedOnIPRegister();
+   return UNW_ESUCCESS;
+ #elif defined(_LIBUNWIND_TARGET_AARCH64)
+-  new ((void *)cursor) UnwindCursor<LocalAddressSpace, Registers_arm64>(
++  auto *co = new (cursor->data) UnwindCursor<LocalAddressSpace, Registers_arm64>(
+       context, LocalAddressSpace::sThisAddressSpace);
+-  auto *co = reinterpret_cast<AbstractUnwindCursor *>(cursor);
+   co->setInfoBasedOnIPRegister();
+   return UNW_ESUCCESS;
+ #else
+@@ -467,11 +464,11 @@ _unw_init_seh(unw_cursor_t *cursor, CONTEXT *context) {
+ static DISPATCHER_CONTEXT *
+ _unw_seh_get_disp_ctx(unw_cursor_t *cursor) {
+ #ifdef _LIBUNWIND_TARGET_X86_64
+-  return reinterpret_cast<UnwindCursor<LocalAddressSpace, Registers_x86_64> *>(cursor)->getDispatcherContext();
++  return reinterpret_cast<UnwindCursor<LocalAddressSpace, Registers_x86_64> *>(cursor->data)->getDispatcherContext();
+ #elif defined(_LIBUNWIND_TARGET_ARM)
+-  return reinterpret_cast<UnwindCursor<LocalAddressSpace, Registers_arm> *>(cursor)->getDispatcherContext();
++  return reinterpret_cast<UnwindCursor<LocalAddressSpace, Registers_arm> *>(cursor->data)->getDispatcherContext();
+ #elif defined(_LIBUNWIND_TARGET_AARCH64)
+-  return reinterpret_cast<UnwindCursor<LocalAddressSpace, Registers_arm64> *>(cursor)->getDispatcherContext();
++  return reinterpret_cast<UnwindCursor<LocalAddressSpace, Registers_arm64> *>(cursor->data)->getDispatcherContext();
+ #else
+   return nullptr;
+ #endif
+@@ -480,11 +477,11 @@ _unw_seh_get_disp_ctx(unw_cursor_t *cursor) {
+ static void
+ _unw_seh_set_disp_ctx(unw_cursor_t *cursor, DISPATCHER_CONTEXT *disp) {
+ #ifdef _LIBUNWIND_TARGET_X86_64
+-  reinterpret_cast<UnwindCursor<LocalAddressSpace, Registers_x86_64> *>(cursor)->setDispatcherContext(disp);
++  reinterpret_cast<UnwindCursor<LocalAddressSpace, Registers_x86_64> *>(cursor->data)->setDispatcherContext(disp);
+ #elif defined(_LIBUNWIND_TARGET_ARM)
+-  reinterpret_cast<UnwindCursor<LocalAddressSpace, Registers_arm> *>(cursor)->setDispatcherContext(disp);
++  reinterpret_cast<UnwindCursor<LocalAddressSpace, Registers_arm> *>(cursor->data)->setDispatcherContext(disp);
+ #elif defined(_LIBUNWIND_TARGET_AARCH64)
+-  reinterpret_cast<UnwindCursor<LocalAddressSpace, Registers_arm64> *>(cursor)->setDispatcherContext(disp);
++  reinterpret_cast<UnwindCursor<LocalAddressSpace, Registers_arm64> *>(cursor->data)->setDispatcherContext(disp);
+ #endif
+ }
+ 
+diff --git a/libs/unwind/src/UnwindCursor.hpp b/libs/unwind/src/UnwindCursor.hpp
+index 52439f9b545..7a157c7f8b7 100644
+--- a/libs/unwind/src/UnwindCursor.hpp
++++ b/libs/unwind/src/UnwindCursor.hpp
+@@ -1772,9 +1772,19 @@ bool UnwindCursor<A, R>::getInfoFromSEH(pint_t pc) {
+       // these structures.)
+       // N.B. UNWIND_INFO structs are DWORD-aligned.
+       uint32_t lastcode = (xdata->CountOfCodes + 1) & ~1;
+-      const uint32_t *handler = reinterpret_cast<uint32_t *>(&xdata->UnwindCodes[lastcode]);
+-      _info.lsda = reinterpret_cast<unw_word_t>(handler+1);
+-      if (*handler) {
++      // NOTE: lastcode can be equal to or greater than 2, then accessing UnwindCodes[lastcode] is
++      // out of bound (i.e. undefined behavior). The external memory outside the class object 
++      // cannot be reached from a pointer to a subobject. The only valid case is when CountOfCodes
++      // is 0, and then lastcode will be equal 0.
++      // However, `reinterpret_cast` from a pointer to uint16[2] to a pointer to uint32 is not 
++      // allowed in any case. (https://godbolt.org/z/vY1zKEvo6)
++      // It turns out that here we just need to check each of the array elements for zero.
++      const uint16_t hi = xdata->UnwindCodes[0];
++      const uint16_t low = xdata->UnwindCodes[1];
++#warning "invalid reinterpret-cast"
++      // FIXME: Does `xdata` actually point to an array of UNWIND_INFO?
++      _info.lsda = reinterpret_cast<unw_word_t>(xdata+1);
++      if (hi || low) {
+         _info.handler = reinterpret_cast<unw_word_t>(__libunwind_seh_personality);
+       } else
+         _info.handler = 0;
+diff --git a/libs/unwind/src/libunwind.cpp b/libs/unwind/src/libunwind.cpp
+index 5afe6235c4c..b5421136768 100644
+--- a/libs/unwind/src/libunwind.cpp
++++ b/libs/unwind/src/libunwind.cpp
+@@ -73,10 +73,9 @@ _LIBUNWIND_EXPORT int unw_init_local(unw_cursor_t *cursor,
+ # error Architecture not supported
+ #endif
+   // Use "placement new" to allocate UnwindCursor in the cursor buffer.
+-  new ((void *)cursor) UnwindCursor<LocalAddressSpace, REGISTER_KIND>(
++  auto *co = new (cursor->data) UnwindCursor<LocalAddressSpace, REGISTER_KIND>(
+                                  context, LocalAddressSpace::sThisAddressSpace);
+ #undef REGISTER_KIND
+-  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
+   co->setInfoBasedOnIPRegister();
+ 
+   return UNW_ESUCCESS;
+@@ -94,17 +93,17 @@ _LIBUNWIND_EXPORT int unw_init_remote_thread(unw_cursor_t *cursor,
+   // use "placement new" to allocate UnwindCursor in the cursor buffer
+   switch (as->cpuType) {
+   case CPU_TYPE_I386:
+-    new ((void *)cursor)
++    new (cursor->data)
+         UnwindCursor<RemoteAddressSpace<Pointer32<LittleEndian>>,
+                      Registers_x86>(((unw_addr_space_i386 *)as)->oas, arg);
+     break;
+   case CPU_TYPE_X86_64:
+-    new ((void *)cursor)
++    new (cursor->data)
+         UnwindCursor<RemoteAddressSpace<Pointer64<LittleEndian>>,
+                      Registers_x86_64>(((unw_addr_space_x86_64 *)as)->oas, arg);
+     break;
+   case CPU_TYPE_POWERPC:
+-    new ((void *)cursor)
++    new (cursor->data)
+         UnwindCursor<RemoteAddressSpace<Pointer32<BigEndian>>,
+                      Registers_ppc>(((unw_addr_space_ppc *)as)->oas, arg);
+     break;
+-- 
+GitLab
+
