@@ -42,4 +42,4 @@ wine reg add "HKEY_CURRENT_USER\Software\Wine\Drivers" /v Audio /t REG_SZ /d pip
 - PROTON_PREFER_SDL — Should theoretically do the same thing by giving preference to SDL.
 - PROTON_ENABLE_HIDRAW — Forcibly enables hidraw if you are sure it has been disabled.
 - PROTON_DISABLE_INPUT — Completely disables the input subsystem.
-- WINE_JSHID_FORCEJS — Forces a HID device (format "XXXX:YYYY") to be recognized as a joystick. Skips devices with 0 buttons. (Patch from wine-osu-patches.)
+- WINE_JSHID_FORCEJS — Forces a HID device (format "XXXX:YYYY") to be recognized as a joystick. Skips devices with 0 buttons. (Local patch)
