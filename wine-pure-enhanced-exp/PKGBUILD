@@ -4,8 +4,8 @@ pkgname=wine-pure-enhanced-exp
 pkgver=11.16.r0
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=111e5197390aa008789b002222024229fa2b82cf"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=f1936f02ba06b5012f89f75901944e8c2d26951c"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=86dc0c4ec51910a895e8c34d470cbcd732cfd476"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=719588ab20f00247284f27273924be8799de012a"
   "git+https://github.com/GloriousEggroll/proton-ge-custom.git"
   "git+https://github.com/elgabo86/gwine.git"
   "git+https://github.com/starcitizen-lug/patches.git"
