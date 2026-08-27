@@ -4,7 +4,7 @@ pkgname=wine-pure-enhanced-exp
 pkgver=11.16.r0
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=86dc0c4ec51910a895e8c34d470cbcd732cfd476"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=3489c6531091e307d5865e796e85cb871c90bc6e"
   "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=719588ab20f00247284f27273924be8799de012a"
   "git+https://github.com/GloriousEggroll/proton-ge-custom.git"
   "git+https://github.com/elgabo86/gwine.git"
@@ -409,7 +409,7 @@ build() {
     export AR=llvm-ar
     export RANLIB=llvm-ranlib
     export NM=llvm-nm
-    local _base_flags="-march=native -O2 -pipe -fno-stack-protector -fno-stack-check -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -mharden-sls=none -fno-ident"
+    local _base_flags="-march=native -mtune=native -O2 -pipe -fno-stack-protector -fno-stack-check -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -mharden-sls=none -fno-ident"
     export CFLAGS="${_base_flags} -D_FILE_OFFSET_BITS=64 -D_FORTIFY_SOURCE=0"
     export CXXFLAGS="${CFLAGS} -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
     export CROSSCFLAGS="${_base_flags} -D_FORTIFY_SOURCE=0" 
