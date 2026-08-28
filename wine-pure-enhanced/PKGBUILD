@@ -4,7 +4,7 @@ pkgname=wine-pure-enhanced
 pkgver=11.16.r0
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=3489c6531091e307d5865e796e85cb871c90bc6e"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=e6e9d7627c0a7d660c342b1c38ff0e20dacfd1f9"
   "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=719588ab20f00247284f27273924be8799de012a"
   "git+https://github.com/GloriousEggroll/proton-ge-custom.git"
   "git+https://github.com/elgabo86/gwine.git"
