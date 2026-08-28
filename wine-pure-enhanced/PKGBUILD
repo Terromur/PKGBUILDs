@@ -48,9 +48,11 @@ source=(
   0006-comdlg32-use-XDG-Desktop-Portal-for-native-file-dial.patch
   0007-comdlg32-fix-portal-dialog-compatibility-and-respons.patch
   0008-comdlg32-add-wow64-unix-call-table-for-32-bit.patch
+  proton-em-winewayland.patch
 )
 
 sha256sums=(
+  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -213,6 +215,9 @@ prepare() {
   # https://gitlab.winehq.org/wine/wine/-/merge_requests/11069
   patch -Np1 -i "${srcdir}/kernelbase-Handle-misaligned-stack-in-OpenThread.patch"
   
+  # winewayland fixes & improvements from Proton-EM
+  patch -Np1 -i "${srcdir}/proton-em-winewayland.patch"
+  
   # Other patches
   patch -Np1 -i "${srcdir}/joystick.patch"
   patch -Np1 -i "${srcdir}/no-winemenubuilder.patch"
@@ -303,6 +308,7 @@ if [ -d "${spritz_patches_dir}" ]; then
         -not -path "${spritz_patches_dir}/0004-proton-fsync/*" \
         -not -path "${spritz_patches_dir}/0006-misc/0004-ntdll-Never-use-CLOCK_REALTIME_COARSE.patch" \
         -not -path "${spritz_patches_dir}/0006-misc/0009-ntoskrnl.exe-Add-stub-for-KeGetCurrentIrql.patch" \
+        -not -path "${spritz_patches_dir}/0007-winewayland/*" \
         -not -path "${spritz_patches_dir}/0008-pending-MR/10829-Futex-optimizations/*" \
         -not -path "${spritz_patches_dir}/0008-pending-MR/11339-winegstreamer-wma-decoder-Implement-Get-Input-Output-CurrentType/*" \
         -print0 | sort -z)
@@ -336,6 +342,10 @@ fi
         -not -path "${starcitizen_lug_dir}/wine/0002-wineopenxr_enable.patch" \
         -not -path "${starcitizen_lug_dir}/wine/silence-sc-unsupported-os.patch" \
         -not -path "${starcitizen_lug_dir}/wine/default-to-wayland.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/0079-HACK-winewayland-add-support-for-picking-primary-mon.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/0088-fixup-HACK-winewayland-add-support-for-picking-prima.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/winewayland-fullscreen-idle-inhibit.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/winewayland-guess-primary-output.patch" \
         -print0 | sort -z)
     fi
 
