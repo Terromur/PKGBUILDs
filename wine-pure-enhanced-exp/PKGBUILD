@@ -4,7 +4,7 @@ pkgname=wine-pure-enhanced-exp
 pkgver=11.16.r0
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=e6e9d7627c0a7d660c342b1c38ff0e20dacfd1f9"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=2ecc2f84b45ec42afbf1725d756181180a8204b1"
   "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=719588ab20f00247284f27273924be8799de012a"
   "git+https://github.com/GloriousEggroll/proton-ge-custom.git"
   "git+https://github.com/elgabo86/gwine.git"
@@ -26,7 +26,6 @@ source=(
   Configure-Enforce-4-byte-stack-alignment-on-clang-for-PE-builds.patch
   10108.patch
   10829.patch
-  10864.patch
   kernelbase-Handle-misaligned-stack-in-OpenThread.patch
   joystick.patch
   no-winemenubuilder.patch
@@ -52,7 +51,6 @@ source=(
 )
 
 sha256sums=(
-  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -207,10 +205,6 @@ prepare() {
   # https://gitlab.winehq.org/wine/wine/-/merge_requests/10829
   patch -Np1 -i "${srcdir}/10829.patch"
 
-  # winegstreamer: Normalize PTS values so the stream starts at zero.
-  # https://gitlab.winehq.org/wine/wine/-/merge_requests/10864
-  patch -Np1 -i "${srcdir}/10864.patch"
-
   # kernelbase: Handle misaligned stack in OpenThread
   # https://gitlab.winehq.org/wine/wine/-/merge_requests/11069
   patch -Np1 -i "${srcdir}/kernelbase-Handle-misaligned-stack-in-OpenThread.patch"
@@ -302,6 +296,7 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/protonfixes/*" \
         -not -path "${proton_patches_dir}/vkd3d-proton/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/disabled/0210-winedmo-Handle-demuxer-URLs-without-an-extension.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/disabled/wine-wayland-offscreen-rendering/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/em-fixups/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/0001-decouple-wineopenxr-from-steamvr-and-integrate-it-in.patch" \
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/0001-server-Dynamically-relocate-.exes-by-default-too.patch" \
@@ -419,13 +414,13 @@ build() {
     export AR=llvm-ar
     export RANLIB=llvm-ranlib
     export NM=llvm-nm
-    local _base_flags="-march=native -mtune=native -O2 -pipe -fno-stack-protector -fno-stack-check -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -mharden-sls=none -fno-ident"
+    local _base_flags="-march=native -mtune=native -O2 -pipe -fno-stack-protector -fno-stack-check -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fsplit-lto-unit -fcf-protection=none -mharden-sls=none -fno-ident -mllvm -enable-interleaved-mem-accesses -mllvm -enable-loopinterchange -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement=1 -mllvm -inline-threshold=300 -mllvm -enable-dfa-jump-thread -mllvm -hot-cold-split"
     export CFLAGS="${_base_flags} -D_FILE_OFFSET_BITS=64 -D_FORTIFY_SOURCE=0"
     export CXXFLAGS="${CFLAGS} -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
     export CROSSCFLAGS="${_base_flags} -D_FORTIFY_SOURCE=0" 
     export CROSSCXXFLAGS="${CROSSCFLAGS} -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
     export CROSSLDFLAGS="-Wl,/FILEALIGN:4096,/INCREMENTAL:NO,/LTCG,/OPT:REF,/OPT:ICF=3"
-    export LDFLAGS="-fuse-ld=lld -flto=auto -O3 -Wl,--lto-O3 -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs -Wl,--strip-all -Wl,--icf=safe -Wl,--build-id=none -Wl,-z,norelro"
+    export LDFLAGS="-fuse-ld=lld -flto=auto -O3 -Wl,--lto-O3 -Wl,--lto-CGO3 -Wl,--hash-style=gnu -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs -Wl,--strip-all -Wl,--icf=safe -Wl,--build-id=none -Wl,-z,norelro"
 
   cd "$pkgname-build"
   ../wine/configure \
