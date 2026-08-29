@@ -392,8 +392,7 @@ build() {
     export AR=llvm-ar
     export RANLIB=llvm-ranlib
     export NM=llvm-nm
-    local _base_flags="-march=native -mtune=native -O2 -pipe -fno-stack-protector -fno-stack-check -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fsplit-lto-unit -fcf-protection=none -mharden-sls=none -fno-ident -mllvm -enable-interleaved-mem-accesses -mllvm -enable-loopinterchange -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement=1 -mllvm -inline-threshold=300 -mllvm -enable-dfa-jump-thread -mllvm -hot-cold-split"
-    export CFLAGS="${_base_flags} -D_FILE_OFFSET_BITS=64 -D_FORTIFY_SOURCE=0"
+    local _base_flags="-march=native -mtune=native -O2 -pipe -fno-stack-protector -fno-stack-check -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -mharden-sls=none -fno-ident -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement=1 -mllvm -enable-dfa-jump-thread"    export CFLAGS="${_base_flags} -D_FILE_OFFSET_BITS=64 -D_FORTIFY_SOURCE=0"
     export CXXFLAGS="${CFLAGS} -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
     export CROSSCFLAGS="${_base_flags} -D_FORTIFY_SOURCE=0" 
     export CROSSCXXFLAGS="${CROSSCFLAGS} -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
