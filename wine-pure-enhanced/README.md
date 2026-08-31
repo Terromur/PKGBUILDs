@@ -7,6 +7,7 @@
 
 # New environment variables:
 - GWINE_USE_THP — Enables THP support in Wine. For this to work, you must explicitly configure Linux to set THP to madvise for the enabled, shmem_enabled, and defrag parameters.
+- WINE_APC_FASTPATH — Enables an optimized path for alertable sleeps through NTSync, bypassing the wineserver for NtDelayExecution calls without handles. Reduces context switches and improves performance in applications that frequently call NtDelayExecution. Disabled by default. (Local patch)
 - WAYLANDDRV_PRIMARY_MONITOR — Forces the game to run on a specific monitor. Fixes certain display or mouse input issues. You need to specify your monitor's name (e.g., DP-1).
 - WINE_ENABLE_TIMEOUT_FIX — Fixes network connection issues in games by overriding the timeout value (useful for Genshin Impact, Zenless Zone Zero, etc.).
 - WINE_ENABLE_STEAM_STUB — Tricks games into thinking they are being launched through Steam.
