@@ -1,0 +1,51 @@
+From c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7 Mon Sep 17 00:00:00 2001
+From: Gemini 3.6 Flash <gemini@google.com>
+Date: Sun, 2 Aug 2026 19:13:00 -0300
+Subject: [PATCH] wined3d: Only map host-visible buffer objects in Vulkan backend and handle unmapped BOs in cs.c.
+
+---
+ dlls/wined3d/adapter_vk.c | 2 +-
+ dlls/wined3d/cs.c         | 6 ++----
+ 2 files changed, 3 insertions(+), 5 deletions(-)
+
+diff --git a/dlls/wined3d/adapter_vk.c b/dlls/wined3d/adapter_vk.c
+index 55c7b167156..86512b191a0 100644
+--- a/dlls/wined3d/adapter_vk.c
++++ b/dlls/wined3d/adapter_vk.c
+@@ -1225,7 +1225,7 @@ static bool adapter_vk_alloc_bo(struct wined3d_device *device, struct wined3d_re
+ 
+     if (!bo_vk->b.map_ptr)
+     {
+-        if (!wined3d_bo_vk_map(bo_vk, context_vk))
++        if ((bo_vk->memory_type & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && !wined3d_bo_vk_map(bo_vk, context_vk))
+             ERR("Failed to map bo.\n");
+     }
+ 
+diff --git a/dlls/wined3d/cs.c b/dlls/wined3d/cs.c
+index 7b17b1d3557..f2a7083705c 100644
+--- a/dlls/wined3d/cs.c
++++ b/dlls/wined3d/cs.c
+@@ -3207,10 +3207,7 @@ static bool wined3d_cs_map_upload_bo(struct wined3d_device_context *context, str
+ 
+             if (!map_ptr)
+             {
+-                /* adapter_alloc_bo() should have given us a mapped BO if we are
+-                 * discarding. */
+-                assert(flags & WINED3D_MAP_NOOVERWRITE);
+-                WARN_(d3d_perf)("Not accelerating a NOOVERWRITE map because the BO is not mapped.\n");
++                WARN_(d3d_perf)("Not accelerating a map because the BO is not mapped.\n");
+                 return false;
+             }
+         }
+@@ -3218,8 +3215,7 @@ static bool wined3d_cs_map_upload_bo(struct wined3d_device_context *context, str
+ 
+         if (!map_ptr)
+         {
+-            assert(flags & WINED3D_MAP_NOOVERWRITE);
+-            WARN_(d3d_perf)("Not accelerating a NOOVERWRITE map because the sub-resource has no valid address.\n");
++            WARN_(d3d_perf)("Not accelerating a map because the sub-resource has no valid address.\n");
+             return false;
+         }
+ 
+-- 
+2.43.0

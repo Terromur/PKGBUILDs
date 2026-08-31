@@ -48,9 +48,15 @@ source=(
   0007-comdlg32-fix-portal-dialog-compatibility-and-respons.patch
   0008-comdlg32-add-wow64-unix-call-table-for-32-bit.patch
   proton-em-winewayland.patch
+  0001-ntdll-alertable-sleep-fast-path.patch
+  0007-msi-rewrite-all-tables-on-long-strref.patch
+  0008-wined3d-only-map-host-visible-bo.patch
 )
 
 sha256sums=(
+  'SKIP'
+  'SKIP'
+  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -226,6 +232,9 @@ prepare() {
   patch -Np1 -i "${srcdir}/0006-comdlg32-use-XDG-Desktop-Portal-for-native-file-dial.patch"
   patch -Np1 -i "${srcdir}/0007-comdlg32-fix-portal-dialog-compatibility-and-respons.patch"
   patch -Np1 -i "${srcdir}/0008-comdlg32-add-wow64-unix-call-table-for-32-bit.patch"
+  patch -Np1 -i "${srcdir}/0001-ntdll-alertable-sleep-fast-path.patch"
+  patch -Np1 -i "${srcdir}/0007-msi-rewrite-all-tables-on-long-strref.patch"
+  patch -Np1 -i "${srcdir}/0008-wined3d-only-map-host-visible-bo.patch"
   patch -Np1 -i "${srcdir}/10892.patch"
   patch -Np1 -i "${srcdir}/10805.patch"
   patch -Np1 -i "${srcdir}/10547.patch"
@@ -403,6 +412,7 @@ if [ -d "${gwine_patches_dir}" ]; then
         -not -path "${gwine_patches_dir}/use_real_username.mypatch" \
         -not -path "${gwine_patches_dir}/winewayland-keep-toplevel-for-client-surfaces.mypatch" \
         -not -path "${gwine_patches_dir}/wmadec_getcurrenttype.mypatch" \
+        -not -path "${gwine_patches_dir}/no_exe_executable_bit.mypatch" \
         -print0 | sort -z)
 fi
   autoreconf -f
@@ -414,7 +424,8 @@ build() {
     export AR=llvm-ar
     export RANLIB=llvm-ranlib
     export NM=llvm-nm
-    local _base_flags="-march=native -mtune=native -O2 -pipe -fno-stack-protector -fno-stack-check -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -mharden-sls=none -fno-ident -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement=1 -mllvm -enable-dfa-jump-thread"    export CFLAGS="${_base_flags} -D_FILE_OFFSET_BITS=64 -D_FORTIFY_SOURCE=0"
+    local _base_flags="-march=native -mtune=native -O2 -pipe -fno-stack-protector -fno-stack-check -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -mharden-sls=none -fno-ident -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement=1 -mllvm -enable-dfa-jump-thread"
+    export CFLAGS="${_base_flags} -D_FILE_OFFSET_BITS=64 -D_FORTIFY_SOURCE=0"
     export CXXFLAGS="${CFLAGS} -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
     export CROSSCFLAGS="${_base_flags} -D_FORTIFY_SOURCE=0" 
     export CROSSCXXFLAGS="${CROSSCFLAGS} -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
