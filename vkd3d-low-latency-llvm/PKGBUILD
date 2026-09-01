@@ -1,0 +1,93 @@
+# Maintainer: Terromur <terromuroz@proton.me>
+
+pkgname=vkd3d-low-latency-llvm
+pkgver=3.0.1
+pkgrel=1
+pkgdesc="Enhances VKD3D-Proton with low-latency frame pacing"
+arch=('x86_64')
+url="https://github.com/netborg-afps/vkd3d-low-latency"
+license=('zlib/libpng')
+depends=('vulkan-icd-loader')
+provides=('dxvk' 'd9vk' "dxvk=$pkgver")
+conflicts=('d9vk'  "dxvk" 'dxvk-bin' "dxvk-pure-git")
+makedepends=('ninja' 'meson>=0.43' 'glslang' 'clang' 'lld' 'llvm' 'git' 'mingw-w64-gcc' 'wine')
+options=(!strip !buildflags staticlibs)
+source=(
+    "git+https://github.com/netborg-afps/vkd3d-low-latency.git"
+    "git+https://github.com/Joshua-Ashton/mingw-directx-headers.git"
+    "git+https://github.com/KhronosGroup/Vulkan-Headers.git"
+    "git+https://github.com/KhronosGroup/SPIRV-Headers.git"
+    "0001-vkd3d-bound-present-waits-during-swapchain-drain.patch"
+    "0002-vkd3d-handle-raw-buffer-in-optimized-clear-uav.patch"
+    "llvm-support.patch"
+)
+sha256sums=(
+    'SKIP'
+    'SKIP'
+    'SKIP'
+    'SKIP'
+    'SKIP'
+    'SKIP'
+    'SKIP'
+)
+
+pkgver() {
+    cd vkd3d-low-latency
+    git describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g;s/v//g'
+}
+
+prepare() {
+    cd vkd3d-low-latency
+
+    git remote set-url origin https://github.com/doitsujin/dxvk.git
+    git submodule update --init --filter=tree:0 --recursive
+
+    # Use Clang to build DXVK
+    patch -p1 -i "$srcdir"/llvm-support.patch
+
+    # Rebase patches from Proton-GE
+    patch -p1 -i "$srcdir"/0001-vkd3d-bound-present-waits-during-swapchain-drain.patch
+    patch -p1 -i "$srcdir"/0002-vkd3d-handle-raw-buffer-in-optimized-clear-uav.patch
+
+    local base_cflags="-march=native -mtune=native -O3 -funsafe-math-optimizations -fomit-frame-pointer -fno-ident -fno-stack-protector -fno-math-errno -fno-trapping-math -fcf-protection=none -mharden-sls=none -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement=1 -mllvm -enable-dfa-jump-thread -D_FORTIFY_SOURCE=0"
+    local cflags_64="${base_cflags} -D_FILE_OFFSET_BITS=64"
+    local cxxflags_64="${base_cflags} -D_FILE_OFFSET_BITS=64 -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
+    local cflags_32="${base_cflags}"
+    local cxxflags_32="${base_cflags} -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
+    local ldflags="-Wl,-O3 -Wl,--as-needed,--strip-all -Wl,--lto-O3 -Wl,--lto-CGO3 -flto -Wl,--file-alignment=4096 -latomic"
+
+    sed -i build-win32.txt \
+        -e "s|@CARGS@|'${cflags_32// /\',\'}'|g" \
+        -e "s|@CXXARGS@|'${cxxflags_32// /\',\'}'|g" \
+        -e "s|@LDARGS@|'${ldflags// /\',\'}'|g"
+
+    sed -i build-win64.txt \
+        -e "s|@CARGS@|'${cflags_64// /\',\'}'|g" \
+        -e "s|@CXXARGS@|'${cxxflags_64// /\',\'}'|g" \
+        -e "s|@LDARGS@|'${ldflags// /\',\'}'|g"
+}
+
+build() {
+    meson setup vkd3d-low-latency "build/x64" \
+        --cross-file vkd3d-low-latency/build-win64.txt \
+        --prefix "/usr/share/vkd3d-proton/x64" \
+        --bindir "" --libdir "" \
+        --buildtype "release" \
+        --strip
+    ninja -C "build/x64" -v
+
+    meson setup vkd3d-low-latency "build/x32" \
+        --cross-file vkd3d-low-latency/build-win32.txt \
+        --prefix "/usr/share/vkd3d/x86" \
+        --bindir "" --libdir "" \
+        --buildtype "release" \
+        --strip
+    ninja -C "build/x32" -v
+}
+
+package() {
+     DESTDIR="$pkgdir" ninja -C "build/x32" install
+     DESTDIR="$pkgdir" ninja -C "build/x64" install
+     install -Dm 644 -t "$pkgdir/usr/share/licenses/$pkgname" vkd3d-low-latency/LICENSE
+}
+

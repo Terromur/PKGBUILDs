@@ -1,0 +1,42 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: GloriousEggroll <gloriouseggroll@gmail.com>
+Date: Sat, 29 Aug 2026 12:30:00 -0600
+Subject: [PATCH] vkd3d: Handle raw buffers in optimized ClearUAV path
+
+Raw buffer UAV descriptors use DXGI_FORMAT_UNKNOWN.  The legacy clear path
+already interprets those descriptors as R32_UINT, but the optimized clear path
+added by 7f410b766e2f dereferences the result of looking up the unknown format.
+This causes a NULL dereference in d3d12_command_list_clear_uav_builtin(), seen
+while The Witcher 3 initializes its DX12 renderer.
+
+Use the same R32_UINT format selected for raw buffers by the fallback path and
+reject any other unrecognized format before accessing it.
+
+Fixes: https://github.com/GloriousEggroll/proton-ge-custom/issues/720
+---
+ libs/vkd3d/command.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/libs/vkd3d/command.c b/libs/vkd3d/command.c
+index 5e82fcc4..d69a4d5b 100644
+--- a/libs/vkd3d/command.c
++++ b/libs/vkd3d/command.c
+@@ -16050,6 +16050,18 @@
+             uint_format = vkd3d_get_format(list->device, DXGI_FORMAT_R32_UINT, false);
+         }
+ 
++       /* Raw buffer UAVs use DXGI_FORMAT_UNKNOWN (0), so clear_format is NULL.
++        * Set it to the same R32_UINT format used above, matching the fallback path. */
++       if (!clear_format)
++           clear_format = uint_format;
++
++       /* Reject any other unrecognized format before dereferencing. */
++       if (!clear_format)
++       {
++           ERR("Invalid format for buffer UAV clear.\n");
++           return;
++       }
++
+         args.clear_dxgi_format = uint_format->dxgi_format;
+ 
+         args.heap_index = d3d12_command_list_allocate_meta_buffer_view(list,
