@@ -8,8 +8,8 @@ arch=('x86_64')
 url="https://github.com/netborg-afps/vkd3d-low-latency"
 license=('zlib/libpng')
 depends=('vulkan-icd-loader')
-provides=('dxvk' 'd9vk' "dxvk=$pkgver")
-conflicts=('d9vk'  "dxvk" 'dxvk-bin' "dxvk-pure-git")
+provides=('vkd3d-proton' "vkd3d-proton=$pkgver")
+conflicts=('vkd3d-proton-git' 'vkd3d-proton-mingw-git')
 makedepends=('ninja' 'meson>=0.43' 'glslang' 'clang' 'lld' 'llvm' 'git' 'mingw-w64-gcc' 'wine')
 options=(!strip !buildflags staticlibs)
 source=(
