@@ -39,7 +39,7 @@ pkgver() {
 prepare() {
     cd vkd3d-low-latency
 
-    git remote set-url origin https://github.com/doitsujin/dxvk.git
+    git remote set-url origin https://github.com/netborg-afps/vkd3d-low-latency.git
     git submodule update --init --filter=tree:0 --recursive
 
     # Use Clang to build DXVK
