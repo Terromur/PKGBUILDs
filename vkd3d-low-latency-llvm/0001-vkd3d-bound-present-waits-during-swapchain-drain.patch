@@ -14,12 +14,6 @@ both while replacing a native swapchain and before joining the waiter during
 final cleanup. Normal presentations still complete in a single wait, while
 teardown can interrupt a stalled wait within 100 ms. Also read skip_waits under
 its mutex to avoid a data race.
----
- libs/vkd3d/swapchain.c | 39 +++++++++++++++++++++++++++++++++------
- 1 file changed, 33 insertions(+), 6 deletions(-)
-
-diff --git a/libs/vkd3d/swapchain.c b/libs/vkd3d/swapchain.c
-index 5f2e9355..7cf25f63 100644
 --- a/libs/vkd3d/swapchain.c
 +++ b/libs/vkd3d/swapchain.c
 @@ -17,6 +17,7 @@
@@ -57,7 +51,41 @@ index 5f2e9355..7cf25f63 100644
  static void dxgi_vk_swap_chain_destroy_swapchain_in_present_task(struct dxgi_vk_swap_chain *chain)
  {
      const struct vkd3d_vk_device_procs *vk_procs = &chain->queue->device->vk_procs;
-@@ -3659,8 +3673,9 @@
+@@ -2420,16 +2434,11 @@
+     VkRenderingInfo rendering_info;
+     VkDependencyInfo dep_info;
+     VkViewport viewport;
+-    bool blank_present;
+     bool blit_command;
+ 
+     /* If application intends to present before we have rendered to it,
+      * it is valid, but we need to ignore the blit, just clear backbuffer. */
+     resource = chain->user.backbuffers[chain->request.user_index];
+-    blank_present = vkd3d_atomic_uint32_load_explicit(&resource->initial_layout_transition, vkd3d_memory_order_relaxed) != 0;
+-
+-    if (blank_present)
+-        WARN("Application is presenting user index %u, but it has never been rendered to.\n", chain->request.user_index);
+ 
+     memset(&attachment_info, 0, sizeof(attachment_info));
+     attachment_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+@@ -2438,7 +2447,7 @@
+     attachment_info.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+     attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+ 
+-    if (chain->desc.Scaling == DXGI_SCALING_NONE || blank_present)
++    if (chain->desc.Scaling == DXGI_SCALING_NONE)
+         attachment_info.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+ 
+     memset(&rendering_info, 0, sizeof(rendering_info));
+@@ -2558,7 +2567,6 @@
+     {
+         VK_CALL(vkCmdBeginRendering(vk_cmd, &rendering_info));
+ 
+-        if (!blank_present)
+         {
+             VK_CALL(vkCmdSetViewport(vk_cmd, 0, 1, &viewport));
+             VK_CALL(vkCmdSetScissor(vk_cmd, 0, 1, &rendering_info.renderArea));
+@@ -3659,8 +3667,9 @@
          {
              cookie = vkd3d_queue_timeline_trace_register_present_wait(timeline_trace, entry.id);
              /* In skip wait mode we just need to make sure that we signal latency fences properly. */
@@ -68,7 +96,7 @@ index 5f2e9355..7cf25f63 100644
                  /* We don't really care if we observed OUT_OF_DATE or something here. */
                  if (chain->present.wait2)
                  {
-@@ -3668,14 +3683,24 @@
+@@ -3668,14 +3677,24 @@
                      memset(&wait_info, 0, sizeof(wait_info));
                      wait_info.sType = VK_STRUCTURE_TYPE_PRESENT_WAIT_2_INFO_KHR;
                      wait_info.presentId = entry.id;
