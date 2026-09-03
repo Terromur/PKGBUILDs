@@ -318,6 +318,9 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/ntdll-reserve-top-down-space-for-large-address-aware-wow64.patch" \
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/ntdll-remove-redundant-packed-split-lock.patch" \
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/winex11-use-x11-drawables-for-steam-opengl-overlay.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/pending/crypt32-pfx-record-machine-keyset-in-prov-info.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/pending/crypt32-pfx-use-the-container-key-spec.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/pending/ntdll-keep-builtin-amd-ags-ahead-of-version-heuristic.patch" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/comctl32_animate_avi/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/mmsystem.dll16-MIDIHDR_Refcount/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/windowscodecs-TIFF_Support/*" \
