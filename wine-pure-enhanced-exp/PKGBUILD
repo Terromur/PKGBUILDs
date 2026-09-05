@@ -1,11 +1,11 @@
 # Maintainer: Terromur <terromuroz@proton.me>
 
 pkgname=wine-pure-enhanced-exp
-pkgver=11.16.r0
+pkgver=11.17.r0
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=2ecc2f84b45ec42afbf1725d756181180a8204b1"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=719588ab20f00247284f27273924be8799de012a"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=36b6a2cf679fb395f668a917b76537190e212d9c"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=83acf91a00c7db33ac85a704293159fb47aaed24"
   "git+https://github.com/GloriousEggroll/proton-ge-custom.git"
   "git+https://github.com/elgabo86/gwine.git"
   "git+https://github.com/starcitizen-lug/patches.git"
@@ -274,6 +274,7 @@ if [ -d "${wine_osu_patches_dir}" ]; then
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0046-winex11-winewayland-Add-an-opt-in-absolute-tablet-in.patch" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0014-appwiz-Add-env.-vars-to-skip-mono-gecko-installation.patch" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0042-server-rename-debug_level-to-_debug_level-to-hint-br.patch" \
+        -not -path "${wine_osu_patches_dir}/9000-misc-additions/0040-wineusb-usb-annoyances.patch" \
         -print0 | sort -z)
 fi  
   
@@ -307,6 +308,7 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/vkd3d-proton/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/disabled/0210-winedmo-Handle-demuxer-URLs-without-an-extension.patch" \
         -not -path "${proton_patches_dir}/wine-hotfixes/disabled/wine-wayland-offscreen-rendering/*" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/disabled/0209-winegstreamer-wma_decoder-Implement-Get-Input-Output.patch" \
         -not -path "${proton_patches_dir}/wine-hotfixes/em-fixups/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/0001-decouple-wineopenxr-from-steamvr-and-integrate-it-in.patch" \
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/0001-server-Dynamically-relocate-.exes-by-default-too.patch" \
@@ -352,6 +354,7 @@ if [ -d "${spritz_patches_dir}" ]; then
         -not -path "${spritz_patches_dir}/0003-tkg/0006-comctl32-Don-t-use-a-dotty-pen-for-treeview.patch" \
         -not -path "${spritz_patches_dir}/0003-tkg/0007-user32-Draw-focus-rects-in-solid-blue.patch" \
         -not -path "${spritz_patches_dir}/0004-proton-fsync/*" \
+        -not -path "${spritz_patches_dir}/0005-em-backports/*" \
         -not -path "${spritz_patches_dir}/0006-misc/0004-ntdll-Never-use-CLOCK_REALTIME_COARSE.patch" \
         -not -path "${spritz_patches_dir}/0006-misc/0009-ntoskrnl.exe-Add-stub-for-KeGetCurrentIrql.patch" \
         -not -path "${spritz_patches_dir}/0006-misc/0001-HACK-winex11.drv-Workaround-focusing-out-of-exclusiv.patch" \

@@ -49,7 +49,7 @@ prepare() {
     patch -p1 -i "$srcdir"/0001-vkd3d-bound-present-waits-during-swapchain-drain.patch
     patch -p1 -i "$srcdir"/0002-vkd3d-handle-raw-buffer-in-optimized-clear-uav.patch
 
-    local base_cflags="-march=native -mtune=native -O3 -funsafe-math-optimizations -fomit-frame-pointer -fno-ident -fno-stack-protector -fno-math-errno -fno-trapping-math -fcf-protection=none -mharden-sls=none -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement=1 -mllvm -enable-dfa-jump-thread -mllvm -inline-threshold=325 -mllvm -unroll-threshold=350 -D_FORTIFY_SOURCE=0"
+    local base_cflags="-march=native -mtune=native -O3 -funsafe-math-optimizations -fomit-frame-pointer -fno-ident -fno-stack-protector -fno-math-errno -fno-trapping-math -fcf-protection=none -mharden-sls=none -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement=1 -mllvm -enable-dfa-jump-thread -mllvm -inline-threshold=325 -mllvm -unroll-threshold=350 -fno-strict-aliasing -D_FORTIFY_SOURCE=0"
     local cflags_64="${base_cflags} -D_FILE_OFFSET_BITS=64"
     local cxxflags_64="${base_cflags} -D_FILE_OFFSET_BITS=64 -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
     local cflags_32="${base_cflags}"
