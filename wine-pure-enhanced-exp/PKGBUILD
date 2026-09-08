@@ -4,8 +4,8 @@ pkgname=wine-pure-enhanced-exp
 pkgver=11.17.r0
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=36b6a2cf679fb395f668a917b76537190e212d9c"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=83acf91a00c7db33ac85a704293159fb47aaed24"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=490f6d5dcbb2a5047345b8af88d114bbcaad69a8"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=792c2bb2328a32209fe9de3cb1debb926125cfcb"
   "git+https://github.com/GloriousEggroll/proton-ge-custom.git"
   "git+https://github.com/elgabo86/gwine.git"
   "git+https://github.com/starcitizen-lug/patches.git"
@@ -265,6 +265,7 @@ if [ -d "${wine_osu_patches_dir}" ]; then
         -not -path "${wine_osu_patches_dir}/0006-audio/0005-alsa-pulse-mmdevapi-Support-custom-period-and-buffer-sizes.patch" \
         -not -path "${wine_osu_patches_dir}/0006-audio/0008-pulse-mmdevapi-Some-simplifications-and-stability-im.patch" \
         -not -path "${wine_osu_patches_dir}/0006-audio/0010-winepulse-Stop-forcing-period-to-twice-the-minimum-s.patch" \
+        -not -path "${wine_osu_patches_dir}/0006-audio/0011-mmdevapi-winealsa.drv-winepulse.drv-Allow-forcing-th.patch" \
         -not -path "${wine_osu_patches_dir}/0007-proton-additions/0013-server-user32-Backport-more-raw-input-changes-from-P.patch" \
         -not -path "${wine_osu_patches_dir}/0008-winewayland-additions/*" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0009-win32u-Add-WINE_DISABLE_IME.patch" \
@@ -323,6 +324,7 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/crypt32-pfx-record-machine-keyset-in-prov-info.patch" \
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/crypt32-pfx-use-the-container-key-spec.patch" \
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/ntdll-keep-builtin-amd-ags-ahead-of-version-heuristic.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/pending/wineboot-create-sqm-machine-id.patch" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/comctl32_animate_avi/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/mmsystem.dll16-MIDIHDR_Refcount/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/windowscodecs-TIFF_Support/*" \
@@ -331,6 +333,7 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-wayland/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wineland-child-rendering/*" \
         -not -path "${proton_patches_dir}/wineopenxr/*" \
+        -not -path "${proton_patches_dir}/wine-mono/*" \
         -print0 | sort -z)
 fi
   
