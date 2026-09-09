@@ -4,7 +4,7 @@ pkgname=wine-pure-enhanced-exp
 pkgver=11.17.r0
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=490f6d5dcbb2a5047345b8af88d114bbcaad69a8"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=31e19d54b89a03636627bf72773af240787909fe"
   "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=792c2bb2328a32209fe9de3cb1debb926125cfcb"
   "git+https://github.com/GloriousEggroll/proton-ge-custom.git"
   "git+https://github.com/elgabo86/gwine.git"
@@ -325,6 +325,8 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/crypt32-pfx-use-the-container-key-spec.patch" \
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/ntdll-keep-builtin-amd-ags-ahead-of-version-heuristic.patch" \
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/wineboot-create-sqm-machine-id.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/pending/ole32-clipboard-stale-handle-1-tests.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/pending/ole32-clipboard-stale-handle-2-fix.patch" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/comctl32_animate_avi/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/mmsystem.dll16-MIDIHDR_Refcount/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/windowscodecs-TIFF_Support/*" \
@@ -334,6 +336,7 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/wine-hotfixes/wineland-child-rendering/*" \
         -not -path "${proton_patches_dir}/wineopenxr/*" \
         -not -path "${proton_patches_dir}/wine-mono/*" \
+        -not -path "${proton_patches_dir}/low_latency_layer/*" \
         -print0 | sort -z)
 fi
   
