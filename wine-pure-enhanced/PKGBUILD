@@ -4,8 +4,8 @@ pkgname=wine-pure-enhanced
 pkgver=11.17.r0
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=31e19d54b89a03636627bf72773af240787909fe"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=792c2bb2328a32209fe9de3cb1debb926125cfcb"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=913e31f201d344223bdf3d13a50a41af35893d12"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=7399c0df2449659a37f621ff2f44ab20936cc671"
   "git+https://github.com/GloriousEggroll/proton-ge-custom.git"
   "git+https://github.com/elgabo86/gwine.git"
   "git+https://github.com/starcitizen-lug/patches.git"
@@ -259,6 +259,7 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/dxvk/*" \
         -not -path "${proton_patches_dir}/game-patches/layered-overlay-wine.patch" \
         -not -path "${proton_patches_dir}/game-patches/maplestory-kernelbase-charprev-null.patch" \
+        -not -path "${proton_patches_dir}/game-patches/nascar25-protector.patch" \
         -not -path "${proton_patches_dir}/ge-video-rework/*" \
         -not -path "${proton_patches_dir}/lsteamclient/*" \
         -not -path "${proton_patches_dir}/pipewire/*" \
@@ -274,9 +275,7 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/proton/winex11-mutter-cinnamon.patch" \
         -not -path "${proton_patches_dir}/protonfixes/*" \
         -not -path "${proton_patches_dir}/vkd3d-proton/*" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/disabled/0210-winedmo-Handle-demuxer-URLs-without-an-extension.patch" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/disabled/wine-wayland-offscreen-rendering/*" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/disabled/0209-winegstreamer-wma_decoder-Implement-Get-Input-Output.patch" \
+	-not -path "${proton_patches_dir}/wine-hotfixes/disabled/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/em-fixups/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/0001-decouple-wineopenxr-from-steamvr-and-integrate-it-in.patch" \
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/0001-server-Dynamically-relocate-.exes-by-default-too.patch" \
@@ -288,17 +287,21 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/ntdll-reserve-top-down-space-for-large-address-aware-wow64.patch" \
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/ntdll-remove-redundant-packed-split-lock.patch" \
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/winex11-use-x11-drawables-for-steam-opengl-overlay.patch" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/pending/crypt32-pfx-record-machine-keyset-in-prov-info.patch" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/pending/crypt32-pfx-use-the-container-key-spec.patch" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/pending/ntdll-keep-builtin-amd-ags-ahead-of-version-heuristic.patch" \
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/wineboot-create-sqm-machine-id.patch" \
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/ole32-clipboard-stale-handle-1-tests.patch" \
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/ole32-clipboard-stale-handle-2-fix.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/pending/crypt32-pfx-record-machine-keyset-in-prov-info.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/pending/crypt32-pfx-use-the-container-key-spec.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/pending/ntdll-keep-builtin-amd-ags-ahead-of-version-heuristic.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/winex11-Fixed-scancodes/*" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/winex11-ime-check-thread-data/*" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/kernel32-Debugger/*" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/ntdll-Hide_Wine_Exports/*" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/ntdll-ext4-case-folder/*" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/winex11-Window_Style/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/comctl32_animate_avi/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/mmsystem.dll16-MIDIHDR_Refcount/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/windowscodecs-TIFF_Support/*" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/winex11-Fixed-scancodes/*" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/winex11-ime-check-thread-data/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-wayland/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wineland-child-rendering/*" \
         -not -path "${proton_patches_dir}/wineopenxr/*" \
@@ -317,6 +320,7 @@ if [ -d "${spritz_patches_dir}" ]; then
     -name "*.patch" \
         -not -path "${spritz_patches_dir}/0001-spritz/0002-HACK-ws2_32-Block-first-internet-connection-for-some.patch" \
         -not -path "${spritz_patches_dir}/0001-spritz/0007-loader-Copy-arial.ttf-to-fonts.patch" \
+        -not -path "${spritz_patches_dir}/0002-proton-controllers/0003-winebus-Disable-Hidraw-by-default-add-log-message.patch" \
         -not -path "${spritz_patches_dir}/0003-tkg/0001-ntdll-loader-add-support-for-overriding-IMAGE_FILE_L.patch" \
         -not -path "${spritz_patches_dir}/0004-proton-fsync/*" \
         -not -path "${spritz_patches_dir}/0005-em-backports/*" \
