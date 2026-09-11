@@ -4,8 +4,8 @@ pkgname=wine-pure-enhanced
 pkgver=11.17.r0
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=913e31f201d344223bdf3d13a50a41af35893d12"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=7399c0df2449659a37f621ff2f44ab20936cc671"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=8f8792fc857ba609b13c6d63839034e0576b0c9f"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=dc020173dc36007d06a88ff3fc5866de7faba826"
   "git+https://github.com/GloriousEggroll/proton-ge-custom.git"
   "git+https://github.com/elgabo86/gwine.git"
   "git+https://github.com/starcitizen-lug/patches.git"
@@ -260,6 +260,9 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/game-patches/layered-overlay-wine.patch" \
         -not -path "${proton_patches_dir}/game-patches/maplestory-kernelbase-charprev-null.patch" \
         -not -path "${proton_patches_dir}/game-patches/nascar25-protector.patch" \
+        -not -path "${proton_patches_dir}/game-patches/ai-limit-dx12-compute-shader-fallback.patch" \
+        -not -path "${proton_patches_dir}/game-patches/black-desert-keep-fullscreen-on-focus-loss.patch" \
+        -not -path "${proton_patches_dir}/game-patches/max-payne-cpu-detection.patch" \
         -not -path "${proton_patches_dir}/ge-video-rework/*" \
         -not -path "${proton_patches_dir}/lsteamclient/*" \
         -not -path "${proton_patches_dir}/pipewire/*" \
@@ -293,6 +296,7 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/crypt32-pfx-record-machine-keyset-in-prov-info.patch" \
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/crypt32-pfx-use-the-container-key-spec.patch" \
         -not -path "${proton_patches_dir}/wine-hotfixes/pending/ntdll-keep-builtin-amd-ags-ahead-of-version-heuristic.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/pending/ntdll-retry-native-view-allocation-with-effective-range.patch" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/winex11-Fixed-scancodes/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/winex11-ime-check-thread-data/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/kernel32-Debugger/*" \
