@@ -262,10 +262,7 @@ if [ -d "${wine_osu_patches_dir}" ]; then
         -not -path "${wine_osu_patches_dir}/0005-windowing-system-integration/0001-misc/0013-winex11.drv-Do-not-enable-disable-XInput2-when-clipp.patch" \
         -not -path "${wine_osu_patches_dir}/0005-windowing-system-integration/0001-misc/0014-winecfg-Add-a-checkbox-to-enable-virtual-desktop-tas.patch" \
         -not -path "${wine_osu_patches_dir}/0005-windowing-system-integration/0002-proton/0008-winex11.drv-Only-process-raw-input-in-default-winsta.patch" \
-        -not -path "${wine_osu_patches_dir}/0006-audio/0005-alsa-pulse-mmdevapi-Support-custom-period-and-buffer-sizes.patch" \
-        -not -path "${wine_osu_patches_dir}/0006-audio/0008-pulse-mmdevapi-Some-simplifications-and-stability-im.patch" \
-        -not -path "${wine_osu_patches_dir}/0006-audio/0010-winepulse-Stop-forcing-period-to-twice-the-minimum-s.patch" \
-        -not -path "${wine_osu_patches_dir}/0006-audio/0011-mmdevapi-winealsa.drv-winepulse.drv-Allow-forcing-th.patch" \
+        -not -path "${wine_osu_patches_dir}/0006-audio/*" \
         -not -path "${wine_osu_patches_dir}/0007-proton-additions/0013-server-user32-Backport-more-raw-input-changes-from-P.patch" \
         -not -path "${wine_osu_patches_dir}/0008-winewayland-additions/*" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0009-win32u-Add-WINE_DISABLE_IME.patch" \
@@ -274,8 +271,8 @@ if [ -d "${wine_osu_patches_dir}" ]; then
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0043-winex11-Custom-frame-limiter-for-OpenGL.patch" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0046-winex11-winewayland-Add-an-opt-in-absolute-tablet-in.patch" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0014-appwiz-Add-env.-vars-to-skip-mono-gecko-installation.patch" \
-        -not -path "${wine_osu_patches_dir}/9000-misc-additions/0042-server-rename-debug_level-to-_debug_level-to-hint-br.patch" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0040-wineusb-usb-annoyances.patch" \
+        -not -path "${wine_osu_patches_dir}/9000-misc-additions/600hz-default.patch" \
         -print0 | sort -z)
 fi  
   
