@@ -1,10 +1,7 @@
 # Maintainer: Terromur <terromuroz@proton.me>
-# Maintainer: Vasiliy Stelmachenok <ventureo@yandex.ru>
-## AUR package maintainer:
-# Maintainer: Adrià Cereto i Massagué <ssorgatem at gmail.com>
 
 pkgname=dxvk-pure-clang-git
-pkgver=2.6.r5.g653532376
+pkgver=3.1.1
 pkgrel=1
 pkgdesc="A Vulkan-based compatibility layer for Direct3D 9/10/11 which allows running 3D applications on Linux using Wine. Windows DLL version)"
 arch=('x86_64')
@@ -12,36 +9,27 @@ url="https://github.com/doitsujin/dxvk"
 license=('zlib/libpng')
 depends=('vulkan-icd-loader')
 provides=('dxvk' 'd9vk' "dxvk=$pkgver")
-conflicts=('d9vk'  "dxvk" 'dxvk-bin' 'dxvk-pure-git')
-makedepends=('ninja' 'meson>=0.43' 'glslang' 'mingw-w64-gcc' 'git')
-options=(!strip !buildflags !staticlibs)
+conflicts=('d9vk'  "dxvk" 'dxvk-bin' "dxvk-pure-git" "dxvk-low-latency-avx")
+makedepends=('ninja' 'meson>=0.43' 'glslang' 'clang' 'lld' 'llvm' 'git' 'mingw-w64-gcc')
+options=(!strip !buildflags staticlibs)
 source=(
     "git+https://github.com/doitsujin/dxvk.git"
     "git+https://github.com/Joshua-Ashton/mingw-directx-headers.git"
     "git+https://github.com/KhronosGroup/Vulkan-Headers.git"
     "git+https://github.com/KhronosGroup/SPIRV-Headers.git"
     "dxvk-extraopts.patch"
-    "llvm.patch"
-    "fixLockRectd3d9.patch"
-    "global-dxvk.conf.patch"
-    "dxvk-gplasync-master.patch"
-    "update-spirv-version-to-1.6.patch"
-    "fix-nvidia.patch"
+    "5367.patch"
+    "Allow-build-with-AVX-when-using-Clang.patch"
 )
 sha256sums=(
-    "SKIP"
-    "SKIP"
-    "SKIP"
-    "SKIP"
-    "bcc15521e4c7f966a0192a1dabb7fb4935b33db39344ab5b861f9d81486f1362"
-    "SKIP"
-    "SKIP"
-    "SKIP"
-    "SKIP"
-    "SKIP"
-    "SKIP"
+    'SKIP'
+    'SKIP'
+    'SKIP'
+    'SKIP'
+    '83b240fdfff44b27c80b357055f405233c98e763310c2d1a001cd1b4d51d3aed'
+    '4a12f6ced1bbcd05eee0a85e364e1730db8b1da543f4a049c6a3f85aac9fe561'
+    'b2ad28c672da301ed8d90b36a37c71f722438e3daa565bcce9115306a1d37016'
 )
-
 
 pkgver() {
     cd dxvk
@@ -51,89 +39,49 @@ pkgver() {
 prepare() {
     cd dxvk
 
-    # Explicitly set origin URL for submodules using relative paths
     git remote set-url origin https://github.com/doitsujin/dxvk.git
     git submodule update --init --filter=tree:0 --recursive
 
-    # Uncomment to enable extra optimizations
-    # Patch crossfiles with extra optimizations from makepkg.conf
+    # Use Clang to build DXVK
+    patch -p1 -i "$srcdir"/5367.patch
+    patch -p1 -i "$srcdir"/Allow-build-with-AVX-when-using-Clang.patch
+
+    # Patch to passthrough compiler flags (thanks @loathingkernel)
     patch -p1 -i "$srcdir"/dxvk-extraopts.patch
 
-    # Патч для внедрения поддержки кросс-компиляции llvm
-    patch -p1 -i "$srcdir"/llvm.patch
+    local base_cflags="-march=native -mtune=native -O3 -funsafe-math-optimizations -fomit-frame-pointer -fno-ident -fno-stack-protector -fno-math-errno -fno-trapping-math -fcf-protection=none -mharden-sls=none -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement=1 -mllvm -enable-dfa-jump-thread -mllvm -inline-threshold=325 -mllvm -unroll-threshold=350 -D_FORTIFY_SOURCE=0 -ffunction-sections -fdata-sections"
+    local cflags_64="${base_cflags} -D_FILE_OFFSET_BITS=64"
+    local cxxflags_64="${base_cflags} -D_FILE_OFFSET_BITS=64 -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
+    local cflags_32="${base_cflags}"
+    local cxxflags_32="${base_cflags} -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
+    local ldflags="-Wl,-O3 -Wl,--as-needed,--strip-all -Wl,--lto-O3 -Wl,--lto-CGO3 -flto -Wl,--file-alignment=4096 -latomic -Wl,--gc-sections"
 
-    # Исправление back buffers для d3d9
-    patch -p1 -i "$srcdir"/fixLockRectd3d9.patch
-    
-    # Работа с dxvk.conf в пользовательской директории
-    patch -p1 -i "$srcdir"/global-dxvk.conf.patch
-    
-    # Добавление gplasync
-    patch -p1 -i "$srcdir"/dxvk-gplasync-master.patch
-    
-    # Обновление spirv
-    patch -p1 -i "$srcdir"/update-spirv-version-to-1.6.patch
+    sed -i build-win32-clang.txt \
+        -e "s|@CARGS@|'${cflags_32// /\',\'}'|g" \
+        -e "s|@CXXARGS@|'${cxxflags_32// /\',\'}'|g" \
+        -e "s|@LDARGS@|'${ldflags// /\',\'}'|g"
 
-    # Исправление зависания изображения на NVIDIA+Wayland
-    patch -p1 -i "$srcdir"/fix-nvidia.patch
-
-    # Так же вы можете добавить в CFLAGS флаг -D_WIN32_WINNT=0xA00. Он используется тогда, когда вам ничего не нужно, кроме совместимости Windows 10
-    # Так же вы можете добавить в CFLAGS флаг -mprefer-avx128. Он нужен в том случае, когда возникают проблемы с запуском игр. Если вы собрали мой mingw-w64-gcc - вам этот флаг не нужен.
-    export CFLAGS="-O3 -march=native -mtune=native -funroll-loops -fno-plt -fno-math-errno -fno-trapping-math -fcf-protection=none -mharden-sls=none -fno-stack-protector -fno-unwind-tables -fno-pie -funroll-loops -fomit-frame-pointer -fdata-sections -ffunction-sections -flto -fwhole-program-vtables -fsplit-lto-unit -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement -mllvm -enable-gvn-hoist -mllvm -enable-dfa-jump-thread -mllvm -inline-threshold=1500 -mllvm -enable-nontrivial-unswitch -ffp-contract=fast -fno-unique-section-names -fgnuc-version=14.2.0 -fuse-ld=lld -mllvm -enable-loop-distribute -mllvm -enable-unroll-and-jam -mllvm -enable-interleaved-mem-accesses -fno-semantic-interposition -fopenmp -pthread -funsafe-math-optimizations -mllvm -aggressive-ext-opt -mllvm -unroll-runtime-multi-exit -mllvm -enable-loop-flatten -mllvm -enable-loopinterchange -mllvm -slp-vectorize-hor-store -mllvm -enable-cond-stores-vec -mllvm -extra-vectorizer-passes -D_FORTIFY_SOURCE=0 -w"
-    export CXXFLAGS="$CFLAGS -Wp,-U_GLIBCXX_ASSERTIONS"
-    export LDFLAGS="-Wl,--lto-O3,-O3,-Bsymbolic-functions,--as-needed,--strip-all -flto=auto -lpthread -fwhole-program-vtables -flto=jobserver -mllvm -enable-interleaved-mem-accesses -Wl,-z,pack-relative-relocs -Wl,--gc-sections"
-    # These flags are taken from Proton
-    CFLAGS+=" -mfpmath=sse -std=gnu23"
-    CXXFLAGS+=" -mfpmath=sse -std=gnu++23"
-
-    # If using -march=native and the CPU supports AVX, launching a d3d9
-    # game can cause an Unhandled exception. The cause seems to be the
-    # combination of AVX instructions and tree vectorization (implied by O3),
-    # all tested archictures from sandybridge to haswell are affected.
-    # Disabling AVX (and AVX2 as a side-effect).
-    # Since Wine 5.16 AVX is supported. Testing showed 32bit applications
-    # crashing with AVX regardless, but 64bit applications worked just fine.
-    # So disable AVX only for the 32bit binaries and AVX2 for the 64bit.
-    # AVX2 seems to degrade performance. So disregard the above.
-    # Relevant Wine issues
-    # https://bugs.winehq.org/show_bug.cgi?id=45289
-    # https://bugs.winehq.org/show_bug.cgi?id=43516
-    #CFLAGS+=" -mno-avx2"
-    #CXXFLAGS+=" -mno-avx2"
-
-    local cross_ldflags="-Wl,-O3 -Wl,--sort-common,--as-needed,--strip-all -flto=auto -lpthread -fwhole-program-vtables -flto=jobserver -Wl,--gc-sections"
-
-    local cross_cflags="$CFLAGS -mcmodel=small"
-    local cross_cxxflags="$CXXFLAGS -mcmodel=small"
-    sed -i build-win64.txt \
-        -e "s|@CARGS@|\'${cross_cflags// /\',\'}\'|g" \
-        -e "s|@CXXARGS@|\'${cross_cxxflags// /\',\'}\'|g" \
-        -e "s|@LDARGS@|\'${cross_ldflags// /\',\'}\'|g"
-    local cross_cflags="$CFLAGS"
-    local cross_cxxflags="$CXXFLAGS"
-    sed -i build-win32.txt \
-        -e "s|@CARGS@|\'${cross_cflags// /\',\'}\'|g" \
-        -e "s|@CXXARGS@|\'${cross_cxxflags// /\',\'}\'|g" \
-        -e "s|@LDARGS@|\'${cross_ldflags// /\',\'}\'|g"
+    sed -i build-win64-clang.txt \
+        -e "s|@CARGS@|'${cflags_64// /\',\'}'|g" \
+        -e "s|@CXXARGS@|'${cxxflags_64// /\',\'}'|g" \
+        -e "s|@LDARGS@|'${ldflags// /\',\'}'|g"
 }
 
 build() {
     meson setup dxvk "build/x64" \
-        --cross-file dxvk/build-win64.txt \
+        --cross-file dxvk/build-win64-clang.txt \
         --prefix "/usr/share/dxvk/x64" \
         --bindir "" --libdir "" \
         --buildtype "release" \
-        --strip \
-        -Db_lto=true
+        --strip
     ninja -C "build/x64" -v
 
     meson setup dxvk "build/x32" \
-        --cross-file dxvk/build-win32.txt \
+        --cross-file dxvk/build-win32-clang.txt \
         --prefix "/usr/share/dxvk/x32" \
         --bindir "" --libdir "" \
         --buildtype "release" \
-        --strip \
-        -Db_lto=true
+        --strip
     ninja -C "build/x32" -v
 }
 
