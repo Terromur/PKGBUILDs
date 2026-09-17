@@ -20,6 +20,7 @@ source=(
     "dxvk-extraopts.patch"
     "5367.patch"
     "Allow-build-with-AVX-when-using-Clang.patch"
+    "dxvk-preserve-swapchain-on-acquire-backpressure.patch"
 )
 sha256sums=(
     'SKIP'
@@ -29,6 +30,7 @@ sha256sums=(
     '83b240fdfff44b27c80b357055f405233c98e763310c2d1a001cd1b4d51d3aed'
     '4a12f6ced1bbcd05eee0a85e364e1730db8b1da543f4a049c6a3f85aac9fe561'
     'b2ad28c672da301ed8d90b36a37c71f722438e3daa565bcce9115306a1d37016'
+    'SKIP'
 )
 
 pkgver() {
@@ -48,6 +50,9 @@ prepare() {
 
     # Patch to passthrough compiler flags (thanks @loathingkernel)
     patch -p1 -i "$srcdir"/dxvk-extraopts.patch
+    
+    # Patch from GE
+    patch -p1 -i "$srcdir"/dxvk-preserve-swapchain-on-acquire-backpressure.patch
 
     local base_cflags="-march=native -mtune=native -O3 -funsafe-math-optimizations -fomit-frame-pointer -fno-ident -fno-stack-protector -fno-math-errno -fno-trapping-math -fcf-protection=none -mharden-sls=none -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement=1 -mllvm -enable-dfa-jump-thread -mllvm -inline-threshold=325 -mllvm -unroll-threshold=350 -D_FORTIFY_SOURCE=0 -ffunction-sections -fdata-sections"
     local cflags_64="${base_cflags} -D_FILE_OFFSET_BITS=64"
