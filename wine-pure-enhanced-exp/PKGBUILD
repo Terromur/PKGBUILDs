@@ -310,23 +310,7 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/vkd3d-proton/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/disabled/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/em-fixups/*" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/pending/0001-decouple-wineopenxr-from-steamvr-and-integrate-it-in.patch" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/pending/0001-server-Dynamically-relocate-.exes-by-default-too.patch" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/pending/0002-ntdll-allow-disabling-executable-ASLR.patch" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/pending/icuuc-icuin-forwarder-dlls.patch" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/pending/ntdll-prefer-native-version-resource-heuristics.patch" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/pending/secur32-fallback-without-no-shuffle-extensions.patch" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/pending/0009-HACK-kernel32-Spoof-GetProcAddress-of-KiUserApcDispa.patch" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/pending/ntdll-reserve-top-down-space-for-large-address-aware-wow64.patch" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/pending/ntdll-remove-redundant-packed-split-lock.patch" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/pending/winex11-use-x11-drawables-for-steam-opengl-overlay.patch" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/pending/crypt32-pfx-record-machine-keyset-in-prov-info.patch" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/pending/crypt32-pfx-use-the-container-key-spec.patch" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/pending/ntdll-keep-builtin-amd-ags-ahead-of-version-heuristic.patch" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/pending/wineboot-create-sqm-machine-id.patch" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/pending/ole32-clipboard-stale-handle-1-tests.patch" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/pending/ole32-clipboard-stale-handle-2-fix.patch" \
-        -not -path "${proton_patches_dir}/wine-hotfixes/pending/ntdll-retry-native-view-allocation-with-effective-range.patch" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/pending/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/comctl32_animate_avi/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/mmsystem.dll16-MIDIHDR_Refcount/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/windowscodecs-TIFF_Support/*" \
@@ -411,6 +395,7 @@ fi
         -not -path "${starcitizen_lug_dir}/wine/0088-fixup-HACK-winewayland-add-support-for-picking-prima.patch" \
         -not -path "${starcitizen_lug_dir}/wine/winewayland-fullscreen-idle-inhibit.patch" \
         -not -path "${starcitizen_lug_dir}/wine/winewayland-guess-primary-output.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/winewayland-systray.patch" \
         -print0 | sort -z)
     fi
 
