@@ -1,7 +1,7 @@
 # Maintainer: Terromur <terromuroz@proton.me>
 
 pkgname=dxvk-low-latency-avx
-pkgver=3.0.2
+pkgver=3.1.1
 pkgrel=1
 pkgdesc="A Vulkan-based compatibility layer for Direct3D 9/10/11 which allows running 3D applications on Linux using Wine. Windows DLL version)"
 arch=('x86_64')
