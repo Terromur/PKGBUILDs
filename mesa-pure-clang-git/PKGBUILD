@@ -7,96 +7,92 @@
 # Contributor: Andreas Radke <andyrtr@archlinux.org>
 
 pkgname=mesa-pure-clang-git
-pkgver=25.3.0_devel.211947.dce29ae35f6.0186545
+pkgver=26.3.0_devel.230392.fa8db585df4.518a75c
 pkgrel=1
 pkgdesc="A purely personal Mesa build"
 url="https://www.mesa3d.org/"
 arch=(x86_64)
 license=("MIT AND BSD-3-Clause AND SGI-B-2.0")
 makedepends=(
-  'xorgproto'
-  'libxml2'
-  'libvdpau'
-  'libva'
+  'cbindgen'
+  'clang'
+  'cmake'
   'elfutils'
+  'glslang'
+  'libdisplay-info'
+  'libpng'
+  'libva'
+  'libxml2'
   'libxrandr'
+  'lld'
+  'llvm'
   'meson'
   'ninja'
-  'glslang'
   'python-mako'
-  'python-ply'
-  'cbindgen'
-  'wayland-protocols'
-  'cmake'
-  'valgrind'
-  'libpng'
   'python-packaging'
+  'python-ply'
   'python-pyaml'
+  'valgrind'
+  'wayland-protocols'
+  'xorgproto'
 )
 depends=(
-  'libdrm'
-  'libxxf86vm'
-  'libxdamage'
-  'libxshmfence'
-  'libelf'
-  'libunwind'
-  'libglvnd'
-  'wayland'
-  'lm_sensors'
-  'vulkan-icd-loader'
-  'zstd'
   'expat'
-  'gcc-libs'
-  'libxfixes'
-  'libx11'
-  'systemd-libs'
-  'libxext'
-  'libxcb'
   'glibc'
-  'zlib'
+  'libdrm'
+  'libelf'
+  'libgcc'
+  'libglvnd'
+  'libstdc++'
+  'libunwind'
+  'libx11'
+  'libxcb'
+  'libxdamage'
+  'libxext'
+  'libxfixes'
+  'libxshmfence'
+  'libxxf86vm'
+  'lm_sensors'
   'python'
+  'systemd-libs'
+  'vulkan-icd-loader'
+  'wayland'
   'xcb-util-keysyms'
+  'zlib'
+  'zstd'
 )
 optdepends=('opengl-man-pages: for the OpenGL API man pages')
 provides=(
-  'vulkan-mesa-layers'
+  'libva-mesa-driver'
+  'mesa'
+  'mesa-libgl'
   'opencl-driver'
   'opengl-driver'
   'vulkan-driver'
+  'vulkan-mesa-device-select'
+  'vulkan-mesa-implicit-layers'
+  'vulkan-mesa-layers'
   'vulkan-radeon'
-  'libva-mesa-driver'
-  'mesa-libgl'
-  'mesa'
 )
 conflicts=(
-  'vulkan-mesa-layers'
-  'opencl-clover-mesa'
-  'vulkan-radeon'
   'libva-mesa-driver'
-  'mesa-libgl'
   'mesa'
+  'mesa-libgl'
+  'opencl-clover-mesa'
+  'vulkan-mesa-device-select'
+  'vulkan-mesa-implicit-layers'
+  'vulkan-mesa-layers'
+  'vulkan-radeon'
   'mesa-pure'
   'mesa-git'
   'mesa-pure-gcc-git'
 )
 source=(
   "mesa::git+https://gitlab.freedesktop.org/mesa/mesa.git#branch=main"
-  "001_mesa_rust_crates_versions.patch"
-  "25042.patch"
-  "35322.patch"
-  "37027.patch"
-  "intel_anv_fix_wayland.patch"
-  "valve.patch"
+  "u_d3d12.patch"
   "rusticl-radeonsi.conf"
-  "gnome-shell-glthread-disable.patch"
 )
 sha256sums=(
-  'SKIP'
-  'SKIP'
-  'SKIP'
-  'SKIP'
-  'SKIP'
-  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -136,25 +132,26 @@ prepare() {
     done
 }
 
-# Так же вы можете добавить флаги -falign-functions=32 только для старых процессоров и -falign-functions=64 для современных. 
-# А так же флаг -ftree-vectorize, но может вызывать регрессии 
-# или ошибки на неподдерживаемых процессорах AVX архитектурах, потому что флаг пытается использовать SSE и 
-# появляются проблемы при сборке пакета https://github.com/easybuilders/easybuild-easyconfigs/issues/6344
-# Возможно ошибка неактуальна, к тому же я предполагаю, что проблем с ним не будет, если -ftree-vectorize используется
-# -march=native флагом, при условии, что процессор поддерживает AVX инструкцию.
+  # Use Clang compiler
+  export CC=clang
+  export CXX=clang++
+
+  # LTO needs more open files
+  ulimit -n 4096
 build() {
   local meson_options=(
     --buildtype=release
     -D b_lto=true
+    -Dallow-broken-lto=true
     -D llvm=disabled
     -D optimization=3
     -D amd-use-llvm=false
     -D android-libbacktrace=disabled
     -D android-strict=false
-    -D c_args="-march=native -mtune=native -O3 -fdata-sections -fomit-frame-pointer -fno-plt -fno-unwind-tables -funsafe-math-optimizations -fno-stack-protector -pthread -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -ffunction-sections -mharden-sls=none -mllvm -enable-interleaved-mem-accesses -mllvm -enable-unroll-and-jam -mllvm -polly -mllvm -polly-num-threads=$(nproc) -mllvm -polly-run-dce -mllvm -polly-invariant-load-hoisting -mllvm -polly-loopfusion-greedy -mllvm -polly-vectorizer=stripmine -mllvm -enable-loop-distribute -mllvm -polly-run-inliner -mllvm -polly-ast-use-context -mllvm -polly-optimizer=isl -mllvm -inline-threshold=1500 -Wno-unused-command-line-argument -mllvm -enable-gvn-hoist -mllvm -enable-nontrivial-unswitch -mllvm -polly-position=early -mllvm -polly-dependences-computeout=600000 -mllvm -polly-detect-profitability-min-per-loop-insts=40 -mllvm -polly-tiling -mllvm -polly-2nd-level-tiling -mllvm -polly-enable-delicm=true -mllvm -polly-omp-backend=LLVM -mllvm -polly-scheduling=dynamic -mllvm -polly-scheduling-chunksize=1 -funroll-loops -mllvm -aggressive-ext-opt -mllvm -unroll-runtime-multi-exit -mllvm -enable-loop-flatten -mllvm -enable-loopinterchange -mllvm -slp-vectorize-hor-store -mllvm -enable-cond-stores-vec -mllvm -extra-vectorizer-passes"
-    -D c_link_args="-Wl,--lto-O3,-O3,-Bsymbolic-functions,--as-needed -mllvm -enable-interleaved-mem-accesses -flto -fuse-ld=lld"
-    -D cpp_args="-march=native -mtune=native -O3 -fdata-sections -fomit-frame-pointer -fno-plt -fno-unwind-tables -funsafe-math-optimizations -fno-stack-protector -pthread -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -ffunction-sections -mharden-sls=none -mllvm -enable-interleaved-mem-accesses -mllvm -enable-unroll-and-jam -mllvm -polly -mllvm -polly-num-threads=$(nproc) -mllvm -polly-run-dce -mllvm -polly-invariant-load-hoisting -mllvm -polly-loopfusion-greedy -mllvm -polly-vectorizer=stripmine -mllvm -enable-loop-distribute -mllvm -polly-run-inliner -mllvm -polly-ast-use-context -mllvm -polly-optimizer=isl -mllvm -inline-threshold=1500 -Wno-unused-command-line-argument -mllvm -enable-gvn-hoist -mllvm -enable-nontrivial-unswitch -mllvm -polly-position=early -mllvm -polly-dependences-computeout=600000 -mllvm -polly-detect-profitability-min-per-loop-insts=40 -mllvm -polly-tiling -mllvm -polly-2nd-level-tiling -mllvm -polly-enable-delicm=true -mllvm -polly-omp-backend=LLVM -mllvm -polly-scheduling=dynamic -mllvm -polly-scheduling-chunksize=1 -funroll-loops -mllvm -aggressive-ext-opt -mllvm -unroll-runtime-multi-exit -mllvm -enable-loop-flatten -mllvm -enable-loopinterchange -mllvm -slp-vectorize-hor-store -mllvm -enable-cond-stores-vec -mllvm -extra-vectorizer-passes -Wp,-U_GLIBCXX_ASSERTIONS"
-    -D cpp_link_args="-Wl,--lto-O3,-O3,-Bsymbolic-functions,--as-needed -mllvm -enable-interleaved-mem-accesses -flto -fuse-ld=lld"
+    -D c_args="-march=native -mtune=native -O2 -pipe -fno-stack-protector -fno-stack-check -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -mharden-sls=none -fno-ident -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement=1 -mllvm -enable-dfa-jump-thread -mtls-dialect=gnu2 -fsplit-machine-functions -mllvm -unroll-threshold=500 -D_FORTIFY_SOURCE=0"
+    -D c_link_args="-fuse-ld=lld -flto=auto -O3 -Wl,--lto-O3 -Wl,--lto-CGO3 -Wl,--hash-style=gnu -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs -Wl,--strip-all -Wl,--icf=safe -Wl,-z,norelro"
+    -D cpp_args="-march=native -mtune=native -O2 -pipe -fno-stack-protector -fno-stack-check -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -mharden-sls=none -fno-ident -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement=1 -mllvm -enable-dfa-jump-thread -mtls-dialect=gnu2 -fsplit-machine-functions -mllvm -unroll-threshold=500 -D_FORTIFY_SOURCE=0 -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
+    -D cpp_link_args="-fuse-ld=lld -flto=auto -O3 -Wl,--lto-O3 -Wl,--lto-CGO3 -Wl,--hash-style=gnu -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs -Wl,--strip-all -Wl,--icf=safe -Wl,-z,norelro"
     -D b_asneeded=false
     -D b_ndebug=true
     -D gallium-drivers=radeonsi
@@ -170,7 +167,7 @@ build() {
     -D valgrind=disabled
     -D video-codecs=all
     -D vulkan-drivers=amd
-    -D vulkan-layers=device-select,overlay
+    -D vulkan-layers=device-select,overlay,screenshot,vram-report-limit,anti-lag
     -D vulkan-beta=true
     -D python.bytecompile=2
     -D strip=true
