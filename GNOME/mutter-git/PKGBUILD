@@ -87,10 +87,8 @@ source=(
   # Mutter tags use SSH signatures which makepkg doesn't understand
   "git+$url.git"
   "git+https://gitlab.gnome.org/GNOME/gvdb.git#commit=b54bc5da25127ef416858a3ad92e57159ff565b3"
-  "clutter-frame-clock-Preserve-pending_reschedule-from.patch"
 )
 b2sums=('SKIP'
-        'SKIP'
         'SKIP')
 
 pkgver() {
@@ -100,7 +98,6 @@ pkgver() {
 
 prepare() {
   cd mutter
-  git apply -3 ../clutter-frame-clock-Preserve-pending_reschedule-from.patch
 }
 
 build() {
