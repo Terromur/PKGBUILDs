@@ -4,7 +4,7 @@
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 
 pkgname=gtk3-pure
-pkgver=3.24.49
+pkgver=3.24.52
 pkgrel=2
 pkgdesc="GObject-based multi-platform GUI toolkit"
 url="https://www.gtk.org/"
@@ -64,8 +64,14 @@ source=(
   "git+https://github.com/lah7/gtk3-classic#tag=$pkgver"
   0001-Allow-disabling-legacy-Tracker-search.patch
   gtk-query-immodules-3.0.hook
+  9852_export_xdg_toplevel.patch
+  9956_pointer_focus.patch
+  fix-xi2-xatom.patch
 )
 b2sums=(
+  'SKIP'
+  'SKIP'
+  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -77,6 +83,9 @@ prepare() {
 
   # Don't try to use the old Tracker
   patch -Np1 -i "${srcdir}/0001-Allow-disabling-legacy-Tracker-search.patch"
+  patch -Np1 -i "${srcdir}/9852_export_xdg_toplevel.patch"
+  patch -Np1 -i "${srcdir}/9956_pointer_focus.patch"
+  patch -Np1 -i "${srcdir}/fix-xi2-xatom.patch"
 
   # Apply gtk3-classic patchset
   for patch in "${srcdir}"/gtk3-classic/*.patch; do

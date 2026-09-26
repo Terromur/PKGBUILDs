@@ -1,0 +1,46 @@
+gtkwindow: Clear active state on disappearing pointer
+
+If the pointer focus is considered to be no longer on the surface
+while there is an implicit grab, we were leaving the active state
+stale.
+
+On Wayland this may happen in multiple legit circumstances, e.g.
+if the input is stolen by the compositor when a pointer button is
+pressed, as well as other less legit situations (crossing within
+surfaces from the same client). Either way, if the pointer has
+left, we should consider its previous active state as no longer
+applying.
+
+GTK3 adaptation: since GTK3 lacks the GtkPointerFocus infrastructure,
+the fix synthesizes button release events in the Wayland backend's
+pointer_handle_leave when buttons are still pressed. This ensures
+widgets properly clear their pressed/active state instead of leaving
+it stale.
+
+Part-of: <!9956>
+
+diff --git a/gdk/wayland/gdkdevice-wayland.c b/gdk/wayland/gdkdevice-wayland.c
+index 973005a06385e751df6db989937c26b8955d46f7..f093e999e0dd2b7ea238958ca3447ba0fa63aad9 100644
+--- a/gdk/wayland/gdkdevice-wayland.c
++++ b/gdk/wayland/gdkdevice-wayland.c
+@@ -1719,6 +1719,19 @@ pointer_handle_leave (void              *data,
+ 
+   _gdk_wayland_display_update_serial (display_wayland, serial);
+ 
++  if (seat->pointer_info.button_modifiers)
++    {
++      seat->pointer_info.button_modifiers = 0;
++
++      GDK_NOTE (EVENTS,
++                g_message ("ending implicit grab, seat %p", seat));
++      _gdk_display_end_device_grab (seat->display,
++                                    seat->master_pointer,
++                                    _gdk_display_get_next_serial (seat->display),
++                                    seat->pointer_info.focus,
++                                    TRUE);
++    }
++
+   event = gdk_wayland_seat_get_frame_event (seat, GDK_LEAVE_NOTIFY);
+   event->crossing.window = g_object_ref (seat->pointer_info.focus);
+   gdk_event_set_device (event, seat->master_pointer);
+
