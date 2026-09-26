@@ -4,7 +4,7 @@
 # Contributor: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=xorg-xwayland-pure-git
-pkgver=24.1.4.r445.g8707d2835
+pkgver=24.1.13.r1185.g1d815d00f
 pkgrel=1
 arch=('x86_64')
 license=(
@@ -34,16 +34,10 @@ makedepends=('meson' 'xorgproto' 'xtrans' 'libxkbfile' 'dbus'
              'xorg-font-util' 'wayland-protocols' 'mesa-libgl'
              'systemd' 'git')
 source=("xserver::git+https://gitlab.freedesktop.org/xorg/xserver.git"
-0002-Revert-xwayland-present-Check-allow_commits-in-xwl_p.patch
+0001-Revert-xwayland-Restrict-allow-commit-to-the-window-.patch
 xwayland-pointer-warp-fix.patch
-no-sighandler-segv-etc.patch
-allow-overflow-on-glamor_composite_clipped_region.patch
-xwayland-vsync.diff
 )
 sha256sums=('SKIP'
-'SKIP'
-'SKIP'
-'SKIP'
 'SKIP'
 'SKIP')
 
@@ -77,10 +71,6 @@ build() {
   arch-meson xserver build \
       -D b_ndebug=false \
       -D b_pie=false \
-      -D c_std=gnu23 \
-      -D build.c_std=gnu23 \
-      -D cpp_std=gnu++23 \
-      -D build.cpp_std=gnu+23 \
       -D b_lto=true \
       --buildtype=release \
       --wrap-mode=nofallback \
