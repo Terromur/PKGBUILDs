@@ -32,11 +32,12 @@ conflicts=(gnome-mimeapps)
 replaces=(gnome-mimeapps)
 provides=(gnome-mimeapps)
 groups=(gnome)
-source=("git+https://gitlab.gnome.org/GNOME/gnome-session.git#tag=${pkgver/[a-z]/.&}")
-b2sums=('341be544f20ccb5b7e919fea5d62b2455772d64b9e20f7f26dbe98932e65fad59f350b70a28170fd8d1ee3bb9731dabefb2512d82f4eab4ca7a44f8030eb5fc2')
+source=("git+https://gitlab.gnome.org/GNOME/gnome-session.git#tag=${pkgver/[a-z]/.&}" "fix-double-free-GError.patch")
+b2sums=('341be544f20ccb5b7e919fea5d62b2455772d64b9e20f7f26dbe98932e65fad59f350b70a28170fd8d1ee3bb9731dabefb2512d82f4eab4ca7a44f8030eb5fc2' 'SKIP')
 
 prepare() {
   cd $pkgname
+  git apply -3 ../fix-double-free-GError.patch
 }
 
 build() {
