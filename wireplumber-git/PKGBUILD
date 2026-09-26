@@ -7,7 +7,7 @@ pkgname=(
   wireplumber
   libwireplumber
 )
-pkgver=0.5.7.r10.ga1bc3d9
+pkgver=0.5.17.r30.g251d742
 pkgrel=1
 pkgdesc="Session / policy manager implementation for PipeWire"
 url="https://pipewire.pages.freedesktop.org/wireplumber/"
@@ -27,9 +27,8 @@ makedepends=(
   systemd
 )
 checkdepends=(pipewire-audio)
-source=("git+https://gitlab.freedesktop.org/pipewire/$pkgbase.git"
-disable-suspension.patch)
-b2sums=('SKIP' 'SKIP')
+source=("git+https://gitlab.freedesktop.org/pipewire/$pkgbase.git")
+b2sums=('SKIP')
 
 pkgver() {
   cd $pkgbase
@@ -38,17 +37,12 @@ pkgver() {
 
 prepare() {
   cd $pkgbase
-
-  # Отключение времени ожидания
-  patch -p1 -i "$srcdir"/disable-suspension.patch
 }
 
 build() {
   local meson_options=(
       -D b_ndebug=false \
       -D b_pie=false \
-      -D c_std=gnu23 \
-      -D cpp_std=gnu++23 \
       --buildtype=release \
       --wrap-mode=nofallback \
       -D doc=disabled \
@@ -58,8 +52,6 @@ build() {
       -D dbus-tests=false \
       -D errorlogs=false \
       -D python.bytecompile=2 \
-      -D build.c_std=gnu23 \
-      -D build.cpp_std=gnu+23 \
       -D b_lto=true \
       -D optimization=3 \
       -D debug=false \
