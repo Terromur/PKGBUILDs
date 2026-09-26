@@ -7,7 +7,7 @@
 # Contributor: Eivind Uggedal <eivind@uggedal.com>
 
 pkgname=mpv-pure-git
-pkgver=0.39.0.r615.gca211b5b88
+pkgver=0.41.0.r1084.ga1bf4b6559
 pkgrel=1
 pkgdesc='a free, open source, and cross-platform media player'
 arch=('x86_64')
@@ -23,15 +23,10 @@ optdepends=('yt-dlp: for video-sharing websites playback')
 conflicts=('libmpv.so' 'mpv')
 provides=('libmpv.so' 'mpv')
 options=('!emptydirs')
-source=("git+https://github.com/mpv-player/mpv.git"
-        "dynamically_generate_desktop_file_protocols.patch"
-        "avoid-shader-cache-flushes.patch")
-sha256sums=('SKIP'
-            '88acf97cbc8e0fe745f09bd0bd7f65e0437adcb549dadf3588fd0724d01298e9'
-            'SKIP')
+source=("git+https://github.com/mpv-player/mpv.git")
+sha256sums=('SKIP')
 prepare() {
   cd mpv
-  patch -Np1 -i ../avoid-shader-cache-flushes.patch
 }
 
 pkgver() {
@@ -73,10 +68,6 @@ build() {
     -Dxv=disabled
     -Doptimization=3
     -Db_lto=true
-    -Dc_std=gnu23
-    -Dbuild.c_std=gnu23
-    -Dcpp_std=gnu++23
-    -Dbuild.cpp_std=gnu++23
     -Dpython.bytecompile=2
     -Derrorlogs=false
     -Dstdsplit=false
