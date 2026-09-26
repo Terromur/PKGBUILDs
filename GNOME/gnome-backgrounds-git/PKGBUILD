@@ -1,0 +1,48 @@
+# Maintainer: Fabian Bornschein <fabiscafe@archlinux.org>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Contributor: Jan de Groot <jgc@archlinux.org>
+# Maintainer: Terromur <terromuroz@proton.me>
+
+pkgname=gnome-backgrounds-git
+pkgver=51.0+1+g3e0962c
+pkgrel=2
+pkgdesc="Background images and data for GNOME"
+url="https://gitlab.gnome.org/GNOME/gnome-backgrounds"
+arch=(any)
+license=(CC-BY-SA-3.0)
+depends=(libjxl)
+makedepends=(
+  glib2
+  git
+  meson
+)
+groups=(gnome)
+source=("git+https://gitlab.gnome.org/GNOME/gnome-backgrounds.git")
+b2sums=('SKIP')
+
+pkgver() {
+  cd gnome-backgrounds
+  git describe --tags | sed 's/^v//; s/-/+/g'
+}
+
+build() {
+  local meson_options=(
+    --buildtype=release
+    -Dpython.bytecompile=2
+    -Db_pie=false
+    -D debug=false
+    -D strip=true
+    -D b_lto=true
+    -D errorlogs=false
+  )
+  arch-meson gnome-backgrounds build "${meson_options[@]}"
+}
+
+package() {
+  provides=(gnome-backgrounds)
+  conflicts=(gnome-backgrounds)
+  
+  meson install -C build --no-rebuild --destdir "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:

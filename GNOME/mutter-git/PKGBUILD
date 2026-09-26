@@ -1,0 +1,155 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Maintainer: Fabian Bornschein <fabiscafe@archlinux.org>
+# Contributor: Ionut Biru <ibiru@archlinux.org>
+# Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
+# Maintainer: Terromur <terromuroz@proton.me>
+
+pkgbase=mutter-git
+pkgname=(
+  mutter-git
+)
+pkgver=51.0+11+g888a7b7dac
+pkgrel=2
+pkgdesc="Window manager and compositor for GNOME"
+url="https://gitlab.gnome.org/GNOME/mutter"
+arch=(x86_64)
+license=(GPL-2.0-or-later)
+depends=(
+  at-spi2-core
+  cairo
+  colord
+  dconf
+  egl-wayland
+  fontconfig
+  fribidi
+  gdk-pixbuf2
+  glib2
+  glibc
+  glycin
+  gnome-desktop-4
+  gnome-settings-daemon
+  graphene
+  gsettings-desktop-schemas
+  gtk4
+  harfbuzz
+  iio-sensor-proxy
+  lcms2
+  libcanberra
+  libcolord
+  libdisplay-info
+  libdrm
+  libei
+  libgcc
+  libgirepository
+  libglvnd
+  libgudev
+  libinput
+  libpipewire
+  libsysprof-capture
+  libwacom
+  libx11
+  libxau
+  libxcb
+  libxcomposite
+  libxcursor
+  libxdamage
+  libxext
+  libxfixes
+  libxi
+  libxinerama
+  libxkbcommon
+  libxrandr
+  mesa
+  pango
+  pipewire
+  pixman
+  python
+  python-argcomplete
+  python-dbus
+  python-gobject
+  startup-notification
+  systemd-libs
+  wayland
+  xorg-xwayland
+)
+makedepends=(
+  bash-completion
+  gi-docgen
+  git
+  glib2-devel
+  gobject-introspection
+  meson
+  python-docutils
+  sysprof
+  wayland-protocols
+)
+source=(
+  # Mutter tags use SSH signatures which makepkg doesn't understand
+  "git+$url.git"
+  "git+https://gitlab.gnome.org/GNOME/gvdb.git#commit=b54bc5da25127ef416858a3ad92e57159ff565b3"
+)
+b2sums=('SKIP'
+        'SKIP')
+
+pkgver() {
+  cd mutter
+  git describe --tags | sed 's/^v//; s/-/+/g'
+}
+
+prepare() {
+  cd mutter
+}
+
+build() {
+  local meson_options=(
+    -D docs=false
+    -D installed_tests=false
+    -D tests=disabled
+    --buildtype=release
+    -Dpython.bytecompile=2
+    -Db_pie=false
+    -D debug=false
+    -D strip=true
+    -D b_lto=true
+    -D errorlogs=false
+    -D catch=false
+    -D clutter_tests=false
+    -D cogl_tests=false
+    -D devkit=disabled
+    -D libwacom=false
+    -D mutter_tests=false
+    -D verbose=false
+  )
+
+  CFLAGS="${CFLAGS/-O2/-O3} -fno-semantic-interposition"
+  LDFLAGS+=" -Wl,-Bsymbolic-functions"
+
+  # Inject gvdb
+  export MESON_PACKAGE_CACHE_DIR="$srcdir"
+
+  arch-meson mutter build "${meson_options[@]}"
+  meson compile -C build
+}
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+package_mutter-git() {
+  provides=(libmutter-51.so mutter)
+  conflicts=(mutter)
+  optdepends=(
+    'bash-completion: Bash completions for gdctl'
+    'mutter-devkit-git: Mutter SDK, "MDK"'
+  )
+
+  meson install -C build --no-rebuild --destdir "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:

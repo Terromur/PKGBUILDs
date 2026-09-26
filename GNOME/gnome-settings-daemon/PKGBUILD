@@ -1,0 +1,99 @@
+# Maintainer: Fabian Bornschein <fabiscafe@archlinux.org>
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Maintainer: Terromur <terromuroz@proton.me>
+
+pkgname=gnome-settings-daemon
+pkgver=51.0
+pkgrel=1
+pkgdesc="GNOME Settings Daemon"
+url="https://gitlab.gnome.org/GNOME/gnome-settings-daemon"
+arch=(x86_64)
+license=(
+  GPL-2.0-or-later
+  LGPL-2.0-or-later
+)
+depends=(
+  alsa-lib
+  bash
+  dconf
+  fontconfig
+  gcr-4
+  geoclue
+  geocode-glib-2
+  glib2
+  glibc
+  gnome-desktop-4
+  gsettings-desktop-schemas
+  gtk4
+  libcanberra-pulse
+  libcolord
+  libcups
+  libgcc
+  libgudev
+  libgweather-4
+  libmm-glib
+  libnm
+  libnotify
+  libp11-kit
+  libpulse
+  libx11
+  libxfixes
+  polkit
+  pulse-native-provider
+  systemd-libs
+  upower
+)
+makedepends=(
+  docbook-xsl
+  git
+  glib2-devel
+  libxslt
+  meson
+  python
+  usbguard
+)
+checkdepends=(
+  python-dbusmock
+  python-gobject
+)
+optdepends=('usbguard: USB protection support')
+groups=(gnome)
+backup=(etc/xdg/Xwayland-session.d/00-xrdb)
+source=(
+  "git+https://gitlab.gnome.org/GNOME/gnome-settings-daemon.git#tag=${pkgver/[a-z]/.&}"
+  "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git"
+)
+b2sums=('bf44b171992735d1800ff87fce8c164245882187a63fd38011d5d3f72f05e8fb6a55a5a36b576b83dc49a833e2f2dc8ac55d622d29e6da25fcf642674df2c69d'
+        'SKIP')
+
+prepare() {
+  cd $pkgname
+
+  git submodule init
+  git submodule set-url subprojects/gvc "$srcdir/libgnome-volume-control"
+  git -c protocol.file.allow=always -c protocol.allow=never submodule update
+}
+
+build() {
+  local meson_options=(
+    --buildtype=release
+    -Dpython.bytecompile=2
+    -Db_pie=false
+    -D debug=false
+    -D strip=true
+    -D b_lto=true
+    -D errorlogs=false
+  )
+  arch-meson $pkgname build "${meson_options[@]}"
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package() {
+  meson install -C build --no-rebuild --destdir "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:

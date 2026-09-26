@@ -3,21 +3,21 @@
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 # Contributor: Jaroslav Lichtblau <dragonlord@aur.archlinux.org>
 # Contributor: Adam Hani Schakaki (krzd) <krzd@krzd.net>
+# Maintainer: Terromur <terromuroz@proton.me>
 
 pkgbase=gsettings-desktop-schemas
 pkgname=(
   gsettings-desktop-schemas
   gsettings-system-schemas
 )
-pkgver=48alpha
+pkgver=51.0
 pkgrel=1
 pkgdesc="GSettings schemas for GNOME"
 url="https://gitlab.gnome.org/GNOME/gsettings-desktop-schemas"
 arch=(any)
 license=(LGPL-2.1-or-later)
 makedepends=(
-  adobe-source-code-pro-fonts
-  cantarell-fonts
+  adwaita-fonts
   dconf
   git
   glib2-devel
@@ -25,14 +25,23 @@ makedepends=(
   meson
 )
 source=("git+$url.git#tag=${pkgver/[a-z]/.&}")
-b2sums=('7134d6cb620e34e4181da08fb41aad259e5247e31ac4f8b60714d612670fc961310a458eaea62b1dacb04c7cbf42bd300b1e1fbfb63e98529036230748544087')
+b2sums=('1615914f9d1b49d34fefff0cecfa5c58bf4c1f171a94c0afb321b9ee838ab8ad0b18c6a4dc01e4cee7b70b2d522de48ae6293d6c8ee7a6b6e8bbe39fb6cff473')
 
 prepare() {
   cd $pkgbase
 }
 
 build() {
-  arch-meson $pkgbase build
+  local meson_options=(
+    --buildtype=release
+    -Dpython.bytecompile=2
+    -Db_pie=false
+    -D debug=false
+    -D strip=true
+    -D b_lto=true
+    -D errorlogs=false
+  )
+  arch-meson $pkgbase build "${meson_options[@]}"
   meson compile -C build
 }
 
@@ -54,12 +63,11 @@ package_gsettings-desktop-schemas() {
   pkgdesc+=" desktop components"
   depends=(
     "gsettings-system-schemas=$pkgver-$pkgrel"
-    adobe-source-code-pro-fonts
-    cantarell-fonts
+    adwaita-fonts
     dconf
   )
 
-  meson install -C build --destdir "$pkgdir"
+  meson install -C build --no-rebuild --destdir "$pkgdir"
 
   cd "$pkgdir"
   _pick system usr/share/glib-2.0/schemas/org.gnome.desktop.enums.xml

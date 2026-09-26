@@ -1,0 +1,146 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Maintainer: Fabian Bornschein <fabiscafe@archlinux.org>
+# Contributor: Ionut Biru <ibiru@archlinux.org>
+# Contributor: Flamelab <panosfilip@gmail.com>
+# Maintainer: Terromur <terromuroz@proton.me>
+
+pkgbase=gnome-shell-git
+pkgname=(
+  gnome-shell-git
+)
+pkgver=51.0+19+g209865cf8
+pkgrel=2
+epoch=1
+pkgdesc="Next generation desktop shell"
+url="https://gitlab.gnome.org/GNOME/gnome-shell"
+arch=(x86_64)
+license=(GPL-3.0-or-later)
+depends=(
+  accountsservice
+  at-spi2-core
+  bash
+  cairo
+  dconf
+  gcr-4
+  gdk-pixbuf2
+  gjs
+  glib2
+  glibc
+  gnome-autoar
+  gnome-desktop-4
+  gnome-session
+  gnome-settings-daemon
+  graphene
+  gsettings-desktop-schemas
+  gtk4
+  hicolor-icon-theme
+  ibus
+  json-glib
+  libadwaita
+  libcanberra-pulse
+  libgcc
+  libgdm-git
+  libglvnd
+  libgweather-4
+  libibus
+  libical
+  libnm
+  libnma-gtk4
+  libpipewire
+  libpulse
+  libsecret
+  libsoup3
+  libx11
+  libxext
+  libxfixes
+  mutter-git
+  pango
+  polkit
+  systemd-libs
+  unzip
+  upower
+  webkitgtk-6.0
+)
+makedepends=(
+  asciidoc
+  bash-completion
+  evolution-data-server
+  gi-docgen
+  git
+  glib2-devel
+  gnome-keybindings-git
+  gobject-introspection
+  meson
+  python-docutils
+  sassc
+)
+source=(
+  # GNOME Shell tags use SSH signatures which makepkg doesn't understand
+  "git+https://gitlab.gnome.org/GNOME/gnome-shell.git"
+  "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git#commit=0a4eda0cdc2deb352bebc70ec697c42af46094e4"
+  "git+https://github.com/ptomato/jasmine-gjs.git#commit=856465dddbd92e82e574891e1ebc79e17d7b708a"
+  "git+https://gitlab.gnome.org/GNOME/libshew.git#commit=d16afc40412b565d2bbecf80335f54a19a978009"
+)
+b2sums=('SKIP'
+        'SKIP'
+        'SKIP'
+        'SKIP')
+
+pkgver() {
+  cd gnome-shell
+  git describe --tags | sed 's/^v//; s/-/+/g'
+}
+
+prepare() {
+  # Inject gvc
+  ln -s libgnome-volume-control gvc
+}
+
+build() {
+  local meson_options=(
+    -D gtk_doc=false
+    -D tests=false
+    --buildtype=release
+    -Dpython.bytecompile=2
+    -Db_pie=false
+    -D debug=false
+    -D strip=true
+    -D b_lto=true
+    -D errorlogs=false
+    -D camera_monitor=false
+    -D man=false
+  )
+
+  CFLAGS="${CFLAGS/-O2/-O3} -fno-semantic-interposition"
+  LDFLAGS+=" -Wl,-Bsymbolic-functions"
+
+  # Inject subprojects
+  export MESON_PACKAGE_CACHE_DIR="$srcdir"
+
+  arch-meson gnome-shell build "${meson_options[@]}"
+  meson compile -C build
+}
+
+package_gnome-shell-git() {
+  depends+=(libmutter-51.so)
+  provides=(gnome-shell)
+  conflicts=(gnome-shell)
+  optdepends=(
+    'evolution-data-server: Evolution calendar integration'
+    'gnome-bluetooth-3.0: Bluetooth support'
+    'gnome-control-center-git: System settings'
+    'gnome-disk-utility: Mount with keyfiles'
+    'gnome-extensions-app: Manage gnome-shell extensions'
+    'gst-plugin-pipewire: Screen recording'
+    'gst-plugins-good: Screen recording'
+    'power-profiles-daemon: Power profile switching'
+    'python-gobject: gnome-shell-test-tool performance tester'
+    'python-simplejson: gnome-shell-test-tool performance tester'
+    'switcheroo-control: Multi-GPU support'
+  )
+  groups=(gnome)
+
+  meson install -C build --no-rebuild --destdir "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:

@@ -1,0 +1,136 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Maintainer: Fabian Bornschein <fabiscafe@archlinux.org>
+# Contributor: Jan de Groot <jan@archlinux.org>
+# Maintainer: Terromur <terromuroz@proton.me>
+
+pkgbase=gnome-desktop
+pkgname=(
+  gnome-desktop-common
+  gnome-desktop
+  gnome-desktop-4
+)
+pkgver=51.0
+pkgrel=2
+epoch=1
+pkgdesc="Provides API shared by several apps on the GNOME desktop"
+url="https://gitlab.gnome.org/GNOME/gnome-desktop"
+arch=(x86_64)
+license=(
+  GPL-2.0-or-later
+  LGPL-2.0-or-later
+)
+depends=(
+  bubblewrap
+  cairo
+  gdk-pixbuf2
+  glib2
+  glibc
+  gsettings-desktop-schemas
+  iso-codes
+  libgcc
+  libseccomp
+  libxkbcommon
+  systemd-libs
+  xkeyboard-config
+)
+makedepends=(
+  git
+  glib2-devel
+  gobject-introspection
+  gtk-doc
+  gtk3
+  gtk4
+  meson
+  systemd
+  yelp-tools
+)
+checkdepends=(xorg-server-xvfb)
+source=(
+  "git+https://gitlab.gnome.org/GNOME/gnome-desktop.git#tag=${pkgver/[a-z]/.&}"
+  "git+https://github.com/nayuki/QR-Code-generator.git#commit=8329a7108fc22be3e1eec0a9f9318978579e3621")
+b2sums=('020fdca37b46b9ead69bbabd118247ae572f3741630c06545423df29cca936323c08ee158baf58b0288d7ee613c84736f3f80aff69004935529c5b6713a3fda5'
+        '6edb307fd99bf028177423b6c58925a276139b0f1f44d61026a9d59d0007984564eb187a8f5d612ba3d53f94b8b48eb5b5015eadb9d0b1f50554bdad1ef386a1')
+
+prepare() {
+  # Inject gvc
+  ln -s QR-Code-generator qrcodegen
+
+  cd $pkgbase
+}
+
+build() {
+  local meson_options=(
+    -D debug_tools=false
+    -D gtk_doc=false
+    --buildtype=release
+    -Dpython.bytecompile=2
+    -Db_pie=false
+    -D debug=false
+    -D strip=true
+    -D b_lto=true
+    -D errorlogs=false
+    -D desktop_docs=false
+    -D installed_tests=false
+  )
+
+  # Inject subprojects
+  export MESON_PACKAGE_CACHE_DIR="$srcdir"
+
+  arch-meson $pkgbase build "${meson_options[@]}"
+  meson compile -C build
+}
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+package_gnome-desktop-common() {
+  pkgdesc+=" (common files)"
+  depends=()
+
+  meson install -C build --no-rebuild --destdir "$pkgdir"
+
+  cd "$pkgdir"
+
+  _pick gtk3 usr/include/gnome-desktop-3.0
+  _pick gtk3 usr/lib/libgnome-desktop-3.so*
+  _pick gtk3 usr/lib/pkgconfig/gnome-desktop-3.0.pc
+  _pick gtk3 usr/lib/girepository-1.0/GnomeDesktop-3.0.typelib
+  _pick gtk3 usr/share/gir-1.0/GnomeDesktop-3.0.gir
+
+  _pick gtk4 usr/include/gnome-desktop-4.0
+  _pick gtk4 usr/lib/libgnome-*-4.so*
+  _pick gtk4 usr/lib/pkgconfig/gnome-*-4.pc
+  _pick gtk4 usr/lib/girepository-1.0/Gnome*-4.0.typelib
+  _pick gtk4 usr/share/gir-1.0/Gnome*-4.0.gir
+}
+
+package_gnome-desktop() {
+  pkgdesc+=" using GTK 3"
+  depends+=(
+    "gnome-desktop-common=$epoch:$pkgver-$pkgrel"
+    gtk3
+  )
+  provides=(libgnome-desktop-3.so)
+
+  mv gtk3/* "$pkgdir"
+}
+
+package_gnome-desktop-4() {
+  pkgdesc+=" using GTK 4"
+  depends+=(
+    "gnome-desktop-common=$epoch:$pkgver-$pkgrel"
+    gtk4
+  )
+  provides=(libgnome-{bg,desktop,qr,qr-gtk}-4.so)
+
+  mv gtk4/* "$pkgdir"
+}
+
+# vim:set sw=2 sts=-1 et:
