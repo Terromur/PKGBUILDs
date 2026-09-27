@@ -1,0 +1,28 @@
+# Maintainer: Vasiliy Stelmachenok <ventureo@yandex.ru>
+# Maintainer: Terromur <terromuroz@proton.me>
+pkgname=firefox-settings
+pkgver=20251210
+pkgrel=1
+pkgdesc='My settings for Firefox browser'
+depends=('xdg-desktop-portal')
+conflicts=('cachyos-firefox-settings')
+arch=('any')
+backup=('etc/firefox/policies/policies.json')
+url="https://github.com/ventureoo/PKGBUILDs"
+source=(
+    pure.js
+    policies.json
+)
+sha256sums=(
+    'SKIP'
+    '2f2ea4c5926f0a9235b9560381b4b308990be880feca13d29d9402c7177fa5b4'
+)
+
+pkgver() {
+    date +%Y%m%d
+}
+
+package() {
+    install -Dm644 pure.js "$pkgdir/usr/lib/firefox/browser/defaults/preferences/pure.js"
+    install -Dm644 policies.json "$pkgdir/etc/firefox/policies/policies.json"
+}
