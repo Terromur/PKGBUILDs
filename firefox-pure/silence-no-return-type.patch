@@ -1,0 +1,696 @@
+diff -rup a/gfx/skia/skia/include/codec/SkEncodedOrigin.h b/gfx/skia/skia/include/codec/SkEncodedOrigin.h
+--- a/gfx/skia/skia/include/codec/SkEncodedOrigin.h	2026-07-16 18:13:40.000000000 +0200
++++ b/gfx/skia/skia/include/codec/SkEncodedOrigin.h	2026-07-18 12:59:37.462584783 +0200
+@@ -41,6 +41,7 @@ static inline SkMatrix SkEncodedOriginTo
+         case  kLeftBottom_SkEncodedOrigin: return SkMatrix::MakeAll( 0,  1, 0, -1,  0, h, 0, 0, 1);
+     }
+     SK_ABORT("Unexpected origin");
++    SkUNREACHABLE;
+ }
+ 
+ /**
+diff -rup a/gfx/skia/skia/include/private/gpu/ganesh/GrTypesPriv.h b/gfx/skia/skia/include/private/gpu/ganesh/GrTypesPriv.h
+--- a/gfx/skia/skia/include/private/gpu/ganesh/GrTypesPriv.h	2026-07-16 18:13:40.000000000 +0200
++++ b/gfx/skia/skia/include/private/gpu/ganesh/GrTypesPriv.h	2026-07-18 12:53:40.982863915 +0200
+@@ -301,6 +301,7 @@ static inline bool GrTextureTypeHasRestr
+         default:
+             SK_ABORT("Unexpected texture type");
+     }
++    SkUNREACHABLE;
+ }
+ 
+ //////////////////////////////////////////////////////////////////////////////
+diff -rup a/gfx/skia/skia/src/core/SkDescriptor.cpp b/gfx/skia/skia/src/core/SkDescriptor.cpp
+--- a/gfx/skia/skia/src/core/SkDescriptor.cpp	2026-07-16 18:13:40.000000000 +0200
++++ b/gfx/skia/skia/src/core/SkDescriptor.cpp	2026-07-18 12:53:40.982987240 +0200
+@@ -26,6 +26,7 @@ std::unique_ptr<SkDescriptor> SkDescript
+ void SkDescriptor::operator delete(void* p) { ::operator delete(p); }
+ void* SkDescriptor::operator new(size_t) {
+     SK_ABORT("Descriptors are created with placement new.");
++    SkUNREACHABLE;
+ }
+ 
+ void SkDescriptor::flatten(SkWriteBuffer& buffer) const {
+diff -rup a/gfx/skia/skia/src/core/SkGeometry.h b/gfx/skia/skia/src/core/SkGeometry.h
+--- a/gfx/skia/skia/src/core/SkGeometry.h	2026-07-16 18:13:40.000000000 +0200
++++ b/gfx/skia/skia/src/core/SkGeometry.h	2026-07-18 12:53:40.983065483 +0200
+@@ -284,6 +284,7 @@ static inline bool SkCubicIsDegenerate(S
+             return true;
+     }
+     SK_ABORT("Invalid SkCubicType");
++    SkUNREACHABLE;
+ }
+ 
+ static inline const char* SkCubicTypeName(SkCubicType type) {
+@@ -296,6 +297,7 @@ static inline const char* SkCubicTypeNam
+         case SkCubicType::kLineOrPoint: return "kLineOrPoint";
+     }
+     SK_ABORT("Invalid SkCubicType");
++    SkUNREACHABLE;
+ }
+ 
+ /** Returns the cubic classification.
+diff -rup a/gfx/skia/skia/src/core/SkTextBlob.cpp b/gfx/skia/skia/src/core/SkTextBlob.cpp
+--- a/gfx/skia/skia/src/core/SkTextBlob.cpp	2026-07-16 18:13:41.000000000 +0200
++++ b/gfx/skia/skia/src/core/SkTextBlob.cpp	2026-07-18 12:53:40.983169697 +0200
+@@ -212,6 +212,7 @@ void SkTextBlob::operator delete(void* p
+ 
+ void* SkTextBlob::operator new(size_t) {
+     SK_ABORT("All blobs are created by placement new.");
++    SkUNREACHABLE;
+ }
+ 
+ void* SkTextBlob::operator new(size_t, void* p) {
+diff -rup a/gfx/skia/skia/src/core/SkTypeface_remote.h b/gfx/skia/skia/src/core/SkTypeface_remote.h
+--- a/gfx/skia/skia/src/core/SkTypeface_remote.h	2026-07-16 18:13:40.000000000 +0200
++++ b/gfx/skia/skia/src/core/SkTypeface_remote.h	2026-07-18 12:53:40.983257540 +0200
+@@ -108,12 +108,14 @@ public:
+     bool isLogging() const {return fIsLogging;}
+ 
+ protected:
+-    int onGetUPEM() const override { SK_ABORT("Should never be called."); }
++    int onGetUPEM() const override { SK_ABORT("Should never be called."); SkUNREACHABLE; }
+     std::unique_ptr<SkStreamAsset> onOpenStream(int* ttcIndex) const override {
+         SK_ABORT("Should never be called.");
++        SkUNREACHABLE;
+     }
+     sk_sp<SkTypeface> onMakeClone(const SkFontArguments& args) const override {
+         SK_ABORT("Should never be called.");
++        SkUNREACHABLE;
+     }
+     bool onGlyphMaskNeedsCurrentColor() const override {
+         return fGlyphMaskNeedsCurrentColor;
+@@ -121,9 +123,11 @@ protected:
+     int onGetVariationDesignPosition(
+                          SkSpan<SkFontArguments::VariationPosition::Coordinate>) const override {
+         SK_ABORT("Should never be called.");
++        SkUNREACHABLE;
+     }
+     int onGetVariationDesignParameters(SkSpan<SkFontParameters::Variation::Axis>) const override {
+         SK_ABORT("Should never be called.");
++        SkUNREACHABLE;
+     }
+     void onGetFamilyName(SkString* familyName) const override {
+         // Used by SkStrikeCache::DumpMemoryStatistics.
+@@ -131,15 +135,19 @@ protected:
+     }
+     bool onGetPostScriptName(SkString*) const override {
+         SK_ABORT("Should never be called.");
++        SkUNREACHABLE;
+     }
+     SkTypeface::LocalizedStrings* onCreateFamilyNameIterator() const override {
+         SK_ABORT("Should never be called.");
++        SkUNREACHABLE;
+     }
+     int onGetTableTags(SkSpan<SkFontTableTag>) const override {
+         SK_ABORT("Should never be called.");
++        SkUNREACHABLE;
+     }
+     size_t onGetTableData(SkFontTableTag, size_t offset, size_t length, void* data) const override {
+         SK_ABORT("Should never be called.");
++        SkUNREACHABLE;
+     }
+     std::unique_ptr<SkScalerContext> onCreateScalerContext(
+         const SkScalerContextEffects& effects, const SkDescriptor* desc) const override
+@@ -174,6 +182,7 @@ protected:
+ 
+     void* onGetCTFontRef() const override {
+         SK_ABORT("Should never be called.");
++        SkUNREACHABLE;
+     }
+ 
+ private:
+diff -rup a/gfx/skia/skia/src/sksl/SkSLOperator.cpp b/gfx/skia/skia/src/sksl/SkSLOperator.cpp
+--- a/gfx/skia/skia/src/sksl/SkSLOperator.cpp	2026-07-16 18:13:41.000000000 +0200
++++ b/gfx/skia/skia/src/sksl/SkSLOperator.cpp	2026-07-18 12:53:40.983302182 +0200
+@@ -51,7 +51,7 @@ OperatorPrecedence Operator::getBinaryPr
+         case Kind::BITWISEXOREQ: // fall through
+         case Kind::BITWISEOREQ:  return OperatorPrecedence::kAssignment;
+         case Kind::COMMA:        return OperatorPrecedence::kSequence;
+-        default: SK_ABORT("unsupported binary operator");
++        default: SkUNREACHABLE;
+     }
+ }
+ 
+diff -rup a/gfx/skia/skia/src/sksl/ir/SkSLType.h b/gfx/skia/skia/src/sksl/ir/SkSLType.h
+--- a/gfx/skia/skia/src/sksl/ir/SkSLType.h	2026-07-16 18:13:41.000000000 +0200
++++ b/gfx/skia/skia/src/sksl/ir/SkSLType.h	2026-07-18 12:53:40.983350133 +0200
+@@ -474,6 +474,7 @@ public:
+ 
+     virtual SkSpan<const Field> fields() const {
+         SK_ABORT("Internal error: not a struct");
++        SkUNREACHABLE;
+     }
+ 
+     /**
+diff -rup a/gfx/skia/skia/src/utils/SkShadowUtils.cpp b/gfx/skia/skia/src/utils/SkShadowUtils.cpp
+--- a/gfx/skia/skia/src/utils/SkShadowUtils.cpp	2026-07-16 18:13:40.000000000 +0200
++++ b/gfx/skia/skia/src/utils/SkShadowUtils.cpp	2026-07-18 12:53:40.983411406 +0200
+@@ -142,6 +142,7 @@ struct SpotVerticesFactory {
+                 return true;
+         }
+         SK_ABORT("Uninitialized occluder type?");
++        SkUNREACHABLE;
+     }
+ 
+     sk_sp<SkVertices> makeVertices(const SkPath& path, const SkMatrix& ctm,
+diff -rup a/intl/icu/source/i18n/number_rounding.cpp b/intl/icu/source/i18n/number_rounding.cpp
+--- a/intl/icu/source/i18n/number_rounding.cpp	2026-07-16 18:13:41.000000000 +0200
++++ b/intl/icu/source/i18n/number_rounding.cpp	2026-07-18 12:53:40.983480888 +0200
+@@ -287,6 +287,7 @@ FractionPrecision Precision::constructFr
+     settings.fMaxFrac = static_cast<digits_t>(maxFrac);
+     settings.fMinSig = -1;
+     settings.fMaxSig = -1;
++    settings.fPriority = UNUM_ROUNDING_PRIORITY_RELAXED;
+     PrecisionUnion union_{};
+     union_.fracSig = settings;
+     return {RND_FRACTION, union_};
+@@ -298,6 +299,7 @@ Precision Precision::constructSignifican
+     settings.fMaxFrac = -1;
+     settings.fMinSig = static_cast<digits_t>(minSig);
+     settings.fMaxSig = static_cast<digits_t>(maxSig);
++    settings.fPriority = UNUM_ROUNDING_PRIORITY_RELAXED;
+     PrecisionUnion union_{};
+     union_.fracSig = settings;
+     return {RND_SIGNIFICANT, union_};
+diff -rup a/third_party/libwebrtc/api/adaptation/resource.cc b/third_party/libwebrtc/api/adaptation/resource.cc
+--- a/third_party/libwebrtc/api/adaptation/resource.cc	2026-07-16 18:13:57.000000000 +0200
++++ b/third_party/libwebrtc/api/adaptation/resource.cc	2026-07-18 12:54:18.155548220 +0200
+@@ -22,6 +22,7 @@ const char* ResourceUsageStateToString(R
+       return "kUnderuse";
+   }
+   RTC_CHECK_NOTREACHED();
++  return nullptr;
+ }
+ 
+ ResourceListener::~ResourceListener() {}
+diff -rup a/third_party/libwebrtc/api/rtp_parameters.cc b/third_party/libwebrtc/api/rtp_parameters.cc
+--- a/third_party/libwebrtc/api/rtp_parameters.cc	2026-07-16 18:59:08.000000000 +0200
++++ b/third_party/libwebrtc/api/rtp_parameters.cc	2026-07-18 12:54:18.155592091 +0200
+@@ -79,6 +79,7 @@ const char* DegradationPreferenceToStrin
+       return "balanced";
+   }
+   RTC_CHECK_NOTREACHED();
++  return "";
+ }
+ 
+ const double kDefaultBitratePriority = 1.0;
+diff -rup a/third_party/libwebrtc/api/video/video_frame_buffer.cc b/third_party/libwebrtc/api/video/video_frame_buffer.cc
+--- a/third_party/libwebrtc/api/video/video_frame_buffer.cc	2026-07-16 18:13:57.000000000 +0200
++++ b/third_party/libwebrtc/api/video/video_frame_buffer.cc	2026-07-18 12:54:18.155635493 +0200
+@@ -125,6 +125,8 @@ const char* VideoFrameBufferTypeToString
+     default:
+       RTC_DCHECK_NOTREACHED();
+   }
++  RTC_DCHECK_NOTREACHED();
++  return nullptr;
+ }
+ 
+ int I420BufferInterface::ChromaWidth() const {
+diff -rup a/third_party/libwebrtc/api/video_codecs/video_codec.cc b/third_party/libwebrtc/api/video_codecs/video_codec.cc
+--- a/third_party/libwebrtc/api/video_codecs/video_codec.cc	2026-07-16 18:13:57.000000000 +0200
++++ b/third_party/libwebrtc/api/video_codecs/video_codec.cc	2026-07-18 12:54:18.155681695 +0200
+@@ -158,6 +158,7 @@ const char* CodecTypeToPayloadString(Vid
+       return kPayloadNameH265;
+   }
+   RTC_CHECK_NOTREACHED();
++  return "";
+ }
+ 
+ VideoCodecType PayloadStringToCodecType(const std::string& name) {
+diff -rup a/third_party/libwebrtc/api/video_codecs/video_encoder_software_fallback_wrapper.cc b/third_party/libwebrtc/api/video_codecs/video_encoder_software_fallback_wrapper.cc
+--- a/third_party/libwebrtc/api/video_codecs/video_encoder_software_fallback_wrapper.cc	2026-07-16 18:13:56.000000000 +0200
++++ b/third_party/libwebrtc/api/video_codecs/video_encoder_software_fallback_wrapper.cc	2026-07-18 12:54:18.155732397 +0200
+@@ -192,6 +192,7 @@ class VideoEncoderSoftwareFallbackWrappe
+         return fallback_encoder_.get();
+     }
+     RTC_CHECK_NOTREACHED();
++    return nullptr;
+   }
+ 
+   // Updates encoder with last observed parameters, such as callbacks, rates,
+@@ -390,6 +391,7 @@ int32_t VideoEncoderSoftwareFallbackWrap
+       return fallback_encoder_->Encode(frame, frame_types);
+   }
+   RTC_CHECK_NOTREACHED();
++  return WEBRTC_VIDEO_CODEC_ERROR;
+ }
+ 
+ int32_t VideoEncoderSoftwareFallbackWrapper::EncodeWithMainEncoder(
+diff -rup a/third_party/libwebrtc/call/adaptation/video_stream_adapter.cc b/third_party/libwebrtc/call/adaptation/video_stream_adapter.cc
+--- a/third_party/libwebrtc/call/adaptation/video_stream_adapter.cc	2026-07-16 18:59:08.000000000 +0200
++++ b/third_party/libwebrtc/call/adaptation/video_stream_adapter.cc	2026-07-18 12:54:18.155796999 +0200
+@@ -177,6 +177,7 @@ const char* Adaptation::StatusToString(A
+       return "kRejectedByConstraint";
+   }
+   RTC_CHECK_NOTREACHED();
++  return "";
+ }
+ 
+ Adaptation::Adaptation(int validation_id,
+@@ -401,6 +402,7 @@ VideoStreamAdapter::RestrictionsOrState
+       return Adaptation::Status::kAdaptationDisabled;
+   }
+   RTC_CHECK_NOTREACHED();
++  return Adaptation::Status::kAdaptationDisabled;
+ }
+ 
+ Adaptation VideoStreamAdapter::GetAdaptationDown() {
+@@ -481,6 +483,7 @@ VideoStreamAdapter::GetAdaptationDownSte
+       return Adaptation::Status::kAdaptationDisabled;
+   }
+   RTC_CHECK_NOTREACHED();
++  return Adaptation::Status::kAdaptationDisabled;
+ }
+ 
+ VideoStreamAdapter::RestrictionsOrState VideoStreamAdapter::DecreaseResolution(
+@@ -634,6 +637,8 @@ Adaptation VideoStreamAdapter::GetAdaptD
+     }
+   }
+   RTC_CHECK_NOTREACHED();
++  return RestrictionsOrStateToAdaptation(
++         Adaptation::Status::kAdaptationDisabled, input_state);
+ }
+ 
+ VideoStreamAdapter::RestrictionsOrState
+diff -rup a/third_party/libwebrtc/call/rtp_payload_params.cc b/third_party/libwebrtc/call/rtp_payload_params.cc
+--- a/third_party/libwebrtc/call/rtp_payload_params.cc	2026-07-16 18:13:57.000000000 +0200
++++ b/third_party/libwebrtc/call/rtp_payload_params.cc	2026-07-18 12:54:18.155868352 +0200
+@@ -425,7 +425,8 @@ std::optional<FrameDependencyStructure>
+     case VideoCodecType::kVideoCodecH265:
+       return std::nullopt;
+   }
+-  RTC_DCHECK_NOTREACHED() << "Unsupported codec.";
++  //RTC_DCHECK_NOTREACHED() << "Unsupported codec.";
++  RTC_CHECK_NOTREACHED();
+ }
+ 
+ void RtpPayloadParams::GenericToGeneric(int64_t frame_id,
+diff -rup a/third_party/libwebrtc/call/video_send_stream.cc b/third_party/libwebrtc/call/video_send_stream.cc
+--- a/third_party/libwebrtc/call/video_send_stream.cc	2026-07-16 18:13:58.000000000 +0200
++++ b/third_party/libwebrtc/call/video_send_stream.cc	2026-07-18 12:54:18.155914673 +0200
+@@ -34,6 +34,7 @@ const char* StreamTypeToString(VideoSend
+       return "flexfec";
+   }
+   RTC_CHECK_NOTREACHED();
++  return "";
+ }
+ 
+ }  // namespace
+diff -rup a/third_party/libwebrtc/media/base/codec_comparators.cc b/third_party/libwebrtc/media/base/codec_comparators.cc
+--- a/third_party/libwebrtc/media/base/codec_comparators.cc	2026-07-16 18:59:08.000000000 +0200
++++ b/third_party/libwebrtc/media/base/codec_comparators.cc	2026-07-18 12:54:18.155950255 +0200
+@@ -330,6 +330,7 @@ bool MatchesWithCodecRules(const Codec&
+         return IsSameCodecSpecific(left_codec.name, left_codec.params,
+                                    right_codec.name, right_codec.params);
+     }
++    return false;
+   };
+ 
+   return matches_id && matches_type_specific();
+diff -rup a/third_party/libwebrtc/modules/audio_processing/agc2/clipping_predictor.cc b/third_party/libwebrtc/modules/audio_processing/agc2/clipping_predictor.cc
+--- a/third_party/libwebrtc/modules/audio_processing/agc2/clipping_predictor.cc	2026-07-16 18:13:57.000000000 +0200
++++ b/third_party/libwebrtc/modules/audio_processing/agc2/clipping_predictor.cc	2026-07-18 12:54:18.155996136 +0200
+@@ -387,7 +387,7 @@ std::unique_ptr<ClippingPredictor> Creat
+           config.reference_window_delay, config.clipping_threshold,
+           /*adaptive_step_estimation=*/false);
+   }
+-  RTC_DCHECK_NOTREACHED();
++  RTC_CHECK_NOTREACHED();
+ }
+ 
+ }  // namespace webrtc
+diff -rup a/third_party/libwebrtc/modules/audio_processing/agc2/input_volume_stats_reporter.cc b/third_party/libwebrtc/modules/audio_processing/agc2/input_volume_stats_reporter.cc
+--- a/third_party/libwebrtc/modules/audio_processing/agc2/input_volume_stats_reporter.cc	2026-07-16 18:13:57.000000000 +0200
++++ b/third_party/libwebrtc/modules/audio_processing/agc2/input_volume_stats_reporter.cc	2026-07-18 12:57:26.076221003 +0200
+@@ -48,6 +48,7 @@ constexpr absl::string_view MetricNamePr
+     case InputVolumeType::kRecommended:
+       return "WebRTC.Audio.Apm.RecommendedInputVolume.";
+   }
++  RTC_CHECK_NOTREACHED();
+ }
+ 
+ metrics::Histogram* CreateVolumeHistogram(InputVolumeType input_volume_type) {
+diff -rup a/third_party/libwebrtc/modules/audio_processing/agc2/rnn_vad/rnn_fc.cc b/third_party/libwebrtc/modules/audio_processing/agc2/rnn_vad/rnn_fc.cc
+--- a/third_party/libwebrtc/modules/audio_processing/agc2/rnn_vad/rnn_fc.cc	2026-07-16 18:13:57.000000000 +0200
++++ b/third_party/libwebrtc/modules/audio_processing/agc2/rnn_vad/rnn_fc.cc	2026-07-18 12:54:18.156098610 +0200
+@@ -65,6 +65,8 @@ FunctionView<float(float)> GetActivation
+     case ActivationFunction::kSigmoidApproximated:
+       return ::rnnoise::SigmoidApproximated;
+   }
++  // supposed to be never reached apparently therefore returning bogus
++  return ::rnnoise::TansigApproximated;
+ }
+ 
+ }  // namespace
+diff -rup a/third_party/libwebrtc/modules/audio_processing/audio_processing_impl.cc b/third_party/libwebrtc/modules/audio_processing/audio_processing_impl.cc
+--- a/third_party/libwebrtc/modules/audio_processing/audio_processing_impl.cc	2026-07-16 18:13:58.000000000 +0200
++++ b/third_party/libwebrtc/modules/audio_processing/audio_processing_impl.cc	2026-07-18 12:54:18.156173363 +0200
+@@ -117,6 +117,7 @@ GainControl::Mode Agc1ConfigModeToInterf
+       return GainControl::kFixedDigital;
+   }
+   RTC_CHECK_NOTREACHED();
++  return GainControl::kAdaptiveAnalog;
+ }
+ 
+ bool MinimizeProcessingForUnusedOutput(const FieldTrialsView& field_trials) {
+@@ -184,7 +185,7 @@ int AudioFormatValidityToErrorCode(Audio
+     case AudioFormatValidity::kInvalidChannelCount:
+       return AudioProcessing::kBadNumberChannelsError;
+   }
+-  RTC_DCHECK(false);
++  RTC_CHECK_NOTREACHED();
+ }
+ 
+ // Returns an AudioProcessing::Error together with the best possible option for
+@@ -2000,6 +2001,7 @@ void AudioProcessingImpl::InitializeNois
+               return NsConfig::SuppressionLevel::k21dB;
+           }
+           RTC_CHECK_NOTREACHED();
++	  return NsConfig::SuppressionLevel::k6dB;
+         };
+ 
+     NsConfig cfg;
+diff -rup a/third_party/libwebrtc/modules/congestion_controller/goog_cc/goog_cc_network_control.cc b/third_party/libwebrtc/modules/congestion_controller/goog_cc/goog_cc_network_control.cc
+--- a/third_party/libwebrtc/modules/congestion_controller/goog_cc/goog_cc_network_control.cc	2026-07-16 18:13:57.000000000 +0200
++++ b/third_party/libwebrtc/modules/congestion_controller/goog_cc/goog_cc_network_control.cc	2026-07-18 12:54:18.156276697 +0200
+@@ -85,6 +85,8 @@ BandwidthLimitedCause GetBandwidthLimite
+     case LossBasedState::kDelayBasedEstimate:
+       return BandwidthLimitedCause::kDelayBasedLimited;
+   }
++  // just return something by default
++  return BandwidthLimitedCause::kLossLimitedBwe;
+ }
+ 
+ }  // namespace
+diff -rup a/third_party/libwebrtc/modules/congestion_controller/goog_cc_scream_network_controller/goog_cc_scream_network_controller.h b/third_party/libwebrtc/modules/congestion_controller/goog_cc_scream_network_controller/goog_cc_scream_network_controller.h
+--- a/third_party/libwebrtc/modules/congestion_controller/goog_cc_scream_network_controller/goog_cc_scream_network_controller.h	2026-07-16 18:13:57.000000000 +0200
++++ b/third_party/libwebrtc/modules/congestion_controller/goog_cc_scream_network_controller/goog_cc_scream_network_controller.h	2026-07-18 12:54:18.156323198 +0200
+@@ -63,6 +63,7 @@ class GoogCcScreamNetworkController : pu
+       case Mode::kScreamAfterCe:
+         return true;
+     }
++    return false;
+   }
+ 
+  private:
+diff -rup a/third_party/libwebrtc/modules/desktop_capture/linux/wayland/screencast_portal.cc b/third_party/libwebrtc/modules/desktop_capture/linux/wayland/screencast_portal.cc
+--- a/third_party/libwebrtc/modules/desktop_capture/linux/wayland/screencast_portal.cc	2026-07-16 18:59:08.000000000 +0200
++++ b/third_party/libwebrtc/modules/desktop_capture/linux/wayland/screencast_portal.cc	2026-07-18 12:54:18.156363010 +0200
+@@ -56,6 +56,7 @@ ScreenCastPortal::CaptureSourceType Scre
+     case CaptureType::kAnyScreenContent:
+       return ScreenCastPortal::CaptureSourceType::kAnyScreenContent;
+   }
++  RTC_CHECK_NOTREACHED();
+ }
+ 
+ ScreenCastPortal::ScreenCastPortal(CaptureType type,
+diff -rup a/third_party/libwebrtc/modules/pacing/bitrate_prober.cc b/third_party/libwebrtc/modules/pacing/bitrate_prober.cc
+--- a/third_party/libwebrtc/modules/pacing/bitrate_prober.cc	2026-07-16 18:13:58.000000000 +0200
++++ b/third_party/libwebrtc/modules/pacing/bitrate_prober.cc	2026-07-18 12:54:18.156407992 +0200
+@@ -91,6 +91,7 @@ bool BitrateProber::ReadyToSetActiveStat
+       return packet_size >=
+              std::min(RecommendedMinProbeSize(), config_.min_packet_size.Get());
+   }
++  RTC_CHECK_NOTREACHED();
+ }
+ 
+ void BitrateProber::OnIncomingPacket(DataSize packet_size) {
+diff -rup a/third_party/libwebrtc/modules/rtp_rtcp/source/create_video_rtp_depacketizer.cc b/third_party/libwebrtc/modules/rtp_rtcp/source/create_video_rtp_depacketizer.cc
+--- a/third_party/libwebrtc/modules/rtp_rtcp/source/create_video_rtp_depacketizer.cc	2026-07-16 18:13:57.000000000 +0200
++++ b/third_party/libwebrtc/modules/rtp_rtcp/source/create_video_rtp_depacketizer.cc	2026-07-18 12:54:18.156432152 +0200
+@@ -47,6 +47,7 @@ std::unique_ptr<VideoRtpDepacketizer> Cr
+       return std::make_unique<VideoRtpDepacketizerGeneric>();
+   }
+   RTC_CHECK_NOTREACHED();
++  return nullptr;
+ }
+ 
+ }  // namespace webrtc
+diff -rup a/third_party/libwebrtc/modules/rtp_rtcp/source/rtcp_packet/congestion_control_feedback.cc b/third_party/libwebrtc/modules/rtp_rtcp/source/rtcp_packet/congestion_control_feedback.cc
+--- a/third_party/libwebrtc/modules/rtp_rtcp/source/rtcp_packet/congestion_control_feedback.cc	2026-07-16 18:13:57.000000000 +0200
++++ b/third_party/libwebrtc/modules/rtp_rtcp/source/rtcp_packet/congestion_control_feedback.cc	2026-07-18 12:54:18.156458943 +0200
+@@ -113,6 +113,7 @@ uint16_t To2BitEcn(EcnMarking ecn_markin
+     case EcnMarking::kCe:
+       return kEcnCe << 13;
+   }
++  return 0; // should not be reached
+ }
+ 
+ EcnMarking ToEcnMarking(uint16_t receive_info) {
+diff -rup a/third_party/libwebrtc/modules/rtp_rtcp/source/rtp_format.cc b/third_party/libwebrtc/modules/rtp_rtcp/source/rtp_format.cc
+--- a/third_party/libwebrtc/modules/rtp_rtcp/source/rtp_format.cc	2026-07-16 18:13:57.000000000 +0200
++++ b/third_party/libwebrtc/modules/rtp_rtcp/source/rtp_format.cc	2026-07-18 12:54:18.156489065 +0200
+@@ -73,6 +73,10 @@ std::unique_ptr<RtpPacketizer> RtpPacket
+                                                     rtp_video_header);
+     }
+   }
++  // The following serves only to shut up the compiler about
++  //    "control reaches end of non-void function":
++  return std::make_unique<RtpPacketizerGeneric>(payload, limits,
++					        rtp_video_header);
+ }
+ 
+ std::vector<int> RtpPacketizer::SplitAboutEqually(
+diff -rup a/third_party/libwebrtc/modules/rtp_rtcp/source/rtp_sender.cc b/third_party/libwebrtc/modules/rtp_rtcp/source/rtp_sender.cc
+--- a/third_party/libwebrtc/modules/rtp_rtcp/source/rtp_sender.cc	2026-07-16 18:59:08.000000000 +0200
++++ b/third_party/libwebrtc/modules/rtp_rtcp/source/rtp_sender.cc	2026-07-18 12:54:18.156525236 +0200
+@@ -149,6 +149,7 @@ bool IsNonVolatile(RTPExtensionType type
+ #endif
+   }
+   RTC_CHECK_NOTREACHED();
++  return false;
+ }
+ 
+ bool HasBweExtension(const RtpHeaderExtensionMap& extensions_map) {
+diff -rup a/third_party/libwebrtc/modules/rtp_rtcp/source/rtp_sender_video.cc b/third_party/libwebrtc/modules/rtp_rtcp/source/rtp_sender_video.cc
+--- a/third_party/libwebrtc/modules/rtp_rtcp/source/rtp_sender_video.cc	2026-07-16 18:13:58.000000000 +0200
++++ b/third_party/libwebrtc/modules/rtp_rtcp/source/rtp_sender_video.cc	2026-07-18 12:54:18.156577198 +0200
+@@ -178,6 +178,7 @@ PacketizationFormat GetPacketizationForm
+     case kVideoCodecGeneric:
+       return PacketizationFormat::kGeneric;
+   }
++  return (PacketizationFormat) 0;
+ }
+ 
+ }  // namespace
+diff -rup a/third_party/libwebrtc/modules/video_coding/codecs/vp8/default_temporal_layers.cc b/third_party/libwebrtc/modules/video_coding/codecs/vp8/default_temporal_layers.cc
+--- a/third_party/libwebrtc/modules/video_coding/codecs/vp8/default_temporal_layers.cc	2026-07-16 18:13:57.000000000 +0200
++++ b/third_party/libwebrtc/modules/video_coding/codecs/vp8/default_temporal_layers.cc	2026-07-18 12:54:18.156635280 +0200
+@@ -119,6 +119,7 @@ size_t BufferToIndex(Vp8BufferReference
+     case Vp8FrameConfig::Vp8BufferReference::kNone:
+       RTC_CHECK_NOTREACHED();
+   }
++  RTC_CHECK_NOTREACHED();
+ }
+ 
+ }  // namespace
+diff -rup a/third_party/libwebrtc/modules/video_coding/codecs/vp8/temporal_layers_checker.cc b/third_party/libwebrtc/modules/video_coding/codecs/vp8/temporal_layers_checker.cc
+--- a/third_party/libwebrtc/modules/video_coding/codecs/vp8/temporal_layers_checker.cc	2026-07-16 18:13:57.000000000 +0200
++++ b/third_party/libwebrtc/modules/video_coding/codecs/vp8/temporal_layers_checker.cc	2026-07-18 12:54:18.156672021 +0200
+@@ -34,6 +34,7 @@ TemporalLayersChecker::CreateTemporalLay
+       return std::make_unique<TemporalLayersChecker>(num_temporal_layers);
+   }
+   RTC_CHECK_NOTREACHED();
++  return nullptr;
+ }
+ 
+ TemporalLayersChecker::TemporalLayersChecker(int num_temporal_layers)
+diff -rup a/third_party/libwebrtc/modules/video_coding/h26x_packet_buffer.cc b/third_party/libwebrtc/modules/video_coding/h26x_packet_buffer.cc
+--- a/third_party/libwebrtc/modules/video_coding/h26x_packet_buffer.cc	2026-07-16 18:13:57.000000000 +0200
++++ b/third_party/libwebrtc/modules/video_coding/h26x_packet_buffer.cc	2026-07-18 12:54:18.156703483 +0200
+@@ -67,6 +67,7 @@ bool BeginningOfIdr(const H26xPacketBuff
+       return contains_idr_nalu && IsFirstPacketOfFragment(h264_header);
+     }
+   }
++  return false;
+ }
+ 
+ bool HasSps(const H26xPacketBuffer::Packet& packet) {
+diff -rup a/third_party/libwebrtc/net/dcsctp/packet/parameter/reconfiguration_response_parameter.cc b/third_party/libwebrtc/net/dcsctp/packet/parameter/reconfiguration_response_parameter.cc
+--- a/third_party/libwebrtc/net/dcsctp/packet/parameter/reconfiguration_response_parameter.cc	2026-07-16 18:13:58.000000000 +0200
++++ b/third_party/libwebrtc/net/dcsctp/packet/parameter/reconfiguration_response_parameter.cc	2026-07-18 12:54:18.156739744 +0200
+@@ -60,6 +60,7 @@ absl::string_view ToString(Reconfigurati
+     case ReconfigurationResponseParameter::Result::kInProgress:
+       return "In progress";
+   }
++  return "Should never be reached";
+ }
+ 
+ std::optional<ReconfigurationResponseParameter>
+diff -rup a/third_party/libwebrtc/net/dcsctp/public/dcsctp_handover_state.cc b/third_party/libwebrtc/net/dcsctp/public/dcsctp_handover_state.cc
+--- a/third_party/libwebrtc/net/dcsctp/public/dcsctp_handover_state.cc	2026-07-16 18:13:57.000000000 +0200
++++ b/third_party/libwebrtc/net/dcsctp/public/dcsctp_handover_state.cc	2026-07-18 12:54:18.156761615 +0200
+@@ -44,6 +44,7 @@ constexpr absl::string_view HandoverUnre
+     case HandoverUnreadinessReason::kPendingStreamResetRequest:
+       return "PENDING_STREAM_RESET_REQUEST";
+   }
++  return "NOTREACHED";
+ }
+ }  // namespace
+ 
+diff -rup a/third_party/libwebrtc/net/dcsctp/rx/data_tracker.cc b/third_party/libwebrtc/net/dcsctp/rx/data_tracker.cc
+--- a/third_party/libwebrtc/net/dcsctp/rx/data_tracker.cc	2026-07-16 18:13:57.000000000 +0200
++++ b/third_party/libwebrtc/net/dcsctp/rx/data_tracker.cc	2026-07-18 12:54:18.156787806 +0200
+@@ -357,6 +357,7 @@ absl::string_view DataTracker::ToString(
+     case AckState::kImmediate:
+       return "IMMEDIATE";
+   }
++  return "NOTREACHED";
+ }
+ 
+ HandoverReadinessStatus DataTracker::GetHandoverReadiness() const {
+diff -rup a/third_party/libwebrtc/net/dcsctp/socket/dcsctp_socket.cc b/third_party/libwebrtc/net/dcsctp/socket/dcsctp_socket.cc
+--- a/third_party/libwebrtc/net/dcsctp/socket/dcsctp_socket.cc	2026-07-16 18:13:57.000000000 +0200
++++ b/third_party/libwebrtc/net/dcsctp/socket/dcsctp_socket.cc	2026-07-18 12:54:18.156849908 +0200
+@@ -261,6 +261,7 @@ bool DcSctpSocket::IsConsistent() const
+       return (tcb_ != nullptr && !t1_init_->is_running() &&
+               !t1_cookie_->is_running() && t2_shutdown_->is_running());
+   }
++  return false; // notreached
+ }
+ 
+ constexpr absl::string_view DcSctpSocket::ToString(DcSctpSocket::State state) {
+@@ -282,6 +283,7 @@ constexpr absl::string_view DcSctpSocket
+     case DcSctpSocket::State::kShutdownAckSent:
+       return "SHUTDOWN_ACK_SENT";
+   }
++  return "NOTREACHED";
+ }
+ 
+ void DcSctpSocket::SetState(State state, absl::string_view reason) {
+@@ -656,6 +658,7 @@ SocketState DcSctpSocket::state() const
+     case State::kShutdownAckSent:
+       return SocketState::kShuttingDown;
+   }
++  return SocketState::kShuttingDown; // notreached
+ }
+ 
+ void DcSctpSocket::SetMaxMessageSize(size_t max_message_size) {
+diff -rup a/third_party/libwebrtc/net/dcsctp/socket/packet_sender.cc b/third_party/libwebrtc/net/dcsctp/socket/packet_sender.cc
+--- a/third_party/libwebrtc/net/dcsctp/socket/packet_sender.cc	2026-07-16 18:13:58.000000000 +0200
++++ b/third_party/libwebrtc/net/dcsctp/socket/packet_sender.cc	2026-07-18 12:54:18.156920121 +0200
+@@ -48,5 +48,6 @@ bool PacketSender::Send(SctpPacket::Buil
+       return false;
+     }
+   }
++  return false; // not reached
+ }
+ }  // namespace dcsctp
+diff -rup a/third_party/libwebrtc/net/dcsctp/timer/timer.cc b/third_party/libwebrtc/net/dcsctp/timer/timer.cc
+--- a/third_party/libwebrtc/net/dcsctp/timer/timer.cc	2026-07-16 18:13:57.000000000 +0200
++++ b/third_party/libwebrtc/net/dcsctp/timer/timer.cc	2026-07-18 12:54:18.156942932 +0200
+@@ -51,6 +51,7 @@ TimeDelta GetBackoffDuration(const Timer
+       return TimeDelta(std::min(duration, Timer::kMaxTimerDuration));
+     }
+   }
++  return base_duration; // fake nonreached
+ }
+ }  // namespace
+ 
+diff -rup a/third_party/libwebrtc/rtc_base/network_constants.cc b/third_party/libwebrtc/rtc_base/network_constants.cc
+--- a/third_party/libwebrtc/rtc_base/network_constants.cc	2026-07-16 16:13:58.000000000 +0000
++++ b/third_party/libwebrtc/rtc_base/network_constants.cc	2026-07-18 11:24:57.621285609 +0000
+@@ -54,6 +54,7 @@ absl::string_view NetworkSliceToString(N
+     case NetworkSlice::UNIFIED_COMMUNICATIONS:
+       return "UNIFIED_COMMUNICATIONS";
+   }
++  return "NOTREACHED";
+ }
+ 
+ }  // namespace webrtc
+diff -rup a/third_party/libwebrtc/rtc_base/network_monitor.cc b/third_party/libwebrtc/rtc_base/network_monitor.cc
+--- a/third_party/libwebrtc/rtc_base/network_monitor.cc	2026-07-16 18:13:58.000000000 +0200
++++ b/third_party/libwebrtc/rtc_base/network_monitor.cc	2026-07-18 12:58:53.059199314 +0200
+@@ -21,6 +21,7 @@ absl::string_view NetworkPreferenceToStr
+     case NetworkPreference::NOT_PREFERRED:
+       return "NOT_PREFERRED";
+   }
++  return "NEUTRAL"; //unreached
+ }
+ 
+ NetworkMonitorInterface::NetworkMonitorInterface() {}
+diff -rup a/third_party/libwebrtc/video/adaptation/pixel_limit_resource.cc b/third_party/libwebrtc/video/adaptation/pixel_limit_resource.cc
+--- a/third_party/libwebrtc/video/adaptation/pixel_limit_resource.cc	2026-07-16 18:13:58.000000000 +0200
++++ b/third_party/libwebrtc/video/adaptation/pixel_limit_resource.cc	2026-07-18 12:54:18.157016604 +0200
+@@ -88,6 +88,7 @@ const char* ToString(VideoAdaptationReas
+     case VideoAdaptationReason::kCpu:
+       return "cpu";
+   }
++  return "shut-up-the-compiler";
+ }
+ 
+ }  // namespace
+diff -rup a/third_party/libwebrtc/video/adaptation/video_stream_encoder_resource_manager.cc b/third_party/libwebrtc/video/adaptation/video_stream_encoder_resource_manager.cc
+--- a/third_party/libwebrtc/video/adaptation/video_stream_encoder_resource_manager.cc	2026-07-16 18:13:57.000000000 +0200
++++ b/third_party/libwebrtc/video/adaptation/video_stream_encoder_resource_manager.cc	2026-07-18 12:54:18.157053086 +0200
+@@ -87,6 +87,7 @@ std::string ToString(VideoAdaptationReas
+       return "cpu";
+   }
+   RTC_CHECK_NOTREACHED();
++  return "";
+ }
+ 
+ std::vector<bool> GetActiveLayersFlags(const VideoCodec& codec) {
+diff -rup a/third_party/libwebrtc/video/config/encoder_stream_factory.cc b/third_party/libwebrtc/video/config/encoder_stream_factory.cc
+--- a/third_party/libwebrtc/video/config/encoder_stream_factory.cc	2026-07-16 18:13:57.000000000 +0200
++++ b/third_party/libwebrtc/video/config/encoder_stream_factory.cc	2026-07-18 12:54:18.157102287 +0200
+@@ -124,6 +124,7 @@ int GetDefaultMaxQp(VideoCodecType codec
+     case kVideoCodecAV1:
+       return kDefaultVideoMaxQpAv1;
+   }
++  return kDefaultVideoMaxQpAv1;
+ }
+ 
+ Resolution NormalizeResolution(const Resolution& resolution,
+diff -rup a/third_party/libwebrtc/video/corruption_detection/video_frame_sampler.cc b/third_party/libwebrtc/video/corruption_detection/video_frame_sampler.cc
+--- a/third_party/libwebrtc/video/corruption_detection/video_frame_sampler.cc	2026-07-16 18:13:58.000000000 +0200
++++ b/third_party/libwebrtc/video/corruption_detection/video_frame_sampler.cc	2026-07-18 12:54:18.157147499 +0200
+@@ -42,6 +42,7 @@ class I420FrameSampler : public VideoFra
+         RTC_DCHECK_LT(row, height(ChannelType::V));
+         return buffer_->DataV()[row * buffer_->StrideV() + col];
+     }
++    return 0;
+   }
+ 
+   int width(ChannelType channel) const override {
+@@ -52,6 +53,7 @@ class I420FrameSampler : public VideoFra
+       case ChannelType::V:
+         return buffer_->ChromaWidth();
+     }
++    return 0;
+   }
+ 
+   int height(ChannelType channel) const override {
+@@ -62,6 +64,7 @@ class I420FrameSampler : public VideoFra
+       case ChannelType::V:
+         return buffer_->ChromaHeight();
+     }
++    return 0;
+   }
+ 
+  private:
+@@ -90,6 +93,7 @@ class NV12FrameSampler : public VideoFra
+         RTC_DCHECK_LT(row, height(ChannelType::V));
+         return buffer_->DataUV()[row * buffer_->StrideUV() + (col * 2) + 1];
+     }
++    return 0;
+   }
+ 
+   int width(ChannelType channel) const override {
+@@ -100,6 +104,7 @@ class NV12FrameSampler : public VideoFra
+       case ChannelType::V:
+         return buffer_->ChromaWidth();
+     }
++    return 0;
+   }
+ 
+   int height(ChannelType channel) const override {
+@@ -110,6 +115,7 @@ class NV12FrameSampler : public VideoFra
+       case ChannelType::V:
+         return buffer_->ChromaHeight();
+     }
++    return 0;
+   }
+ 
+  private:

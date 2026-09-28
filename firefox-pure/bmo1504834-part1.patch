@@ -1,0 +1,94 @@
+# HG changeset patch
+# Parent  ed92e2fa6996864cd05177e2d4012c2aa867bf54
+Taken from https://bugzilla.mozilla.org/show_bug.cgi?id=1504834
+
+diff --git a/gfx/2d/DrawTargetSkia.cpp b/gfx/2d/DrawTargetSkia.cpp
+--- a/gfx/2d/DrawTargetSkia.cpp
++++ b/gfx/2d/DrawTargetSkia.cpp
+@@ -162,17 +162,18 @@ static IntRect CalculateSurfaceBounds(co
+   if (!sampledBounds.ToIntRect(&bounds)) {
+     return surfaceBounds;
+   }
+ 
+   return surfaceBounds.Intersect(bounds);
+ }
+ 
+ static const int kARGBAlphaOffset =
+-    SurfaceFormat::A8R8G8B8_UINT32 == SurfaceFormat::B8G8R8A8 ? 3 : 0;
++    0;  // Skia is always BGRA SurfaceFormat::A8R8G8B8_UINT32 ==
++        // SurfaceFormat::B8G8R8A8 ? 3 : 0;
+ 
+ static bool VerifyRGBXFormat(uint8_t* aData, const IntSize& aSize,
+                              const int32_t aStride, SurfaceFormat aFormat) {
+   if (aFormat != SurfaceFormat::B8G8R8X8 || aSize.IsEmpty()) {
+     return true;
+   }
+   // We should've initialized the data to be opaque already
+   // On debug builds, verify that this is actually true.
+diff --git a/gfx/skia/skia/modules/skcms/skcms.cc b/gfx/skia/skia/modules/skcms/skcms.cc
+--- a/gfx/skia/skia/modules/skcms/skcms.cc
++++ b/gfx/skia/skia/modules/skcms/skcms.cc
+@@ -26,16 +26,18 @@
+         // it'd be a lot slower.  But we want all those headers included so we
+         // can use their features after runtime checks later.
+         #include <smmintrin.h>
+         #include <avxintrin.h>
+         #include <avx2intrin.h>
+         #include <avx512fintrin.h>
+         #include <avx512dqintrin.h>
+     #endif
++#else
++    #define SKCMS_PORTABLE
+ #endif
+ 
+ using namespace skcms_private;
+ 
+ static bool sAllowRuntimeCPUDetection = true;
+ 
+ void skcms_DisableRuntimeCPUDetection() {
+     sAllowRuntimeCPUDetection = false;
+@@ -374,30 +376,38 @@ enum {
+     skcms_Signature_sf32 = 0x73663332,
+     // XYZ is also a PCS signature, so it's defined in skcms.h
+     // skcms_Signature_XYZ = 0x58595A20,
+ };
+ 
+ static uint16_t read_big_u16(const uint8_t* ptr) {
+     uint16_t be;
+     memcpy(&be, ptr, sizeof(be));
+-#if defined(_MSC_VER)
+-    return _byteswap_ushort(be);
++#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
++    return be;
+ #else
+-    return __builtin_bswap16(be);
++    #if defined(_MSC_VER)
++     return _byteswap_ushort(be);
++    #else
++     return __builtin_bswap16(be);
++    #endif
+ #endif
+ }
+ 
+ static uint32_t read_big_u32(const uint8_t* ptr) {
+     uint32_t be;
+     memcpy(&be, ptr, sizeof(be));
+-#if defined(_MSC_VER)
+-    return _byteswap_ulong(be);
++#if __BYTE_ORDER == __ORDER_BIG_ENDIAN__
++    return be;
+ #else
+-    return __builtin_bswap32(be);
++    #if defined(_MSC_VER)
++     return _byteswap_ulong(be);
++    #else
++     return __builtin_bswap32(be);
++    #endif
+ #endif
+ }
+ 
+ static int32_t read_big_i32(const uint8_t* ptr) {
+     return (int32_t)read_big_u32(ptr);
+ }
+ 
+ static float read_big_fixed(const uint8_t* ptr) {
