@@ -276,6 +276,7 @@ pref("gfx.webrender.compositor.force-enabled", true);
 pref("image.cache.size", 20971520);
 pref("network.buffer.cache.count", 48);
 pref("network.dnsCacheEntries", 1000);
+pref("gfx.webrender.layer-compositor", true);
 
 // Улучшение приватности
 pref("privacy.query_stripping.enabled", true);
@@ -284,3 +285,18 @@ pref("privacy.query_stripping.enabled", true);
 pref("media.rdd-vpx.enabled", false);
 pref("media.rdd-ffvpx.enabled", false);
 pref("dom.webgpu.enabled", true);
+
+// Увеличение плавности и доп оптимизация
+pref("general.smoothScroll.mouseWheel.durationMinMS", 80);
+pref("mousewheel.min_line_scroll_amount", 10);
+pref("gfx.canvas.max-size", 32767);
+pref("browser.sessionstore.restore_pinned_tabs_on_demand", true);
+pref("full-screen-api.transition-duration.enter", "0 0");
+pref("full-screen-api.transition-duration.leave", "0 0");
+pref("full-screen-api.warning.timeout", 1250);
+pref("full-screen-api.warning.delay", 500);
+pref("gfx.webrender.quality.force-subpixel-aa-where-possible", true);
+pref("browser.urlbar.maxRichResults", 6);
+pref("browser.newtabpage.activity-stream.showWeather", false);
+pref("browser.newtabpage.activity-stream.newtabWallpapers.enabled", false);
+
