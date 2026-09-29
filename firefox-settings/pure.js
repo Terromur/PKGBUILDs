@@ -396,3 +396,6 @@ pref("network.http.tailing.urgency", 6);
 pref("browser.sessionstore.interval", 60000);
 pref("browser.sessionstore.max_tabs_undo", 10);
 pref("browser.sessionstore.max_windows_undo", 3);
+
+// Изменение звуковой подсистемы
+pref("media.cubeb.backend", alsa);
