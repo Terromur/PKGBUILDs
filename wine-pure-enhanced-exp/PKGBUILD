@@ -1,11 +1,11 @@
 # Maintainer: Terromur <terromuroz@proton.me>
 
 pkgname=wine-pure-enhanced-exp
-pkgver=11.17.r0
+pkgver=11.18.r246.g6880117619a
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=8f8792fc857ba609b13c6d63839034e0576b0c9f"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=dc020173dc36007d06a88ff3fc5866de7faba826"
+  "git+https://gitlab.winehq.org/wine/wine.git"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git"
   "git+https://github.com/GloriousEggroll/proton-ge-custom.git"
   "git+https://github.com/elgabo86/gwine.git"
   "git+https://github.com/starcitizen-lug/patches.git"
@@ -273,6 +273,7 @@ if [ -d "${wine_osu_patches_dir}" ]; then
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0014-appwiz-Add-env.-vars-to-skip-mono-gecko-installation.patch" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0040-wineusb-usb-annoyances.patch" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/600hz-default.patch" \
+        -not -path "${wine_osu_patches_dir}/9000-misc-additions/0042-server-rename-debug_level-to-_debug_level-to-hint-br.patch" \
         -print0 | sort -z)
 fi  
   
@@ -292,6 +293,7 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/game-patches/ai-limit-dx12-compute-shader-fallback.patch" \
         -not -path "${proton_patches_dir}/game-patches/black-desert-keep-fullscreen-on-focus-loss.patch" \
         -not -path "${proton_patches_dir}/game-patches/max-payne-cpu-detection.patch" \
+        -not -path "${proton_patches_dir}/game-patches/return-to-krondor-text-bitmap-readback.patch" \
         -not -path "${proton_patches_dir}/ge-video-rework/*" \
         -not -path "${proton_patches_dir}/lsteamclient/*" \
         -not -path "${proton_patches_dir}/pipewire/*" \
@@ -306,6 +308,7 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/proton/0002-HACK-ntdll-add-optiscaler-inection-hack.patch" \
         -not -path "${proton_patches_dir}/proton/wine_host_block_envvar.patch" \
         -not -path "${proton_patches_dir}/proton/winex11-mutter-cinnamon.patch" \
+        -not -path "${proton_patches_dir}/proton/build_failure_prevention-add-nls.patch" \
         -not -path "${proton_patches_dir}/protonfixes/*" \
         -not -path "${proton_patches_dir}/vkd3d-proton/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/disabled/*" \
@@ -340,6 +343,8 @@ if [ -d "${spritz_patches_dir}" ]; then
         -not -path "${spritz_patches_dir}/0001-spritz/0007-loader-Copy-arial.ttf-to-fonts.patch" \
         -not -path "${spritz_patches_dir}/0001-spritz/0006-HACK-winex11-Make-WM-focus-the-window-by-default.patch" \
         -not -path "${spritz_patches_dir}/0001-spritz/0008-winex11-Ignore-XI_BadDevice-errors-on-X_OpenDevice-w.patch" \
+        -not -path "${spritz_patches_dir}/0001-spritz/0004-ntdll-Allow-launching-apps-from-steam.exe-stub.patch" \
+        -not -path "${spritz_patches_dir}/0001-spritz/0005-HACK-ntdll-Set-WINE_ENABLE_STEAM_STUB-for-some-games.patch" \
         -not -path "${spritz_patches_dir}/0002-proton-controllers/0003-winebus-Disable-Hidraw-by-default-add-log-message.patch" \
         -not -path "${spritz_patches_dir}/0003-tkg/0001-ntdll-loader-add-support-for-overriding-IMAGE_FILE_L.patch" \
         -not -path "${spritz_patches_dir}/0003-tkg/0003-user32-Update-system-colors.patch" \
@@ -473,8 +478,8 @@ package() {
   ln -sf /usr/bin/wine "$pkgdir"/usr/bin/wine64
 
   # Strip Windows binaries
-  i686-w64-mingw32-strip --strip-debug "$pkgdir"/usr/lib/wine/i386-windows/*.dll
-  x86_64-w64-mingw32-strip --strip-debug "$pkgdir"/usr/lib/wine/x86_64-windows/*.dll
+  llvm-strip --strip-unneeded "$pkgdir"/usr/lib/wine/i386-windows/*.{dll,exe}
+  llvm-strip --strip-unneeded "$pkgdir"/usr/lib/wine/x86_64-windows/*.{dll,exe}
 
   # Font aliasing settings for Win32 applications
   install -d "$pkgdir"/usr/share/fontconfig/conf.{avail,default}
