@@ -250,20 +250,13 @@ build() {
   export CARGO_HOME="$srcdir/cargo-home"
   mkdir -p "$CARGO_HOME"
   
-  export RUSTFLAGS="-C target-cpu=native -C codegen-units=1 -C opt-level=3 -C debuginfo=0 -C force-frame-pointers=no"
-
-  CFLAGS="-O3 -march=native -mtune=native -fno-semantic-interposition -fomit-frame-pointer -fdata-sections -ffunction-sections -pipe -fno-common -fno-plt -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2"
-  CXXFLAGS="${CFLAGS}"
-
-  CFLAGS="${CFLAGS/-fexceptions/}"
-  CXXFLAGS="${CXXFLAGS/-fexceptions/}"
-
-  LDFLAGS="-Wl,-O2 -Wl,--lto-O3 -Wl,--gc-sections -Wl,--icf=safe -Wl,-z,keep-text-section-prefix -Wl,--as-needed -Wl,--hash-style=gnu"
-  
-  export CFLAGS CXXFLAGS LDFLAGS
+  export CFLAGS="-march=native -mtune=native -O3 -pipe -fno-stack-protector -fno-stack-check -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -mharden-sls=none -fno-ident -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement=1 -mllvm -enable-dfa-jump-thread -mtls-dialect=gnu2 -fsplit-machine-functions -D_FORTIFY_SOURCE=0"
+  export CXXFLAGS="$CFLAGS -DNDEBUG"
+  export LDFLAGS="-fuse-ld=mold -flto=full -O3 -Wl,--lto-O3 -Wl,--hash-style=gnu -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs -Wl,--strip-all -Wl,--icf=safe -Wl,-z,norelro"
+  export RUSTFLAGS="-C opt-level=3 -C target-cpu=native -C link-arg=-fuse-ld=mold"
 
   # LTO needs more open files
-  ulimit -n 4096
+  ulimit -n 16384
 
   cat >.mozconfig ../mozconfig
 
