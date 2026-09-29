@@ -279,14 +279,43 @@ pref("network.dnsCacheEntries", 1000);
 pref("gfx.webrender.layer-compositor", true);
 
 // Улучшение приватности
-pref("privacy.query_stripping.enabled", true);
 
-// Дополнительные параметры для исправления корректности работы аппаратного ускорения
+pref("privacy.query_stripping.enabled", true);
+pref("toolkit.telemetry.server_owner", "", locked);
+pref("toolkit.telemetry.shutdownPingSender.enabledFirstSession", false, locked);
+pref("toolkit.telemetry.pioneer-new-studies-available", false, locked);
+pref("toolkit.telemetry.dap_helper", "", locked);
+pref("toolkit.telemetry.dap_leader", "", locked);
+pref("toolkit.telemetry.coverage.opt-out", true, locked);
+pref("toolkit.coverage.endpoint.base", "", locked);
+pref("toolkit.coverage.opt-out", true, locked);
+pref("datareporting.policy.dataSubmissionPolicyBypassNotification", true, locked);
+pref("datareporting.policy.firstRunURL", "", locked);
+pref("browser.ping-centre.log", false, locked);
+pref("security.app_menu.recordEventTelemetry", false, locked);
+pref("security.protectionspopup.recordEventTelemetry", false, locked);
+pref("browser.newtabpage.activity-stream.impressionId", "", locked);
+pref("media.video_stats.enabled", false);
+pref("media.video.dropped_frame_stats.enabled", false);
+pref("media.aboutwebrtc.hist.enabled", false);
+pref("browser.crashReports.unsubmittedCheck.enabled", false, locked);
+pref("browser.tabs.crashReporting.includeURL", false, locked);
+pref("app.shield.optoutstudies.enabled", false, locked);
+pref("telemetry.number_of_site_origin.min_interval", 0, locked);
+pref("dom.gamepad.enabled", false);
+pref("dom.gamepad.extensions.enabled", false);
+pref("dom.gamepad.haptic_feedback.enabled", false);
+pref("dom.vibrator.enabled", false);
+pref("dom.vibrator.max_vibrate_ms", 0);
+
+// Дополнительные параметры для аппаратного ускорения
+
 pref("media.rdd-vpx.enabled", false);
 pref("media.rdd-ffvpx.enabled", false);
 pref("dom.webgpu.enabled", true);
 
-// Увеличение плавности и доп оптимизация
+// Увеличение плавности и доп. оптимизация
+
 pref("general.smoothScroll.mouseWheel.durationMinMS", 80);
 pref("mousewheel.min_line_scroll_amount", 10);
 pref("gfx.canvas.max-size", 32767);
@@ -300,3 +329,70 @@ pref("browser.urlbar.maxRichResults", 6);
 pref("browser.newtabpage.activity-stream.showWeather", false);
 pref("browser.newtabpage.activity-stream.newtabWallpapers.enabled", false);
 
+// Оптимизация IPC
+
+pref("dom.ipc.processCount.privilegedabout", 2);
+pref("dom.ipc.processCount.privilegedmozilla", 2);
+pref("dom.ipc.processPrelaunch.fission.number", 1);
+pref("dom.ipc.processReuse.unusedGraceMs", 30000);
+
+// Ещё оптимизация рендера
+
+pref("gfx.webrender.compositor.max_update_rects", 4);
+pref("gfx.webrender.max-partial-present-rects", 4);
+pref("gfx.webrender.force-partial-present", true);
+pref("layers.gpu-process.max_restarts", 10);
+
+// WebGL оптимизация
+
+pref("webgl.force-enabled", true);
+pref("webgl.max-contexts", 2000);
+pref("webgl.max-contexts-per-principal", 600);
+
+// HTTP оптимизация
+
+pref("network.http.http2.default-concurrent", 200);
+pref("network.http.http2.pull-allowance", 25165824);
+pref("network.http.http3.max_data", 50331648);
+pref("network.http.http3.max_stream_data", 25165824);
+pref("network.http.http3.cc_algorithm", 1);
+pref("network.http.http3.slow_start_algorithm", 1);
+pref("network.http.http3.hystart_alternative_css_baseline", true);
+pref("network.http.http3.pmtud", true);
+pref("network.http.http3.retry_different_ip_family", true);
+pref("network.http.http3.parallel_fallback_conn_limit", 64);
+pref("network.http.happy_eyeballs_enabled", true);
+pref("network.http.happy_eyeballs_upgrade_enabled", true);
+pref("network.http.happy_eyeballs_resolution_delay", 15);
+pref("network.http.happy_eyeballs_connection_attempt_delay", 25);
+
+// DNS оптимизация
+
+pref("network.dnsCacheExpirationGracePeriod", 900);
+pref("network.dns.max_high_priority_threads", 80);
+pref("network.dns.max_any_priority_threads", 64);
+pref("network.dns.resolver-thread-extra-idle-time-seconds", 120);
+pref("network.dns.get-ttl", true);
+
+// Кэш оптимизация
+
+pref("browser.cache.memory.max_entry_size", 20480);
+pref("browser.cache.disk.metadata_memory_limit", 2048);
+pref("image.mem.surfacecache.min_expiration_ms", 600000);
+pref("image.cache.timeweight", 1000);
+pref("media.cache_size", 1024000);
+pref("network.ssl_tokens_cache_records_per_entry", 20);
+pref("network.ssl_tokens_cache_persistence", true);
+pref("network.buffer.default_size", 131072);
+
+// Улучшение плавности
+
+pref("nglayout.initialpaint.delay_in_oopif", 0);
+pref("layout.frame_rate", -1);
+pref("layout.idle_period.required_quiescent_frames", 1);
+pref("network.http.tailing.urgency", 6);
+
+// Оптимизация сессий
+pref("browser.sessionstore.interval", 60000);
+pref("browser.sessionstore.max_tabs_undo", 10);
+pref("browser.sessionstore.max_windows_undo", 3);
