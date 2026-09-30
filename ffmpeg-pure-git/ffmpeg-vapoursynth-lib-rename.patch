@@ -1,0 +1,37 @@
+From 9013e697a56294a2a50e287c9a9c204f2aff6254 Mon Sep 17 00:00:00 2001
+From: Simone Caronni <negativo17@gmail.com>
+Date: Mon, 10 Aug 2026 11:37:39 +0200
+Subject: [PATCH] vapoursynth: load the library under its current name and
+ soname
+
+VapourSynth R79 renamed libvapoursynth-script to libvsscript, so the
+demuxer fails at runtime with "Could not open libvapoursynth-script.so"
+on any installation from R79 onwards.
+
+Load the versioned soname rather than the unversioned linker name while
+touching this. The unversioned .so is shipped in the development package
+on most distributions, so dlopen() of it only succeeded when that package
+happened to be installed; the runtime package is the one that carries the
+soname.
+---
+ libavformat/vapoursynth.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/libavformat/vapoursynth.c b/libavformat/vapoursynth.c
+index 0fa5aff..765fada 100644
+--- a/libavformat/vapoursynth.c
++++ b/libavformat/vapoursynth.c
+@@ -48,8 +48,8 @@
+   #define VSSCRIPT_LIB "VSScript.dll"
+ #else
+   #include <dlfcn.h>
+-  #define VSSCRIPT_NAME "libvapoursynth-script"
+-  #define VSSCRIPT_LIB VSSCRIPT_NAME SLIBSUF
++  #define VSSCRIPT_NAME "libvsscript"
++  #define VSSCRIPT_LIB VSSCRIPT_NAME SLIBSUF ".0"
+ #endif
+ 
+ struct VSState {
+-- 
+2.55.0
+
