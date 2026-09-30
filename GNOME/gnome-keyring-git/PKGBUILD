@@ -37,7 +37,7 @@ provides=(org.freedesktop.secrets)
 groups=(gnome)
 install=gnome-keyring.install
 source=(
-  "git+$url.git?signed"
+  "git+$url.git"
   0001-daemon-Add-Cinnamon-to-autostart-files.patch
   04a6bc68ff4350676c5fc55d1b244a17224fbea2.patch
 )
