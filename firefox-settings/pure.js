@@ -334,20 +334,18 @@ pref("browser.newtabpage.activity-stream.newtabWallpapers.enabled", false);
 pref("dom.ipc.processCount.privilegedabout", 2);
 pref("dom.ipc.processCount.privilegedmozilla", 2);
 pref("dom.ipc.processPrelaunch.fission.number", 1);
-pref("dom.ipc.processReuse.unusedGraceMs", 30000);
-
-// Ещё оптимизация рендера
-
-pref("gfx.webrender.compositor.max_update_rects", 4);
-pref("gfx.webrender.max-partial-present-rects", 4);
-pref("gfx.webrender.force-partial-present", true);
-pref("layers.gpu-process.max_restarts", 10);
 
 // WebGL оптимизация
 
 pref("webgl.force-enabled", true);
 pref("webgl.max-contexts", 2000);
 pref("webgl.max-contexts-per-principal", 600);
+pref("gfx.webrender.compositor.max_update_rects", 16);
+pref("gfx.webrender.max-partial-present-rects", 16);
+pref("gfx.webrender.compositor.surface-pool-size", 64);
+pref("gfx.webrender.batching.lookback", 40);
+pref("layout.display-list.retain.sc", true);
+pref("layers.gpu-process.max_restarts", 10);
 
 // HTTP оптимизация
 
@@ -369,8 +367,6 @@ pref("network.http.happy_eyeballs_connection_attempt_delay", 25);
 // DNS оптимизация
 
 pref("network.dnsCacheExpirationGracePeriod", 900);
-pref("network.dns.max_high_priority_threads", 80);
-pref("network.dns.max_any_priority_threads", 64);
 pref("network.dns.resolver-thread-extra-idle-time-seconds", 120);
 pref("network.dns.get-ttl", true);
 
@@ -379,7 +375,6 @@ pref("network.dns.get-ttl", true);
 pref("browser.cache.memory.max_entry_size", 20480);
 pref("browser.cache.disk.metadata_memory_limit", 2048);
 pref("image.mem.surfacecache.min_expiration_ms", 600000);
-pref("image.cache.timeweight", 1000);
 pref("media.cache_size", 1024000);
 pref("network.ssl_tokens_cache_records_per_entry", 20);
 pref("network.ssl_tokens_cache_persistence", true);
@@ -396,6 +391,12 @@ pref("network.http.tailing.urgency", 6);
 pref("browser.sessionstore.interval", 60000);
 pref("browser.sessionstore.max_tabs_undo", 10);
 pref("browser.sessionstore.max_windows_undo", 3);
+
+// Javascript оптимизация
+pref("javascript.options.blinterp.threshold", 5);
+pref("javascript.options.ion.frequent_bailout_threshold", 20);
+pref("javascript.options.inlining_bytecode_max_length", 300);
+pref("javascript.options.concurrent_multiprocess_gcs.cpu_divisor", 2)
 
 // Изменение звуковой подсистемы
 pref("media.cubeb.backend", alsa);
