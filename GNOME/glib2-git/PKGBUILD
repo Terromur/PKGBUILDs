@@ -42,7 +42,7 @@ checkdepends=(
   desktop-file-utils
 )
 source=(
-  "git+https://gitlab.gnome.org/GNOME/glib.git?signed"
+  "git+https://gitlab.gnome.org/GNOME/glib.git"
   "git+https://gitlab.gnome.org/GNOME/gvdb.git"
   0001-glib-compile-schemas-Remove-noisy-deprecation-warnin.patch
   0002-gdesktopappinfo-Add-more-known-terminals.patch
