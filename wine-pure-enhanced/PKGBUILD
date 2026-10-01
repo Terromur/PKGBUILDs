@@ -1,7 +1,7 @@
 # Maintainer: Terromur <terromuroz@proton.me>
 
 pkgname=wine-pure-enhanced
-pkgver=11.18.r246.g6880117619a
+pkgver=11.18.r318.g6d1b0940577
 pkgrel=1
 source=(
   "git+https://gitlab.winehq.org/wine/wine.git"
@@ -51,9 +51,17 @@ source=(
   0001-ntdll-alertable-sleep-fast-path.patch
   0007-msi-rewrite-all-tables-on-long-strref.patch
   0008-wined3d-only-map-host-visible-bo.patch
+  0001-dinput-Allow-a-NULL-instance-handle-for-DirectInput-.patch
+  0002-crypt32-Don-t-free-contexts-still-referenced-on-a-fo.patch
+  0003-crypt32-Read-serialized-store-properties-that-preced.patch
+  0003-lmu-vr-cursor.patch
 )
 
 sha256sums=(
+  'SKIP'
+  'SKIP'
+  'SKIP'
+  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -242,6 +250,10 @@ prepare() {
   patch -Np1 -i "${srcdir}/9640.patch"
   patch -Np1 -i "${srcdir}/8484.patch"
   patch -Np1 -i "${srcdir}/4908.patch"
+  patch -Np1 -i "${srcdir}/0001-dinput-Allow-a-NULL-instance-handle-for-DirectInput-.patch"
+  patch -Np1 -i "${srcdir}/0002-crypt32-Don-t-free-contexts-still-referenced-on-a-fo.patch"
+  patch -Np1 -i "${srcdir}/0003-crypt32-Read-serialized-store-properties-that-preced.patch"
+  patch -Np1 -i "${srcdir}/0003-lmu-vr-cursor.patch"
 
   ./dlls/winevulkan/make_vulkan
   ./tools/make_requests

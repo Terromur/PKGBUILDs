@@ -1,0 +1,184 @@
+From ee7fd5b7d88c01d0646cab7dba78835bc2fdb131 Mon Sep 17 00:00:00 2001
+From: Jonah Paul Simon <Jman19922@gmail.com>
+Date: Fri, 25 Sep 2026 16:18:54 -0600
+Subject: [PATCH 3/3] crypt32: Read serialized store properties that precede
+ their context.
+
+CertSaveStore writes each context's properties before the context element
+itself (see CRYPT_SerializeStoreElement), but the reader rejected any property
+seen before the first context and returned an empty store, so a saved store
+with properties could not be loaded back. Queue properties until their context
+arrives.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=60401
+---
+ dlls/crypt32/serialize.c   | 64 +++++++++++++++++++++++---------------
+ dlls/crypt32/tests/store.c | 47 ++++++++++++++++++++++++++++
+ 2 files changed, 86 insertions(+), 25 deletions(-)
+
+diff --git a/dlls/crypt32/serialize.c b/dlls/crypt32/serialize.c
+index 11d3918..4031cfa 100644
+--- a/dlls/crypt32/serialize.c
++++ b/dlls/crypt32/serialize.c
+@@ -635,9 +635,12 @@ static BOOL CRYPT_ReadSerializedStore(void *handle,
+             WINE_CERT_PROP_HEADER propHdr;
+             const void *context = NULL;
+             const WINE_CONTEXT_INTERFACE *contextInterface = NULL;
+-            LPBYTE buf = NULL;
+-            DWORD bufSize = 0;
++            LPBYTE buf = NULL, pending = NULL;
++            DWORD bufSize = 0, pendingSize = 0;
+ 
++            /* CertSaveStore (native and ours, see CRYPT_SerializeStoreElement)
++             * writes each context's properties BEFORE the context itself, so
++             * hold properties until the context they belong to is read. */
+             do {
+                 ret = read_func(handle, &propHdr, sizeof(propHdr), &read);
+                 if (ret && read == sizeof(propHdr))
+@@ -666,39 +669,47 @@ static BOOL CRYPT_ReadSerializedStore(void *handle,
+                         ret = read_func(handle, buf, propHdr.cb, &read);
+                         if (ret && read == propHdr.cb)
+                         {
+-                            if (propHdr.propID == CERT_CERT_PROP_ID)
+-                            {
+-                                contextInterface = pCertInterface;
+-                                ret = contextInterface->addEncodedToStore(store,
+-                                 X509_ASN_ENCODING, buf, read,
+-                                 CERT_STORE_ADD_NEW, &context);
+-                            }
+-                            else if (propHdr.propID == CERT_CRL_PROP_ID)
+-                            {
+-                                contextInterface = pCRLInterface;
+-                                ret = contextInterface->addEncodedToStore(store,
+-                                 X509_ASN_ENCODING, buf, read,
+-                                 CERT_STORE_ADD_NEW, &context);
+-                            }
+-                            else if (propHdr.propID == CERT_CTL_PROP_ID)
++                            if (propHdr.propID == CERT_CERT_PROP_ID ||
++                             propHdr.propID == CERT_CRL_PROP_ID ||
++                             propHdr.propID == CERT_CTL_PROP_ID)
+                             {
+-                                contextInterface = pCTLInterface;
++                                DWORD off = 0;
++
++                                if (propHdr.propID == CERT_CERT_PROP_ID)
++                                    contextInterface = pCertInterface;
++                                else if (propHdr.propID == CERT_CRL_PROP_ID)
++                                    contextInterface = pCRLInterface;
++                                else
++                                    contextInterface = pCTLInterface;
+                                 ret = contextInterface->addEncodedToStore(store,
+                                  X509_ASN_ENCODING, buf, read,
+                                  CERT_STORE_ADD_NEW, &context);
++                                while (ret && off < pendingSize)
++                                {
++                                    WINE_CERT_PROP_HEADER *hdr =
++                                     (WINE_CERT_PROP_HEADER *)(pending + off);
++
++                                    off += sizeof(*hdr);
++                                    ret = CRYPT_ReadContextProp(contextInterface,
++                                     context, hdr, pending + off, hdr->cb);
++                                    off += hdr->cb;
++                                }
++                                pendingSize = 0;
+                             }
+                             else
+                             {
+-                                if (!contextInterface)
++                                BYTE *p = CryptMemRealloc(pending,
++                                 pendingSize + sizeof(propHdr) + read);
++
++                                if (p)
+                                 {
+-                                    WARN("prop id %ld before a context id\n",
+-                                     propHdr.propID);
+-                                    ret = FALSE;
++                                    pending = p;
++                                    memcpy(pending + pendingSize, &propHdr, sizeof(propHdr));
++                                    memcpy(pending + pendingSize + sizeof(propHdr), buf, read);
++                                    pendingSize += sizeof(propHdr) + read;
+                                 }
+                                 else
+-                                    ret = CRYPT_ReadContextProp(
+-                                     contextInterface, context, &propHdr, buf,
+-                                     read);
++                                    ret = FALSE;
+                             }
+                         }
+                     }
+@@ -711,6 +722,9 @@ static BOOL CRYPT_ReadSerializedStore(void *handle,
+                 /* Free the last context added */
+                 Context_Release(context_from_ptr(context));
+             }
++            if (pendingSize)
++                WARN("%lu bytes of properties without a context\n", pendingSize);
++            CryptMemFree(pending);
+             CryptMemFree(buf);
+             ret = TRUE;
+         }
+diff --git a/dlls/crypt32/tests/store.c b/dlls/crypt32/tests/store.c
+index c574873..5a6aaf1 100644
+--- a/dlls/crypt32/tests/store.c
++++ b/dlls/crypt32/tests/store.c
+@@ -3861,6 +3861,52 @@ static void test_CryptQueryObject(void)
+     ok( ctx == NULL, "got %p\n", ctx );
+ }
+ 
++static void test_serialized_store_props_roundtrip(void)
++{
++    CRYPT_DATA_BLOB blob = { 0 }, name = { 8, (BYTE *)L"TEST" };
++    HCERTSTORE store, store2;
++    PCCERT_CONTEXT cert;
++    BYTE buf[16];
++    DWORD size;
++    BOOL ret;
++
++    store = CertOpenStore(CERT_STORE_PROV_MEMORY, 0, 0, 0, NULL);
++    ret = CertAddEncodedCertificateToStore(store, X509_ASN_ENCODING, bigCert,
++     sizeof(bigCert), CERT_STORE_ADD_ALWAYS, &cert);
++    ok(ret, "CertAddEncodedCertificateToStore failed: %08lx\n", GetLastError());
++    ret = CertSetCertificateContextProperty(cert, CERT_FRIENDLY_NAME_PROP_ID, 0, &name);
++    ok(ret, "CertSetCertificateContextProperty failed: %08lx\n", GetLastError());
++    CertFreeCertificateContext(cert);
++
++    /* A saved store puts each context's properties before the context. */
++    ret = CertSaveStore(store, 0, CERT_STORE_SAVE_AS_STORE, CERT_STORE_SAVE_TO_MEMORY, &blob, 0);
++    ok(ret, "CertSaveStore failed: %08lx\n", GetLastError());
++    blob.pbData = malloc(blob.cbData);
++    ret = CertSaveStore(store, 0, CERT_STORE_SAVE_AS_STORE, CERT_STORE_SAVE_TO_MEMORY, &blob, 0);
++    ok(ret, "CertSaveStore failed: %08lx\n", GetLastError());
++    CertCloseStore(store, 0);
++
++    store2 = CertOpenStore(CERT_STORE_PROV_SERIALIZED, 0, 0, 0, &blob);
++    ok(store2 != NULL, "CertOpenStore failed: %08lx\n", GetLastError());
++    cert = CertEnumCertificatesInStore(store2, NULL);
++    ok(cert != NULL, "saved store reloaded without its certificate\n");
++    if (cert)
++    {
++        size = sizeof(buf);
++        ret = CertGetCertificateContextProperty(cert, CERT_FRIENDLY_NAME_PROP_ID, buf, &size);
++        ok(ret && size == name.cbData && !memcmp(buf, name.pbData, size),
++         "friendly name not restored, ret %d size %lu\n", ret, size);
++
++        /* Forced close while a context is still held must not free it. */
++        ret = CertCloseStore(store2, CERT_CLOSE_STORE_FORCE_FLAG);
++        ok(ret, "CertCloseStore failed: %08lx\n", GetLastError());
++        CertFreeCertificateContext(cert);
++    }
++    else
++        CertCloseStore(store2, 0);
++    free(blob.pbData);
++}
++
+ START_TEST(store)
+ {
+     /* various combinations of CertOpenStore */
+@@ -3897,4 +3943,5 @@ START_TEST(store)
+     test_PFXImportCertStore_trailing_zeros();
+     test_PFXExportCertStoreEx();
+     test_CryptQueryObject();
++    test_serialized_store_props_roundtrip();
+ }
+-- 
+2.55.0
+

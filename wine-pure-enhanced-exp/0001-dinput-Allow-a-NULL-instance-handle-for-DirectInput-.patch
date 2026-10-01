@@ -1,0 +1,62 @@
+From a5861538a19baa28f7848e44fb55275aa38cf3da Mon Sep 17 00:00:00 2001
+From: Jonah Paul Simon <Jman19922@gmail.com>
+Date: Fri, 25 Sep 2026 16:18:54 -0600
+Subject: [PATCH 1/3] dinput: Allow a NULL instance handle for DirectInput
+ version 0x300.
+
+Native accepts DirectInputCreate(NULL, 0x300, ...) and Initialize(NULL, 0x300),
+as the existing todo_wine tests show. WildTangent's Web Driver (Polar Bowler,
+Polar Golfer, 2004-2006) creates its mouse device this way; the failure makes
+IWT::pollMouse return E_FAIL and the game freezes on its first frame.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=60400
+---
+ dlls/dinput/dinput.c       | 2 +-
+ dlls/dinput/tests/dinput.c | 4 +---
+ 2 files changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/dlls/dinput/dinput.c b/dlls/dinput/dinput.c
+index 4a28b42..56c80c2 100644
+--- a/dlls/dinput/dinput.c
++++ b/dlls/dinput/dinput.c
+@@ -198,7 +198,7 @@ static HRESULT WINAPI dinput7_Initialize( IDirectInput7W *iface, HINSTANCE hinst
+ 
+     TRACE( "iface %p, hinst %p, version %#lx.\n", iface, hinst, version );
+ 
+-    if (!hinst)
++    if (!hinst && version != DIRECTINPUT_VERSION_300)
+         return DIERR_INVALIDPARAM;
+     else if (version == 0)
+         return DIERR_NOTINITIALIZED;
+diff --git a/dlls/dinput/tests/dinput.c b/dlls/dinput/tests/dinput.c
+index 0585a3c..01c7b29 100644
+--- a/dlls/dinput/tests/dinput.c
++++ b/dlls/dinput/tests/dinput.c
+@@ -259,7 +259,6 @@ static void test_DirectInputCreate( DWORD version )
+         winetest_push_context( "%u", i );
+         unknown = (void *)0xdeadbeef;
+         hr = DirectInputCreateW( create_tests[i].instance, create_tests[i].version, (IDirectInputW **)create_tests[i].out, NULL );
+-        todo_wine_if(i == 3 && version == 0x300)
+         ok( hr == create_tests[i].expected_hr, "DirectInputCreateEx returned %#lx\n", hr );
+         if (SUCCEEDED(hr)) IUnknown_Release( unknown );
+         else ok( unknown == create_tests[i].expect_out, "got IUnknown %p\n", unknown );
+@@ -326,7 +325,6 @@ static void test_DirectInputCreateEx( DWORD version )
+         unknown = (void *)0xdeadbeef;
+         hr = DirectInputCreateEx( create_tests[i].instance, create_tests[i].version, create_tests[i].iid,
+                                   (void **)create_tests[i].out, NULL );
+-        todo_wine_if( version == 0x300 && i == 7 )
+         ok( hr == create_tests[i].expected_hr, "DirectInputCreateEx returned %#lx\n", hr );
+         if (SUCCEEDED(hr)) IUnknown_Release( unknown );
+         else ok( unknown == create_tests[i].expect_out, "got IUnknown %p\n", unknown );
+@@ -755,7 +753,7 @@ static void test_Initialize( DWORD version )
+     ok( hr == DIERR_INVALIDPARAM, "Initialize returned %#lx\n", hr );
+ 
+     hr = IDirectInput_Initialize( dinput, NULL, version );
+-    if (version == 0x300) todo_wine ok( hr == S_OK, "Initialize returned %#lx\n", hr );
++    if (version == 0x300) ok( hr == S_OK, "Initialize returned %#lx\n", hr );
+     else ok( hr == DIERR_INVALIDPARAM, "Initialize returned %#lx\n", hr );
+ 
+     hr = IDirectInput_Initialize( dinput, instance, 0 );
+-- 
+2.55.0
+

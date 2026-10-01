@@ -1,0 +1,54 @@
+From 7e7dbe2bba3a11b7feec637a400a0ba5bab4e13f Mon Sep 17 00:00:00 2001
+From: Jonah Paul Simon <Jman19922@gmail.com>
+Date: Fri, 25 Sep 2026 16:18:54 -0600
+Subject: [PATCH 2/3] crypt32: Don't free contexts still referenced on a forced
+ store close.
+
+CertCloseStore(CERT_CLOSE_STORE_FORCE_FLAG) with an outstanding context
+reference freed the context and hit the assert in Context_Free. Defer the
+free until the last context reference is released instead.
+
+Wine-Bug: https://bugs.winehq.org/show_bug.cgi?id=60402
+---
+ dlls/crypt32/store.c | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/dlls/crypt32/store.c b/dlls/crypt32/store.c
+index 8625737..ad75de4 100644
+--- a/dlls/crypt32/store.c
++++ b/dlls/crypt32/store.c
+@@ -257,6 +257,15 @@ static BOOL MemStore_deleteContext(WINE_MEMSTORE *store, context_t *context)
+     return TRUE;
+ }
+ 
++static BOOL has_referenced_contexts(struct list *list)
++{
++    context_t *context;
++
++    LIST_FOR_EACH_ENTRY(context, list, context_t, u.entry)
++        if (context->ref) return TRUE;
++    return FALSE;
++}
++
+ static void free_contexts(struct list *list)
+ {
+     context_t *context, *next;
+@@ -377,6 +386,15 @@ static DWORD MemStore_release(WINECRYPT_CERTSTORE *cert_store, DWORD flags)
+     if(ref && !(flags & CERT_CLOSE_STORE_FORCE_FLAG))
+         return (flags & CERT_CLOSE_STORE_CHECK_FLAG) ? CRYPT_E_PENDING_CLOSE : ERROR_SUCCESS;
+ 
++    /* A forced close must not free contexts the caller still holds; each one
++     * keeps a store reference, so the last release frees the store instead. */
++    if(ref && (has_referenced_contexts(&store->certs) ||
++     has_referenced_contexts(&store->crls) || has_referenced_contexts(&store->ctls)))
++    {
++        WARN("forced close with contexts still referenced, deferring\n");
++        return ERROR_SUCCESS;
++    }
++
+     free_contexts(&store->certs);
+     free_contexts(&store->crls);
+     free_contexts(&store->ctls);
+-- 
+2.55.0
+
