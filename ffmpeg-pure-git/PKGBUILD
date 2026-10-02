@@ -1,6 +1,6 @@
 # Maintainer: Terromur <terromuroz@proton.me>
 pkgname=ffmpeg-pure-git
-pkgver=9.1.r127020.g453386217a
+pkgver=9.1.r127094.gf68e1afc1b
 pkgrel=1
 _svt_hevc_ver='4181c9ee0611baefb40b4c0ed10023cfd837d522'
 _whispercpp_ver='1.9.4'
@@ -75,7 +75,8 @@ source=('git+https://git.ffmpeg.org/ffmpeg.git'
         'ffmpeg-codec-choice.patch'
         'ffmpeg-allow-fdk-aac-free.patch'
         'ffmpeg-allow-decklink.patch'
-        '11013-avcodec-decode-clean-up.patch')
+        '11013-avcodec-decode-clean-up.patch'
+        'ffmpeg-1.0.1-time.h.patch')
 sha256sums=('SKIP'
             'SKIP'
             '57e280cee375ab02425b806ad5146b99f6eb9357e3c2b31357c8a6af2e2e44ae'
@@ -90,7 +91,9 @@ sha256sums=('SKIP'
             '703d15862fbfe1e0241ecc8a3d98c3c1fbf056b08e88b5a4051e7e69a9e8d498'
             '58fc0eb43dfac7c733c47e6f2bc08267b4f6431c643301661d65a107e7125833'
             'd7c25fa28f026d226a7398989db8b8334dbcfa47b731f653ea938e58f87a1afb'
-            'd7f9ea1cce191e7f9a71b0cb6f1849f485342b6f10d1e4d37855882cf2cb7beb')
+            'd7f9ea1cce191e7f9a71b0cb6f1849f485342b6f10d1e4d37855882cf2cb7beb'
+            'SKIP'
+            )
 
 prepare() {
     # ffmpeg includes the astc-encoder header from <astcenc/astcenc.h> instead of using just <astcenc.h>
@@ -108,6 +111,7 @@ prepare() {
     patch -d ffmpeg -Np1 -i "${srcdir}/ffmpeg-allow-decklink.patch"
     patch -d ffmpeg -Np1 -i "${srcdir}/ffmpeg-vapoursynth-lib-rename.patch"
     patch -d ffmpeg -Np1 -i "${srcdir}/11013-avcodec-decode-clean-up.patch"
+    patch -d ffmpeg -Np1 -i "${srcdir}/ffmpeg-1.0.1-time.h.patch"
     patch -d "whisper.cpp-${_whispercpp_ver}" -Np1 -i "${srcdir}/070-ffmpeg-whisper.cpp-fix-pkgconfig.patch"
 }
 

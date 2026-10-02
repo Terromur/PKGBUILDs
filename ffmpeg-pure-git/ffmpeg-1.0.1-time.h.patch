@@ -1,0 +1,13 @@
+diff -uprN ffmpeg-9.0.1/libavutil/time.h ffmpeg-9.0.1/libavutil/time.h
+--- ffmpeg-9.0.1/libavutil/time.h	2020-04-27 23:48:16.000000000 +0200
++++ ffmpeg-9.0.1/libavutil/time.h	2026-08-12 17:41:57.801136312 +0200
+@@ -54,3 +54,9 @@ int av_gettime_relative_is_monotonic(voi
+ int av_usleep(unsigned usec);
+ 
+ #endif /* AVUTIL_TIME_H */
++/* Let's give applications that #include <time.h> with
++ * -I/usr/include/libavutil what they want...
++ * #include_next <time.h> would be nicer, but fails if
++ * we were included by absolute path name
++ */
++#include "/usr/include/time.h"

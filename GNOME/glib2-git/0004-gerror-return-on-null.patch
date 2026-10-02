@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arjan van de Ven <arjan@linux.intel.com>
+Date: Sat, 7 Apr 2018 21:19:38 +0000
+Subject: [PATCH] gerror: return on null
+
+---
+ glib/gerror.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/glib/gerror.c b/glib/gerror.c
+index 82bf626..d4ac5cc 100644
+--- a/glib/gerror.c
++++ b/glib/gerror.c
+@@ -1020,7 +1020,8 @@ void
+ g_propagate_error (GError **dest,
+ 		   GError  *src)
+ {
+-  g_return_if_fail (src != NULL);
++  if (src == NULL)
++	return;
+  
+   if (dest == NULL)
+     {

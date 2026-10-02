@@ -1,0 +1,53 @@
+diff -up mesa-25.2.0-rc1/meson.build.6~ mesa-25.2.0-rc1/meson.build
+--- mesa-25.2.0-rc1/meson.build.6~	2025-07-16 22:57:59.434072436 +0200
++++ mesa-25.2.0-rc1/meson.build	2025-07-16 23:01:21.662559800 +0200
+@@ -142,6 +142,12 @@ system_has_kms_drm = ['openbsd', 'netbsd
+ 
+ gallium_drivers = get_option('gallium-drivers')
+ if gallium_drivers.contains('auto')
++  extras = []
++  foreach drv : gallium_drivers
++    if drv != 'auto'
++      extras += drv
++    endif
++  endforeach
+   if system_has_kms_drm
+     # TODO: Sparc
+     # TODO: handle llvm being disabled or auto when setting default_drivers
+@@ -176,6 +182,11 @@ if gallium_drivers.contains('auto')
+     error('Unknown OS @0@. Please pass -Dgallium-drivers to set driver options. Patches gladly accepted to fix this.'.format(
+           host_machine.system()))
+   endif
++  foreach drv : extras
++    if not gallium_drivers.contains(drv)
++      gallium_drivers += drv
++    endif
++  endforeach
+ elif gallium_drivers.contains('all')
+    gallium_drivers = [
+      'r300', 'r600', 'radeonsi', 'crocus', 'v3d', 'vc4', 'freedreno', 'etnaviv', 'i915',
+@@ -234,6 +245,12 @@ with_gallium_kmsro = system_has_kms_drm
+ 
+ _vulkan_drivers = get_option('vulkan-drivers')
+ if _vulkan_drivers.contains('auto')
++  extras = []
++  foreach drv : _vulkan_drivers
++    if drv != 'auto'
++      extras += drv
++    endif
++  endforeach
+   # TODO: handle swrat driver if llvm is auto/disabled
+   if system_has_kms_drm
+     if host_machine.cpu_family().startswith('x86')
+@@ -253,6 +270,11 @@ if _vulkan_drivers.contains('auto')
+     error('Unknown OS @0@. Please pass -Dvulkan-drivers to set driver options. Patches gladly accepted to fix this.'.format(
+           host_machine.system()))
+   endif
++  foreach drv : extras
++    if not _vulkan_drivers.contains(drv)
++      _vulkan_drivers += drv
++    endif
++  endforeach
+ elif _vulkan_drivers.contains('all')
+    # Build every vulkan driver regardless of architecture.
+    _vulkan_drivers = ['amd', 'intel', 'intel_hasvk', 'swrast',

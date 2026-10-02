@@ -7,7 +7,7 @@
 # Contributor: Andreas Radke <andyrtr@archlinux.org>
 
 pkgname=mesa-pure-clang-git
-pkgver=26.3.0_devel.230392.fa8db585df4.518a75c
+pkgver=26.3.0_devel.230679.9ad63634370.1bf6a79
 pkgrel=1
 pkgdesc="A purely personal Mesa build"
 url="https://www.mesa3d.org/"
@@ -91,8 +91,12 @@ source=(
   "mesa::git+https://gitlab.freedesktop.org/mesa/mesa.git#branch=main"
   "u_d3d12.patch"
   "rusticl-radeonsi.conf"
+  "mesa-buildsystem-improvements.patch"
+  "mesa-26.2-llvm23-libclc.patch"
 )
 sha256sums=(
+  'SKIP'
+  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'

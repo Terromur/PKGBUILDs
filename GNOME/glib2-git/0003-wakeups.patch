@@ -1,0 +1,22 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Arjan van de Ven <arjan@linux.intel.com>
+Date: Fri, 6 Apr 2018 02:07:57 +0000
+Subject: [PATCH] wakeups
+
+---
+ gio/inotify/inotify-missing.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/gio/inotify/inotify-missing.c b/gio/inotify/inotify-missing.c
+index b71b2d3..403fec6 100644
+--- a/gio/inotify/inotify-missing.c
++++ b/gio/inotify/inotify-missing.c
+@@ -27,7 +27,7 @@
+ #include "inotify-path.h"
+ #include "glib-private.h"
+ 
+-#define SCAN_MISSING_TIME 4 /* 1/4 Hz */
++#define SCAN_MISSING_TIME 120 /* 1/4 Hz */
+ 
+ static gboolean im_debug_enabled = FALSE;
+ #define IM_W if (im_debug_enabled) g_warning

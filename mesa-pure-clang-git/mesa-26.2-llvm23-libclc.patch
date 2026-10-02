@@ -1,0 +1,92 @@
+--- a/meson.build	2026-08-20 10:57:40.000000000 +0200
++++ b/meson.build	2026-08-20 14:50:32.507798818 +0200
+@@ -988,7 +988,9 @@
+     'mesa-libclc not found. Build will fall back to upstream libclc, however ' +
+     'this is not recommended for most use cases.')
+   if not dep_clc.found()
+-    dep_clc = dependency('libclc')
++    # LLVM 23 folded libclc into the clang resource directory and dropped
++    # libclc.pc. Prefer the pkg-config module when present (LLVM < 23).
++    dep_clc = dependency('libclc', required : false)
+   endif
+ endif
+ 
+--- a/src/compiler/clc/meson.build	2026-08-20 10:57:40.000000000 +0200
++++ b/src/compiler/clc/meson.build	2026-08-20 14:50:32.507798818 +0200
+@@ -40,10 +40,25 @@
+   _libmesaclc_cpp_args += ['-DUSE_STATIC_OPENCL_C_H=1']
+ endif
+ 
+-if dep_clc.found()
++# LLVM >= 23 installs libclc under the clang resource dir as
++#   <llvm_libdir>/clang/<major>/lib/<triple>/libclc.spv
++# and no longer ships libclc.pc. See mesa!40601 / llvm c5cb48c39701.
++if with_gallium_rusticl or with_microsoft_clc
+   files_libmesaclc += 'nir_load_libclc.c'
+ 
+-  _basedir = dep_clc.get_variable(pkgconfig : 'libexecdir')
++  if dep_clc.found()
++    _basedir = dep_clc.get_variable(pkgconfig : 'libexecdir')
++    _libclc_spirv32 = 'spirv-mesa3d-.spv'
++    _libclc_spirv64 = 'spirv64-mesa3d-.spv'
++  elif dep_llvm.version().version_compare('>= 23')
++    # Clang resource dir uses the major version only (since LLVM 16).
++    _clang_version_dir = dep_llvm.version().split('.')[0]
++    _basedir = join_paths(llvm_libdir, 'clang', _clang_version_dir, 'lib')
++    _libclc_spirv32 = 'spirv32-unknown-unknown/libclc.spv'
++    _libclc_spirv64 = 'spirv64-unknown-unknown/libclc.spv'
++  else
++    error('libclc is required for LLVM < 23 (pkg-config module libclc not found)')
++  endif
+ 
+   _static_libclc = get_option('static-libclc')
+   if _static_libclc.length() > 0
+@@ -57,8 +72,14 @@
+     endif
+     foreach s : _static_libclc
+       _libmesaclc_c_args += '-DHAVE_STATIC_LIBCLC_@0@'.format(s.to_upper())
++      # Keep historical header/symbol names (spirv-mesa3d-.spv.h) even when the
++      # on-disk layout changed in LLVM 23.
+       f = '@0@-mesa3d-.spv'.format(s)
+-      _libclc_file = _basedir / f
++      if s == 'spirv'
++        _libclc_file = _basedir / _libclc_spirv32
++      else
++        _libclc_file = _basedir / _libclc_spirv64
++      endif
+       if _zstd_static_libclc
+         _libclc_file = custom_target(
+           '@0@.zstd'.format(f),
+@@ -79,7 +100,11 @@
+       )
+     endforeach
+   else
+-    _libmesaclc_c_args += ['-DDYNAMIC_LIBCLC_PATH="@0@/"'.format(_basedir)]
++    _libmesaclc_c_args += [
++      '-DDYNAMIC_LIBCLC_PATH="@0@/"'.format(_basedir),
++      '-DLIBCLC_SPV32="@0@"'.format(_libclc_spirv32),
++      '-DLIBCLC_SPV64="@0@"'.format(_libclc_spirv64),
++    ]
+     if not cc.has_function('mmap')
+       error('mmap required for dynamic libCLC loading')
+     endif
+--- a/src/compiler/clc/nir_load_libclc.c	2026-08-20 10:57:40.000000000 +0200
++++ b/src/compiler/clc/nir_load_libclc.c	2026-08-20 14:50:32.521897898 +0200
+@@ -63,7 +63,7 @@
+       .static_data_size = sizeof(libclc_spirv_mesa3d_spv),
+ #endif
+ #ifdef DYNAMIC_LIBCLC_PATH
+-      .sys_path = DYNAMIC_LIBCLC_PATH "spirv-mesa3d-.spv",
++      .sys_path = DYNAMIC_LIBCLC_PATH LIBCLC_SPV32,
+ #endif
+    },
+    {
+@@ -73,7 +73,7 @@
+       .static_data_size = sizeof(libclc_spirv64_mesa3d_spv),
+ #endif
+ #ifdef DYNAMIC_LIBCLC_PATH
+-      .sys_path = DYNAMIC_LIBCLC_PATH "spirv64-mesa3d-.spv",
++      .sys_path = DYNAMIC_LIBCLC_PATH LIBCLC_SPV64,
+ #endif
+    },
+ };

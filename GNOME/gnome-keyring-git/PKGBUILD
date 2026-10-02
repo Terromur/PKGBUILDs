@@ -38,11 +38,11 @@ groups=(gnome)
 install=gnome-keyring.install
 source=(
   "git+$url.git"
-  0001-daemon-Add-Cinnamon-to-autostart-files.patch
+  prompt-crash.patch
   04a6bc68ff4350676c5fc55d1b244a17224fbea2.patch
 )
 b2sums=('SKIP'
-        '584832e529ee2be98b78b128ab4271fae919a194f2d9254526943da6baccfe5eb6deb17ee03cfb54261cade4be0e93ea7fbcc91ebc77ecfacd2f25d90f9e29c4'
+        'SKIP'
         'SKIP')
 validpgpkeys=(
   A7C626E13F9AD776776BD9CA1D8A57CF2E8D36A3 # Niels De Graef (nielsdg) <nielsdegraef@gmail.com>
@@ -55,9 +55,8 @@ pkgver() {
 
 prepare() {
   cd gnome-keyring
-
-  # Autolaunch in Cinnamon
-  git apply -3 ../0001-daemon-Add-Cinnamon-to-autostart-files.patch
+  
+  git apply -3 ../prompt-crash.patch
   
   git apply -3 ../04a6bc68ff4350676c5fc55d1b244a17224fbea2.patch
 }
