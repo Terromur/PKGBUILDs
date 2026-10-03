@@ -1,0 +1,149 @@
+From 4f0de1d6466a396b6ab390c38c072acdc778fce3 Mon Sep 17 00:00:00 2001
+From: Matthew Sitton <matthewsitton@gmail.com>
+Date: Sun, 6 Sep 2026 17:01:13 -0500
+Subject: [PATCH 1/2] fix: give popups their parent's output offset on creation
+
+A window's output offset is only set once its surface enters an output.
+Until then a popup created on an offset output had its first configure
+written back to X without the offset, moving the X window onto the first
+output. The X server then echoed the real position, and reconfigure_window
+subtracted the still zero offset, requesting a positioner offset far
+outside the parent, which the compositor slid to the parent's edge.
+Whether this happened depended on the echo racing the wl_surface.enter
+event, so it was intermittent.
+
+The popup's X11 position is relative to the same output as its parent, so
+inherit the parent's output offset when creating the popup.
+
+The spurious move also happened to answer the popup's ConfigureRequest
+with a real ConfigureNotify; clients waiting for that answer are covered
+by the previous commit's synthetic events.
+---
+ src/server/mod.rs   |  8 +++++++-
+ src/server/tests.rs | 48 +++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 55 insertions(+), 1 deletion(-)
+
+diff --git a/src/server/mod.rs b/src/server/mod.rs
+index a436331..839c4b8 100644
+--- a/src/server/mod.rs
++++ b/src/server/mod.rs
+@@ -1599,7 +1599,7 @@ impl<S: X11Selection + 'static> InnerServerState<S> {
+     fn create_popup(&mut self, entity: Entity, xdg: XdgSurface, parent: x::Window) -> PopupData {
+         let mut query = self
+             .world
+-            .query_one::<(&WindowData, &mut SurfaceScaleFactor)>(entity)
++            .query_one::<(&mut WindowData, &mut SurfaceScaleFactor)>(entity)
+             .unwrap();
+ 
+         let (window, scale) = query.get().unwrap();
+@@ -1611,6 +1611,12 @@ impl<S: X11Selection + 'static> InnerServerState<S> {
+         let parent_dims = parent_window.attrs.dims;
+         let initial_scale = parent_scale.0;
+         *scale = *parent_scale;
++        // The popup's X11 position is relative to the same output as its parent, so take the
++        // parent's output offset right away. Otherwise, until the popup's surface enters an
++        // output, its configure is written back to X without the offset, and the X server's
++        // echoed position is repositioned as if it were on the first output, which pushes the
++        // popup off its parent.
++        window.output_offset = parent_window.output_offset;
+ 
+         debug!(
+             "creating popup ({:?}) {:?} {:?} {:?} {entity:?} (scale: {initial_scale})",
+diff --git a/src/server/tests.rs b/src/server/tests.rs
+index 4e1735e..44e981e 100644
+--- a/src/server/tests.rs
++++ b/src/server/tests.rs
+@@ -2012,6 +2012,54 @@ fn output_offset_surface_positioning() {
+     f.assert_window_dimensions(popup, p_id, popup_dims);
+ }
+ 
++#[test]
++fn output_offset_popup_before_output_enter() {
++    // A popup on an offset output is positioned correctly even before its surface has entered
++    // the output, including when the X server echoes the popup's position back.
++    let (mut f, comp) = TestFixture::new_with_compositor();
++
++    f.new_output(0, 0);
++    let (_, output) = f.new_output(500, 100);
++    f.run();
++
++    let window = Window::new(1);
++    let (_, toplevel_id) = f.create_toplevel(&comp, window);
++    f.testwl.move_surface_to_output(toplevel_id, &output);
++    f.run();
++
++    let popup = Window::new(2);
++    let (_, p_id) = f.create_popup(
++        &comp,
++        PopupBuilder::new(popup, window, toplevel_id).x(510).y(110),
++    );
++    let popup_dims = WindowDims {
++        x: 510,
++        y: 110,
++        width: 50,
++        height: 50,
++    };
++    f.assert_window_dimensions(popup, p_id, popup_dims);
++
++    f.reconfigure_window(popup, popup_dims, true);
++    f.run();
++    f.run();
++    let data = f.testwl.get_surface_data(p_id).unwrap();
++    assert_eq!(
++        data.popup().positioner_state.offset,
++        testwl::Vec2 { x: 10, y: 10 }
++    );
++
++    f.testwl.move_surface_to_output(p_id, &output);
++    f.run();
++    f.run();
++    let data = f.testwl.get_surface_data(p_id).unwrap();
++    assert_eq!(
++        data.popup().positioner_state.offset,
++        testwl::Vec2 { x: 10, y: 10 }
++    );
++    f.assert_window_dimensions(popup, p_id, popup_dims);
++}
++
+ #[test]
+ fn output_offset_xdg_override() {
+     let (mut f, comp) = TestFixture::new_with_compositor();
+-- 
+2.55.0
+
+
+From 217db21690ad9be85a6cec44e171b23ca4b7dc4e Mon Sep 17 00:00:00 2001
+From: rixy <rixy@localhost>
+Date: Fri, 2 Oct 2026 13:48:00 +0300
+Subject: [PATCH 2/2] xstate: treat X11 dialogs as toplevels
+
+---
+ src/xstate/mod.rs | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/src/xstate/mod.rs b/src/xstate/mod.rs
+index 1ed9c09f..1bbe639 100644
+--- a/src/xstate/mod.rs
++++ b/src/xstate/mod.rs
+@@ -336,6 +336,7 @@ impl XState {
+                 time: x::CURRENT_TIME,
+             })
+             .unwrap();
++
+     }
+ 
+     pub fn handle_events(&mut self, server_state: &mut super::RealServerState) {
+@@ -1269,9 +1270,7 @@ impl WindowRoleHeuristics {
+             match ty {
+                 x if x == window_atoms.normal => return WindowRole::Toplevel,
+                 x if x == window_atoms.dialog => {
+-                    return WindowRole::new_basic(
+-                        self.has_transient_for && motif_no_decor && forced_size,
+-                    );
++                    return WindowRole::new_basic(self.override_redirect);
+                 }
+                 x if x == window_atoms.utility => {
+                     return WindowRole::new_basic(motif_no_decor && forced_size);
+-- 
+2.55.0
+
