@@ -1,11 +1,11 @@
 # Maintainer: Terromur <terromuroz@proton.me>
 
 pkgname=wine-pure-enhanced
-pkgver=11.18.r318.g6d1b0940577
+pkgver=11.18.r350.g39d6437794f
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=39d6437794f244b4c486fb75bfd151a78964ec24"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=766285c4fc8fcf92e9d7c76f5f8a5f5d65d3fb5f"
   "git+https://github.com/GloriousEggroll/proton-ge-custom.git"
   "git+https://github.com/elgabo86/gwine.git"
   "git+https://github.com/starcitizen-lug/patches.git"
