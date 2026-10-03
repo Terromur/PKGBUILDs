@@ -7,7 +7,7 @@
 
 pkgname=firefox-pure
 pkgver=157.0
-pkgrel=3
+pkgrel=4
 pkgdesc="Fast, Private & Safe Web Browser"
 url="https://www.firefox.com"
 arch=(x86_64)
@@ -95,6 +95,9 @@ source=(
   "bmo2030493.patch"
   "glibc.patch"
   "no-static-libstdc++.patch"
+  "mozjemalloc.patch"
+  "jit.patch"
+  "pgo.patch"
 )
 sha256sums=(
   '259c564dd4bbd56bbe8a9a6cf001fc8812853567fd3a78e77c9ddf10d7d4e982'
@@ -114,6 +117,9 @@ sha256sums=(
   '0cdd339ef436ac95f2a45a8e2843c86a10eb242696efacf53e61a4d23c69bf6b'
   'd0ee3be3ddcf46614f510e27f45596e6db5316a36e78371a485af51d5cbb0253'
   'ba36d057082445350ff852567264b153bc8c46f60cec24e489b67d347dbf5731'
+  '1e01d255aebd3ee28c720dfd19116d233aa12dd073541abf249203f6e547792b'
+  '909ab754829a3c326413efe643a9e7b34e002bc64ad922c26bb1a4dfc4b6aabb'
+  '87dbb99155a9b726eaf3a78649fa9e2f69aa86f612fcf9ace336c60faf63efc4'
 )
 
 prepare() {
@@ -137,6 +143,11 @@ prepare() {
   # Other patches
   patch -Np1 -i "${srcdir}"/glibc.patch
   patch -Np1 -i "${srcdir}"/no-static-libstdc++.patch
+  
+  # Optimization patches
+  patch -Np1 -i "${srcdir}"/mozjemalloc.patch
+  patch -Np1 -i "${srcdir}"/jit.patch
+  patch -Np1 -i "${srcdir}"/pgo.patch
   
  # Gentoo patches
 for patch in "${srcdir}/firefox-patches"/*.patch; do

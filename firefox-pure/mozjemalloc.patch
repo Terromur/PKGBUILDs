@@ -1,0 +1,11 @@
+--- a/memory/build/Globals.h
++++ b/memory/build/Globals.h
+@@ -148,7 +148,7 @@
+ }
+ 
+ // Maximum number of dirty pages per arena.
+-#define DIRTY_MAX_DEFAULT (1U << 8)
++#define DIRTY_MAX_DEFAULT (1U << 10)
+ 
+ enum PoisonType {
+   NONE,

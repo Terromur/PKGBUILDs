@@ -1,0 +1,11 @@
+--- a/js/src/jit/JitOptions.cpp
++++ b/js/src/jit/JitOptions.cpp
+@@ -275,7 +275,7 @@
+   SET_DEFAULT(osrPcMismatchesBeforeRecompile, 6000);
+ 
+   // The bytecode length limit for small function.
+-  SET_DEFAULT(smallFunctionMaxBytecodeLength, 140);
++  SET_DEFAULT(smallFunctionMaxBytecodeLength, 200);
+ 
+   // The minimum entry count for an IC stub before it can be trial-inlined.
+   SET_DEFAULT(inliningEntryThreshold, 95);

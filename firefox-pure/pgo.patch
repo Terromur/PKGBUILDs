@@ -1,0 +1,13 @@
+--- a/build/pgo/index.html
++++ b/build/pgo/index.html
+@@ -127,6 +127,10 @@
+       extendedTimeout
+     ),
+     new Item(
++      "http://localhost:8000/index.html?startAutomatically=true",
++      superExtendedTimeout
++    ),
++    new Item(
+       "webkit/PerformanceTests/webaudio/index.html?raptor&rendering-buffer-length=30",
+       extendedTimeout
+     )
