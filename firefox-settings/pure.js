@@ -247,7 +247,6 @@ pref("network.cookie.cookieBehavior.optInPartitioning", true);
 pref("network.cookie.cookieBehavior.optInPartitioning.pbmode", true);
 pref("network.predictor.enable-prefetch", false); // Disable speculative website loading
 pref("network.predictor.enabled", false); // Disable speculative website loading
-pref("network.prefetch-next", false); // https://developer.mozilla.org/en-US/docs/Glossary/Prefetch
 pref("privacy.query_stripping.strip_list", "__hsfp __hssc __hstc __s _hsenc _openstat dclid fbclid gbraid gclid hsCtaTracking igshid mc_eid ml_subscriber ml_subscriber_hash msclkid oft_c oft_ck oft_d oft_id oft_ids oft_k oft_lk oft_sk oly_anon_id oly_enc_id rb_clickid s_cid twclid vero_conv vero_id wbraid wickedid yclid"); // https://groups.google.com/a/mozilla.org/g/dev-platform/c/1vOSas0ptVQ?pli=1
 pref("urlclassifier.features.socialtracking.skipURLs", "*.instagram.com, *.twitter.com, *.twimg.com"); // allow embedded social content
 pref("urlclassifier.trackingSkipURLs", "*.reddit.com, *.twitter.com, *.twimg.com"); // allow embedded social content
@@ -284,6 +283,11 @@ pref("image.mem.surfacecache.max_size_kb", 4194304);
 pref("browser.tabs.remote.warmup.enabled", true); 
 pref("dom.ipc.forkserver.enable", true);
 pref("dom.ipc.processCount.webIsolated", 8);
+pref("layout.throttled_frame_rate", 1);
+pref("accessibility.force_disabled", 1);
+pref("network.prefetch-next", true);
+pref("network.predictor.enabled", true);
+pref("network.predictor.enable-hover-on-ssl", true);
 
 // Улучшение приватности
 
