@@ -273,10 +273,17 @@ pref("layout.css.grid-template-masonry-value.enabled", true); // Enable CSS Maso
 // Дополнительная оптимизация от меня
 pref("nglayout.initialpaint.delay", 5);
 pref("gfx.webrender.compositor.force-enabled", true);
-pref("image.cache.size", 20971520);
+pref("image.cache.size", 268435456);
 pref("network.buffer.cache.count", 48);
-pref("network.dnsCacheEntries", 1000);
+pref("network.dnsCacheEntries", 4000);
 pref("gfx.webrender.layer-compositor", true);
+pref("network.websocket.max-connections", 2000);
+pref("network.http.keep-alive.timeout", 300);
+pref("network.http.http3.recvBufferSize", 8388608);
+pref("image.mem.surfacecache.max_size_kb", 4194304);
+pref("browser.tabs.remote.warmup.enabled", true); 
+pref("dom.ipc.forkserver.enable", true);
+pref("dom.ipc.processCount.webIsolated", 8);
 
 // Улучшение приватности
 
@@ -366,7 +373,7 @@ pref("network.http.happy_eyeballs_connection_attempt_delay", 25);
 
 // DNS оптимизация
 
-pref("network.dnsCacheExpirationGracePeriod", 900);
+pref("network.dnsCacheExpirationGracePeriod", 600);
 pref("network.dns.resolver-thread-extra-idle-time-seconds", 120);
 pref("network.dns.get-ttl", true);
 
@@ -394,9 +401,14 @@ pref("browser.sessionstore.max_windows_undo", 3);
 
 // Javascript оптимизация
 pref("javascript.options.blinterp.threshold", 5);
-pref("javascript.options.ion.frequent_bailout_threshold", 20);
-pref("javascript.options.inlining_bytecode_max_length", 300);
-pref("javascript.options.concurrent_multiprocess_gcs.cpu_divisor", 2)
+pref("javascript.options.ion.frequent_bailout_threshold", 10);
+pref("javascript.options.inlining_bytecode_max_length", 200);
+pref("javascript.options.concurrent_multiprocess_gcs.cpu_divisor", 2);
+pref("javascript.options.mem.nursery.max_kb", 65536);
+pref("javascript.options.mem.nursery.min_kb", 4096);
+pref("javascript.options.mem.gc_allocation_threshold_mb", 100);
+pref("javascript.options.mem.gc_incremental_slice_ms", 10);
+pref("javascript.options.mem.gc_max_parallel_marking_threads", 8);
 
 // Изменение звуковой подсистемы
-pref("media.cubeb.backend", alsa);
+pref("media.cubeb.backend", "alsa");
