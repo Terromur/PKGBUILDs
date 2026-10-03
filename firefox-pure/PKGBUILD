@@ -7,7 +7,7 @@
 
 pkgname=firefox-pure
 pkgver=157.0
-pkgrel=4
+pkgrel=5
 pkgdesc="Fast, Private & Safe Web Browser"
 url="https://www.firefox.com"
 arch=(x86_64)
@@ -273,7 +273,7 @@ export PATH="$HOME/.local/node/node-v24.10.0-linux-x64/bin:$PATH"
   
   export CFLAGS="-march=native -mtune=native -O3 -pipe -fno-stack-protector -fno-stack-check -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -mharden-sls=none -fno-ident -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement=1 -mllvm -enable-dfa-jump-thread -mtls-dialect=gnu2 -fsplit-machine-functions -D_FORTIFY_SOURCE=0"
   export CXXFLAGS="$CFLAGS -DNDEBUG"
-  export LDFLAGS="-fuse-ld=mold -flto=full -O3 -Wl,--lto-O3 -Wl,--hash-style=gnu -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs -Wl,--strip-all -Wl,--icf=safe -Wl,-z,norelro"
+  export LDFLAGS="-fuse-ld=mold -flto=full -O3 -Wl,--lto-O3 -Wl,--hash-style=gnu -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs -Wl,--strip-all -Wl,-z,norelro"
   export RUSTFLAGS="-C opt-level=3 -C target-cpu=native -C link-arg=-fuse-ld=mold"
 
   # LTO needs more open files
