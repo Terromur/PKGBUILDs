@@ -271,7 +271,6 @@ pref("layout.css.grid-template-masonry-value.enabled", true); // Enable CSS Maso
 
 // Дополнительная оптимизация от меня
 pref("nglayout.initialpaint.delay", 5);
-pref("gfx.webrender.compositor.force-enabled", true);
 pref("image.cache.size", 268435456);
 pref("network.buffer.cache.count", 48);
 pref("network.dnsCacheEntries", 4000);
