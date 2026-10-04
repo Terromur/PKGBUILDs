@@ -1,0 +1,69 @@
+#Maintainer: Terromur <terromuroz@proton.me>
+
+pkgname=photosuite
+pkgver=0.9.15
+pkgrel=1
+pkgdesc="A desktop image editor faithfully replicating classic Adobe Photoshop with 1:1 native PSD/PSB compatibility"
+arch=('x86_64' 'aarch64')
+url="https://github.com/eolix/photosuite"
+license=('GPL-3.0')
+depends=(
+  'webkit2gtk-4.1'
+  'gtk3'
+  'libsoup3'
+  'libcups'
+)
+makedepends=(
+  'git'
+  'nodejs'
+  'npm'
+  'rust'
+  'cargo'
+  'pkgconf'
+)
+provides=('photosuite')
+conflicts=('photosuite')
+source=("git+https://github.com/eolix/photosuite.git#tag=v${pkgver}")
+sha256sums=('SKIP')
+
+prepare() {
+  cd "$srcdir/photosuite"
+  git submodule update --init --recursive
+}
+
+build() {
+  cd "$srcdir/photosuite"
+  npm install --no-audit --no-fund
+  npm run vendor:fixlinks
+  node_modules/.bin/tauri build --no-bundle
+}
+
+package() {
+  cd "$srcdir/photosuite"
+  install -Dm755 "src-tauri/target/release/photosuite" \
+    "$pkgdir/usr/bin/photosuite"
+  install -Dm644 "src-tauri/icons/32x32.png" \
+    "$pkgdir/usr/share/icons/hicolor/32x32/apps/photosuite.png"
+  install -Dm644 "src-tauri/icons/128x128.png" \
+    "$pkgdir/usr/share/icons/hicolor/128x128/apps/photosuite.png"
+  install -Dm644 "src-tauri/icons/128x128@2x.png" \
+    "$pkgdir/usr/share/icons/hicolor/256x256/apps/photosuite.png"
+  install -Dm644 /dev/stdin \
+    "$pkgdir/usr/share/applications/photosuite.desktop" <<'EOF'
+[Desktop Entry]
+Name=PhotoSuite
+GenericName=Image Editor
+Comment=A desktop image editor with 1:1 native PSD/PSB compatibility
+Exec=photosuite %U
+Icon=photosuite
+Terminal=false
+Type=Application
+Categories=Graphics;2DGraphics;RasterGraphics;Photography;
+MimeType=image/vnd.adobe.photoshop;image/png;image/jpeg;image/gif;image/webp;image/avif;image/bmp;image/tiff;image/svg+xml;application/pdf;image/x-exr;image/x-tga;image/x-dds;image/x-portable-pixmap;image/x-canon-cr2;image/x-nikon-nef;image/x-sony-arw;image/x-adobe-dng;
+StartupNotify=true
+EOF
+  install -Dm644 LICENSE \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 THIRD-PARTY-NOTICES.md \
+    "$pkgdir/usr/share/licenses/$pkgname/THIRD-PARTY-NOTICES.md"
+}
