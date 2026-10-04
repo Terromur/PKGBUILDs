@@ -351,6 +351,7 @@ if [ -d "${spritz_patches_dir}" ]; then
   done < <(find "${spritz_patches_dir}" \
     -type f \
     -name "*.patch" \
+        -not -path "${spritz_patches_dir}/0001-spritz/0002-HACK-ws2_32-Block-first-internet-connection-for-some.patch" \
         -not -path "${spritz_patches_dir}/0001-spritz/0006-HACK-winex11-Make-WM-focus-the-window-by-default.patch" \
         -not -path "${spritz_patches_dir}/0001-spritz/0008-winex11-Ignore-XI_BadDevice-errors-on-X_OpenDevice-w.patch" \
         -not -path "${spritz_patches_dir}/0003-tkg/0001-ntdll-loader-add-support-for-overriding-IMAGE_FILE_L.patch" \

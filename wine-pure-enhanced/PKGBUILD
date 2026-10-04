@@ -320,6 +320,7 @@ if [ -d "${spritz_patches_dir}" ]; then
   done < <(find "${spritz_patches_dir}" \
     -type f \
     -name "*.patch" \
+        -not -path "${spritz_patches_dir}/0001-spritz/0002-HACK-ws2_32-Block-first-internet-connection-for-some.patch" \
         -not -path "${spritz_patches_dir}/0003-tkg/0001-ntdll-loader-add-support-for-overriding-IMAGE_FILE_L.patch" \
         -not -path "${spritz_patches_dir}/0005-misc/0004-ntdll-Never-use-CLOCK_REALTIME_COARSE.patch" \
         -not -path "${spritz_patches_dir}/0004-proton-fsync/*" \
