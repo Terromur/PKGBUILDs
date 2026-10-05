@@ -1,16 +1,16 @@
 # Maintainer: Terromur <terromuroz@proton.me>
 
 pkgname=dxvk-low-latency-avx
-pkgver=3.1.1
+pkgver=low.latency.framepacing.3.1.1.2.r0.gd533db09
 pkgrel=1
 pkgdesc="A Vulkan-based compatibility layer for Direct3D 9/10/11 which allows running 3D applications on Linux using Wine. Windows DLL version)"
 arch=('x86_64')
 url="https://github.com/netborg-afps/dxvk-low-latency"
 license=('zlib/libpng')
-depends=('vulkan-icd-loader')
+depends=('vulkan-icd-loader' 'mingw-w64-mimalloc-git')
 provides=('dxvk' 'd9vk' "dxvk=$pkgver")
 conflicts=('d9vk'  "dxvk" 'dxvk-bin' "dxvk-pure-git")
-makedepends=('ninja' 'meson>=0.43' 'glslang' 'clang' 'lld' 'llvm' 'git' 'mingw-w64-gcc')
+makedepends=('ninja' 'meson>=0.43' 'glslang' 'clang' 'mold' 'llvm' 'git' 'mingw-w64-gcc')
 options=(!strip !buildflags staticlibs)
 source=(
     "git+https://github.com/netborg-afps/dxvk-low-latency.git"
@@ -53,13 +53,24 @@ prepare() {
     
     # Add patch from Proton-GE
     patch -p1 -i "$srcdir"/dxvk-preserve-swapchain-on-acquire-backpressure.patch
+    
+    for f in \
+    src/dxgi/dxgi_main.cpp \
+    src/d3d10/d3d10_core.cpp \
+    src/d3d11/d3d11_main.cpp \
+    src/d3d9/d3d9_main.cpp ; do
+  if [ -f "$f" ]; then
+    sed -i '1i #include <mimalloc-new-delete.h>' "$f"
+    echo "Patched: $f"
+  fi
+done
 
     local base_cflags="-march=native -mtune=native -O3 -funsafe-math-optimizations -fomit-frame-pointer -fno-ident -fno-stack-protector -fno-math-errno -fno-trapping-math -fcf-protection=none -mharden-sls=none -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement=1 -mllvm -enable-dfa-jump-thread -mllvm -inline-threshold=325 -mllvm -unroll-threshold=350 -D_FORTIFY_SOURCE=0 -ffunction-sections -fdata-sections"
     local cflags_64="${base_cflags} -D_FILE_OFFSET_BITS=64"
     local cxxflags_64="${base_cflags} -D_FILE_OFFSET_BITS=64 -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
     local cflags_32="${base_cflags}"
     local cxxflags_32="${base_cflags} -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
-    local ldflags="-Wl,-O3 -Wl,--as-needed,--strip-all -Wl,--lto-O3 -Wl,--lto-CGO3 -flto -Wl,--file-alignment=4096 -latomic -Wl,--gc-sections"
+    local ldflags="-Wl,-O3 -Wl,--strip-all -Wl,--lto-O3 -flto -Wl,--file-alignment=4096 -Wl,--gc-sections -lmimalloc -latomic"
 
     sed -i build-win32-clang.txt \
         -e "s|@CARGS@|'${cflags_32// /\',\'}'|g" \

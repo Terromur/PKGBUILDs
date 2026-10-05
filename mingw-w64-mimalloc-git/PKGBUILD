@@ -1,0 +1,65 @@
+# Maintainer: Terromur <terromuroz@proton.me>
+_pkgbase=mimalloc
+pkgname=mingw-w64-mimalloc-git
+pkgver=3.5.4.r13.g8bd60cf0
+pkgrel=1
+pkgdesc='General-purpose allocator for mingw-w64'
+arch=('any')
+url='https://github.com/microsoft/mimalloc'
+license=('MIT')
+depends=('mingw-w64-gcc' 'mingw-w64-crt')
+makedepends=('git' 'cmake' 'ninja')
+source=("${pkgname}::git+${url}#branch=dev3")
+sha256sums=('SKIP')
+options=(!strip staticlibs !buildflags)
+
+pkgver() {
+  cd "${pkgname}"
+  git describe --long --tags | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+prepare() {
+  cd "${pkgname}"
+  sed -i \
+    -e '/^  #define mi_decl_new(n) /s/ mi_decl_nodiscard mi_decl_restrict$//' \
+    -e '/^  #define mi_decl_new_nothrow(n) /s/ mi_decl_nodiscard mi_decl_restrict$//' \
+    include/mimalloc-new-delete.h
+}
+
+_build_arch() {
+  local arch="$1"
+  local toolchain="${srcdir}/toolchain-${arch}.cmake"
+
+  cat > "${toolchain}" <<EOF
+set(CMAKE_SYSTEM_NAME Windows)
+set(CMAKE_SYSTEM_PROCESSOR ${arch})
+set(CMAKE_C_COMPILER ${arch}-w64-mingw32-gcc)
+set(CMAKE_CXX_COMPILER ${arch}-w64-mingw32-g++)
+set(CMAKE_RC_COMPILER ${arch}-w64-mingw32-windres)
+set(CMAKE_FIND_ROOT_PATH /usr/${arch}-w64-mingw32)
+EOF
+
+  cmake -B "build-${arch}" -S "${pkgname}" -G Ninja \
+    -D CMAKE_TOOLCHAIN_FILE="${toolchain}" \
+    -D CMAKE_BUILD_TYPE=Release \
+    -D CMAKE_INSTALL_PREFIX=/usr/${arch}-w64-mingw32 \
+    -D MI_BUILD_OBJECT=OFF \
+    -D MI_BUILD_SHARED=OFF \
+    -D MI_BUILD_STATIC=ON \
+    -D MI_BUILD_TESTS=OFF \
+    -D MI_USE_LIBATOMIC=OFF \
+    -D MI_INSTALL_TOPLEVEL=ON
+
+  cmake --build "build-${arch}"
+}
+
+build() {
+  _build_arch i686
+  _build_arch x86_64
+}
+
+package() {
+  DESTDIR="${pkgdir}" cmake --install build-i686
+  DESTDIR="${pkgdir}" cmake --install build-x86_64
+  install -vDm644 -t "${pkgdir}/usr/share/licenses/${pkgname}" "${pkgname}/LICENSE"
+}
