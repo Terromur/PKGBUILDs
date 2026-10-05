@@ -7,7 +7,7 @@
 # Contributor: Andreas Radke <andyrtr@archlinux.org>
 
 pkgname=mesa-pure-clang-git
-pkgver=26.3.0_devel.230679.9ad63634370.1bf6a79
+pkgver=26.3.0_devel.230759.1887da10a6e.1bf6a79
 pkgrel=1
 pkgdesc="A purely personal Mesa build"
 url="https://www.mesa3d.org/"
@@ -24,7 +24,7 @@ makedepends=(
   'libva'
   'libxml2'
   'libxrandr'
-  'lld'
+  'mold'
   'llvm'
   'meson'
   'ninja'
@@ -60,6 +60,7 @@ depends=(
   'xcb-util-keysyms'
   'zlib'
   'zstd'
+  'mimalloc'
 )
 optdepends=('opengl-man-pages: for the OpenGL API man pages')
 provides=(
@@ -153,9 +154,9 @@ build() {
     -D android-libbacktrace=disabled
     -D android-strict=false
     -D c_args="-march=native -mtune=native -O2 -pipe -fno-stack-protector -fno-stack-check -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -mharden-sls=none -fno-ident -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement=1 -mllvm -enable-dfa-jump-thread -mtls-dialect=gnu2 -fsplit-machine-functions -mllvm -unroll-threshold=500 -D_FORTIFY_SOURCE=0"
-    -D c_link_args="-fuse-ld=lld -flto=auto -O3 -Wl,--lto-O3 -Wl,--lto-CGO3 -Wl,--hash-style=gnu -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs -Wl,--strip-all -Wl,--icf=safe -Wl,-z,norelro"
+    -D c_link_args="-lmimalloc -fuse-ld=mold -flto=auto -O3 -Wl,--lto-O3 -Wl,--hash-style=gnu -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs -Wl,--strip-all -Wl,--icf=safe -Wl,-z,norelro"
     -D cpp_args="-march=native -mtune=native -O2 -pipe -fno-stack-protector -fno-stack-check -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -mharden-sls=none -fno-ident -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement=1 -mllvm -enable-dfa-jump-thread -mtls-dialect=gnu2 -fsplit-machine-functions -mllvm -unroll-threshold=500 -D_FORTIFY_SOURCE=0 -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
-    -D cpp_link_args="-fuse-ld=lld -flto=auto -O3 -Wl,--lto-O3 -Wl,--lto-CGO3 -Wl,--hash-style=gnu -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs -Wl,--strip-all -Wl,--icf=safe -Wl,-z,norelro"
+    -D cpp_link_args="-lmimalloc -fuse-ld=mold -flto=auto -O3 -Wl,--lto-O3 -Wl,--hash-style=gnu -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs -Wl,--strip-all -Wl,--icf=safe -Wl,-z,norelro"
     -D b_asneeded=false
     -D b_ndebug=true
     -D gallium-drivers=radeonsi
