@@ -1,7 +1,7 @@
 # Maintainer: Terromur <terromuroz@proton.me>
 _pkgbase=mimalloc
 pkgname=mingw-w64-mimalloc-git
-pkgver=3.5.4.r13.g8bd60cf0
+pkgver=3.5.4.r19.gbedb1cdd
 pkgrel=1
 pkgdesc='General-purpose allocator for mingw-w64'
 arch=('any')
@@ -61,5 +61,11 @@ build() {
 package() {
   DESTDIR="${pkgdir}" cmake --install build-i686
   DESTDIR="${pkgdir}" cmake --install build-x86_64
+
+  install -Dm644 "${pkgdir}/usr/i686-w64-mingw32/lib/libmimalloc.a" \
+                 "${pkgdir}/usr/i686-w64-mingw32/lib/mimalloc.lib"
+  install -Dm644 "${pkgdir}/usr/x86_64-w64-mingw32/lib/libmimalloc.a" \
+                 "${pkgdir}/usr/x86_64-w64-mingw32/lib/mimalloc.lib"
+
   install -vDm644 -t "${pkgdir}/usr/share/licenses/${pkgname}" "${pkgname}/LICENSE"
 }

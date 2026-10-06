@@ -129,6 +129,7 @@ depends=(
   wayland
   ffmpeg
   unixodbc
+  mingw-w64-mimalloc-git
 )
 makedepends=(
   git
@@ -306,6 +307,7 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/windowscodecs-TIFF_Support/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-wayland/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wineland-child-rendering/*" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/bluetooth-le/*" \
         -not -path "${proton_patches_dir}/wineopenxr/*" \
         -not -path "${proton_patches_dir}/wine-mono/*" \
         -not -path "${proton_patches_dir}/low_latency_layer/*" \
@@ -415,12 +417,13 @@ build() {
     export RANLIB=llvm-ranlib
     export NM=llvm-nm
     local _base_flags="-march=native -mtune=native -O2 -pipe -fno-stack-protector -fno-stack-check -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -mharden-sls=none -fno-ident -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement=1 -mllvm -enable-dfa-jump-thread"
+    export LIB="/usr/x86_64-w64-mingw32/lib;/usr/i686-w64-mingw32/lib"
     export CFLAGS="${_base_flags} -D_FILE_OFFSET_BITS=64 -D_FORTIFY_SOURCE=0"
     export CXXFLAGS="${CFLAGS} -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
     export CROSSCFLAGS="${_base_flags} -D_FORTIFY_SOURCE=0" 
     export CROSSCXXFLAGS="${CROSSCFLAGS} -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
-    export CROSSLDFLAGS="-Wl,/FILEALIGN:4096,/INCREMENTAL:NO,/LTCG,/OPT:REF,/OPT:ICF=3"
-    export LDFLAGS="-fuse-ld=lld -flto=auto -O3 -Wl,--lto-O3 -Wl,--lto-CGO3 -Wl,--hash-style=gnu -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs -Wl,--strip-all -Wl,--icf=safe -Wl,--build-id=none -Wl,-z,norelro"
+    export CROSSLDFLAGS="-lmimalloc -Wl,/FILEALIGN:4096,/INCREMENTAL:NO,/LTCG,/OPT:REF,/OPT:ICF=3"
+    export LDFLAGS="-lmimalloc -fuse-ld=lld -flto=auto -O3 -Wl,--lto-O3 -Wl,--lto-CGO3 -Wl,--hash-style=gnu -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs -Wl,--strip-all -Wl,--icf=safe -Wl,--build-id=none -Wl,-z,norelro"
 
   cd "$pkgname-build"
   ../wine/configure \
