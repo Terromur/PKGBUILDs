@@ -45,6 +45,7 @@ depends=(
   zlib)
 makedepends=(
   clang
+  cmake
   llvm
   lld
   git
