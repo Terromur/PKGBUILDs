@@ -1,13 +1,1749 @@
+--- /dev/null
++++ b/build/pgo/js-input/indexeddb-bench.html
+@@ -0,0 +1,127 @@
++<!DOCTYPE html>
++<html>
++<head>
++<meta charset="utf-8">
++<title>IndexedDB bench</title>
++<style>
++  body { font: 13px system-ui, sans-serif; margin: 8px; color: #333; }
++  #status { font-variant-numeric: tabular-nums; white-space: pre; }
++</style>
++</head>
++<body>
++<div id="status">idb-bench: starting…</div>
++<script>
++// Exercises IndexedDB: open/upgrade, batch put, cursor iteration via index,
++// batch get, deleteDatabase. Runs until TIME_BUDGET ms elapsed.
++const TIME_BUDGET = 1500;
++// Unique DB name per page load so a stale schema from a previous
++// profileserver run can never collide with this one.
++const DB_NAME = "pgo-idb-bench-" + Math.random().toString(36).slice(2);
++const STORE = "records";
++const N_PER_BATCH = 1000;
++
++const statusEl = document.getElementById("status");
++const now = () => performance.now();
++
++function openDb() {
++  return new Promise((resolve, reject) => {
++    const req = indexedDB.open(DB_NAME, 1);
++    req.onupgradeneeded = e => {
++      const db = e.target.result;
++      if (!db.objectStoreNames.contains(STORE)) {
++        const store = db.createObjectStore(STORE, { keyPath: "id" });
++        store.createIndex("group", "group", { unique: false });
++      }
++    };
++    req.onsuccess = () => resolve(req.result);
++    req.onerror = () => reject(req.error);
++    req.onblocked = () => reject(new Error("open blocked"));
++  });
++}
++
++function txDone(tx) {
++  return new Promise((resolve, reject) => {
++    tx.oncomplete = () => resolve();
++    tx.onerror = () => reject(tx.error);
++    tx.onabort = () => reject(tx.error);
++  });
++}
++
++async function batch(db, base) {
++  // Write batch
++  const tx = db.transaction(STORE, "readwrite");
++  const store = tx.objectStore(STORE);
++  for (let i = 0; i < N_PER_BATCH; i++) {
++    store.put({
++      id: base + i,
++      group: (base + i) % 100,
++      payload: "x".repeat(64),
++      n: i,
++    });
++  }
++  await txDone(tx);
++
++  // Read batch via index cursor
++  const readTx = db.transaction(STORE, "readonly");
++  const idx = readTx.objectStore(STORE).index("group");
++  let count = 0;
++  await new Promise((resolve, reject) => {
++    const cur = idx.openCursor(IDBKeyRange.bound(0, 50));
++    cur.onsuccess = e => {
++      const c = e.target.result;
++      if (c) { count += c.value.n; c.continue(); }
++      else resolve();
++    };
++    cur.onerror = () => reject(cur.error);
++  });
++  await txDone(readTx);
++  return count;
++}
++
++async function deleteDb() {
++  return new Promise(resolve => {
++    const d = indexedDB.deleteDatabase(DB_NAME);
++    // Only resolve on success/error — never on blocked, so we don't leave
++    // the DB in a half-deleted state for the next run.
++    d.onsuccess = () => resolve("ok");
++    d.onerror = () => resolve("error");
++    // Give up after 2 s if something keeps it blocked.
++    setTimeout(() => resolve("blocked-timeout"), 2000);
++  });
++}
++
++(async function run() {
++  const start = now();
++  let db;
++  try {
++    db = await openDb();
++  } catch (e) {
++    statusEl.textContent = "idb-bench: open failed — " + e.message;
++    console.error("[idb] open failed", e);
++    return;
++  }
++
++  let base = 0;
++  let batches = 0;
++  while (now() - start < TIME_BUDGET) {
++    try {
++      await batch(db, base);
++      base += N_PER_BATCH;
++      batches++;
++      statusEl.textContent =
++        `idb-bench: batches=${batches} records=${base} elapsed=${(now() - start) | 0}ms`;
++    } catch (e) {
++      console.error("[idb] batch error", e);
++      break;
++    }
++  }
++
++  db.close();
++  const delResult = await deleteDb();
++  statusEl.textContent =
++    `idb-bench: done — batches=${batches} records=${base} delete=${delResult}`;
++  console.log(`[idb] batches=${batches} records=${base} delete=${delResult}`);
++})();
++</script>
++</body>
++</html>
+
+--- /dev/null
++++ b/build/pgo/js-input/webcrypto-bench.html
+@@ -0,0 +1,161 @@
++<!DOCTYPE html>
++<html>
++<head>
++<meta charset="utf-8">
++<title>Web Crypto bench</title>
++<style>
++  body { font: 13px system-ui, sans-serif; margin: 8px; color: #333; }
++  #status { font-variant-numeric: tabular-nums; white-space: pre-wrap; }
++</style>
++</head>
++<body>
++<div id="status">webcrypto: starting…</div>
++<script>
++// Exercises Web Crypto:
++//   - AES-GCM encrypt/decrypt
++//   - SHA-256 / SHA-384 / SHA-512 digest
++//   - PBKDF2 key derivation
++//   - ECDSA P-256 keygen / sign / verify
++//   - RSA-OAEP 2048 keygen / encrypt / decrypt
++//
++// Each op-type is wrapped in try/catch so one failing algorithm cannot
++// take down the whole run, and the top-level has an explicit .catch()
++// so unhandled rejections never silently leave a blank page.
++const TIME_BUDGET = 1500;
++const now = () => performance.now();
++const statusEl = document.getElementById("status");
++
++function bytes(n) {
++  const a = new Uint8Array(n);
++  crypto.getRandomValues(a);
++  return a;
++}
++
++async function aesGcmRounds(aesKey, iv, pt) {
++  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, aesKey, pt);
++  await crypto.subtle.decrypt({ name: "AES-GCM", iv }, aesKey, ct);
++}
++
++async function shaRounds(data) {
++  await crypto.subtle.digest("SHA-256", data);
++  await crypto.subtle.digest("SHA-384", data);
++  await crypto.subtle.digest("SHA-512", data);
++}
++
++async function hmacRounds(key, data) {
++  const sig = await crypto.subtle.sign("HMAC", key, data);
++  await crypto.subtle.verify("HMAC", key, sig, data);
++}
++
++async function pbkdf2Rounds(baseKey, salt) {
++  await crypto.subtle.deriveBits(
++    { name: "PBKDF2", salt, iterations: 5000, hash: "SHA-256" },
++    baseKey, 256
++  );
++}
++
++async function ecdsaRounds(msg) {
++  const kp = await crypto.subtle.generateKey(
++    { name: "ECDSA", namedCurve: "P-256" }, false, ["sign", "verify"]
++  );
++  const sig = await crypto.subtle.sign(
++    { name: "ECDSA", hash: "SHA-256" }, kp.privateKey, msg
++  );
++  await crypto.subtle.verify(
++    { name: "ECDSA", hash: "SHA-256" }, kp.publicKey, sig, msg
++  );
++}
++
++async function rsaRounds(pt) {
++  const kp = await crypto.subtle.generateKey(
++    {
++      name: "RSA-OAEP",
++      modulusLength: 2048,
++      publicExponent: new Uint8Array([1, 0, 1]),
++      hash: "SHA-256",
++    },
++    false,
++    ["encrypt", "decrypt"]
++  );
++  const ct = await crypto.subtle.encrypt({ name: "RSA-OAEP" }, kp.publicKey, pt);
++  await crypto.subtle.decrypt({ name: "RSA-OAEP" }, kp.privateKey, ct);
++}
++
++async function run() {
++  const start = now();
++
++  if (!(window.crypto && crypto.subtle && crypto.getRandomValues)) {
++    statusEl.textContent = "webcrypto: crypto.subtle unavailable in this context";
++    console.warn("[webcrypto] crypto.subtle unavailable");
++    return;
++  }
++
++  // Prepare shared inputs once.
++  const aesKey = await crypto.subtle.generateKey(
++    { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]
++  );
++  const hmacKey = await crypto.subtle.generateKey(
++    { name: "HMAC", hash: "SHA-256", length: 256 }, false, ["sign", "verify"]
++  );
++  const pbkdf2Key = await crypto.subtle.importKey(
++    "raw",
++    new TextEncoder().encode("correct-horse-battery-staple"),
++    "PBKDF2",
++    false,
++    ["deriveBits"]
++  );
++  const iv = bytes(12);
++  const pt4k = bytes(4096);
++  const pt128 = bytes(128);
++  const salt = bytes(16);
++
++  let aesN = 0, shaN = 0, hmacN = 0, pbkdfN = 0, ecdsaN = 0, rsaN = 0;
++  let aesErr = 0, shaErr = 0, hmacErr = 0, pbkdfErr = 0, ecdsaErr = 0, rsaErr = 0;
++
++  // RSA keygen is slow; cap it separately so the loop doesn't stall.
++  const RSA_MAX = 20;
++
++  while (now() - start < TIME_BUDGET) {
++    // Fast ops first — they dominate the sample count.
++    try { await aesGcmRounds(aesKey, iv, pt4k); aesN++; } catch (e) { aesErr++; }
++
++    try { await shaRounds(pt4k); shaN++; } catch (e) { shaErr++; }
++
++    try { await hmacRounds(hmacKey, pt4k); hmacN++; } catch (e) { hmacErr++; }
++
++    // PBKDF2 with 5000 iterations is moderately expensive.
++    try { await pbkdf2Rounds(pbkdf2Key, salt); pbkdfN++; } catch (e) { pbkdfErr++; }
++
++    // ECDSA keygen is ~1ms, but sign/verify dominate.
++    try { await ecdsaRounds(pt128); ecdsaN++; } catch (e) { ecdsaErr++; }
++
++    // RSA keygen is the slowest; cap it.
++    if (rsaN < RSA_MAX && now() - start < TIME_BUDGET) {
++      try { await rsaRounds(pt128); rsaN++; } catch (e) { rsaErr++; }
++    }
++
++    // Update status every couple of loop iterations.
++    if (((aesN + shaN + hmacN) & 7) === 0) {
++      statusEl.textContent =
++        `webcrypto: aes=${aesN} sha=${shaN} hmac=${hmacN} ` +
++        `pbkdf2=${pbkdfN} ecdsa=${ecdsaN} rsa=${rsaN} ` +
++        `elapsed=${(now() - start) | 0}ms`;
++    }
++  }
++
++  const summary =
++    `[webcrypto] aes=${aesN} sha=${shaN} hmac=${hmacN} ` +
++    `pbkdf2=${pbkdfN} ecdsa=${ecdsaN} rsa=${rsaN} | ` +
++    `errors: aes=${aesErr} sha=${shaErr} hmac=${hmacErr} ` +
++    `pbkdf2=${pbkdfErr} ecdsa=${ecdsaErr} rsa=${rsaErr}`;
++  statusEl.textContent = "webcrypto: done — " + summary;
++  console.log(summary);
++}
++
++run().catch(e => {
++  statusEl.textContent = "webcrypto: fatal — " + (e && e.message ? e.message : e);
++  console.error("[webcrypto] fatal", e);
++});
++</script>
++</body>
++</html>
+
+--- /dev/null
++++ b/build/pgo/js-input/canvas2d-bench.html
+@@ -0,0 +1,99 @@
++<!DOCTYPE html>
++<html>
++<head>
++<meta charset="utf-8">
++<title>Canvas 2D bench</title>
++</head>
++<body>
++<canvas id="c" width="512" height="512"></canvas>
++<script>
++// Exercises Canvas 2D: fills, strokes, gradients, transforms, text, images,
++// composite ops, clip regions, path ops.
++const TIME_BUDGET = 1500;
++const now = () => performance.now();
++const canvas = document.getElementById("c");
++const ctx = canvas.getContext("2d", { alpha: false });
++const W = canvas.width, H = canvas.height;
++
++const off = document.createElement("canvas");
++off.width = 64; off.height = 64;
++{
++  const octx = off.getContext("2d");
++  const g = octx.createLinearGradient(0, 0, 64, 64);
++  g.addColorStop(0, "red"); g.addColorStop(1, "blue");
++  octx.fillStyle = g;
++  octx.fillRect(0, 0, 64, 64);
++}
++
++function paintFrame(t) {
++  ctx.setTransform(1, 0, 0, 1, 0, 0);
++  ctx.globalCompositeOperation = "source-over";
++  ctx.fillStyle = "#101820";
++  ctx.fillRect(0, 0, W, H);
++
++  // Gradient fill
++  const lg = ctx.createLinearGradient(0, 0, W, H);
++  lg.addColorStop(0, `hsl(${(t * 30) % 360}, 80%, 50%)`);
++  lg.addColorStop(1, `hsl(${(t * 30 + 180) % 360}, 80%, 50%)`);
++  ctx.fillStyle = lg;
++  ctx.fillRect(0, 0, W, H);
++
++  // Transforms + strokes
++  ctx.save();
++  ctx.translate(W / 2, H / 2);
++  ctx.rotate(t * 0.02);
++  ctx.lineWidth = 2;
++  ctx.strokeStyle = "rgba(255,255,255,0.7)";
++  for (let i = 0; i < 40; i++) {
++    const a = (i / 40) * Math.PI * 2;
++    ctx.beginPath();
++    ctx.moveTo(0, 0);
++    ctx.lineTo(Math.cos(a) * 200, Math.sin(a) * 200);
++    ctx.stroke();
++  }
++  ctx.restore();
++
++  // Paths + clip
++  ctx.save();
++  ctx.beginPath();
++  ctx.arc(W / 2, H / 2, 120, 0, Math.PI * 2);
++  ctx.clip();
++  ctx.globalCompositeOperation = "multiply";
++  for (let i = 0; i < 20; i++) {
++    ctx.fillStyle = `rgba(${(i * 12) % 255}, 128, 200, 0.6)`;
++    ctx.fillRect((i * 37 + t) % W, (i * 53 + t * 2) % H, 60, 60);
++  }
++  ctx.restore();
++
++  // drawImage
++  ctx.globalCompositeOperation = "lighter";
++  for (let i = 0; i < 30; i++) {
++    ctx.drawImage(off, (i * 17 + t * 3) % W, (i * 23 + t * 5) % H, 32, 32);
++  }
++
++  // Text
++  ctx.globalCompositeOperation = "source-over";
++  ctx.fillStyle = "#fff";
++  ctx.font = "bold 24px sans-serif";
++  for (let i = 0; i < 20; i++) {
++    ctx.fillText(`frame ${t} #${i}`, 10, 30 + i * 24);
++  }
++  ctx.globalCompositeOperation = "source-over";
++}
++
++(function run() {
++  const start = now();
++  let frames = 0;
++  while (now() - start < TIME_BUDGET) {
++    paintFrame(frames);
++    // Force a readback occasionally to exercise pixel path.
++    if ((frames & 7) === 0) {
++      ctx.getImageData(0, 0, 1, 1).data[0];
++    }
++    frames++;
++  }
++  console.log(`[canvas2d] frames=${frames}`);
++})();
++</script>
++</body>
++</html>
+
+--- /dev/null
++++ b/build/pgo/js-input/webgl-bench.html
+@@ -0,0 +1,124 @@
++<!DOCTYPE html>
++<html>
++<head>
++<meta charset="utf-8">
++<title>WebGL bench</title>
++</head>
++<body>
++<canvas id="c" width="512" height="512"></canvas>
++<script>
++// Exercises WebGL: buffer uploads, shader compile/link, draw calls,
++// texture uploads, uniform updates, depth test, blending.
++const TIME_BUDGET = 1500;
++const now = () => performance.now();
++const canvas = document.getElementById("c");
++const gl = canvas.getContext("webgl", { antialias: true, alpha: false });
++if (!gl) {
++  console.log("[webgl] unavailable");
++} else {
++  const VS = `
++    attribute vec2 aPos;
++    attribute vec3 aColor;
++    uniform float uTime;
++    varying vec3 vColor;
++    void main() {
++      float s = sin(uTime + aPos.x * 3.0);
++      float c = cos(uTime + aPos.y * 3.0);
++      gl_Position = vec4(aPos.x + s * 0.1, aPos.y + c * 0.1, 0.0, 1.0);
++      vColor = aColor;
++    }`;
++  const FS = `
++    precision mediump float;
++    varying vec3 vColor;
++    void main() { gl_FragColor = vec4(vColor, 1.0); }`;
++
++  function compile(type, src) {
++    const s = gl.createShader(type);
++    gl.shaderSource(s, src);
++    gl.compileShader(s);
++    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
++      throw new Error(gl.getShaderInfoLog(s));
++    }
++    return s;
++  }
++  const prog = gl.createProgram();
++  gl.attachShader(prog, compile(gl.VERTEX_SHADER, VS));
++  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FS));
++  gl.linkProgram(prog);
++  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
++    throw new Error(gl.getProgramInfoLog(prog));
++  }
++  gl.useProgram(prog);
++
++  const COUNT = 300;
++  const pos = new Float32Array(COUNT * 2);
++  const col = new Float32Array(COUNT * 3);
++  for (let i = 0; i < COUNT; i++) {
++    const a = (i / COUNT) * Math.PI * 2;
++    pos[i * 2] = Math.cos(a);
++    pos[i * 2 + 1] = Math.sin(a);
++    col[i * 3] = (i % 7) / 7;
++    col[i * 3 + 1] = (i % 11) / 11;
++    col[i * 3 + 2] = (i % 13) / 13;
++  }
++  const posBuf = gl.createBuffer();
++  gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
++  gl.bufferData(gl.ARRAY_BUFFER, pos, gl.DYNAMIC_DRAW);
++  const aPos = gl.getAttribLocation(prog, "aPos");
++  gl.enableVertexAttribArray(aPos);
++  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
++
++  const colBuf = gl.createBuffer();
++  gl.bindBuffer(gl.ARRAY_BUFFER, colBuf);
++  gl.bufferData(gl.ARRAY_BUFFER, col, gl.STATIC_DRAW);
++  const aColor = gl.getAttribLocation(prog, "aColor");
++  gl.enableVertexAttribArray(aColor);
++  gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 0, 0);
++
++  const uTime = gl.getUniformLocation(prog, "uTime");
++  gl.enable(gl.DEPTH_TEST);
++  gl.enable(gl.BLEND);
++  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
++
++  // 64x64 procedural texture
++  const texData = new Uint8Array(64 * 64 * 4);
++  for (let i = 0; i < texData.length; i += 4) {
++    texData[i] = i & 0xff;
++    texData[i + 1] = (i * 3) & 0xff;
++    texData[i + 2] = (i * 7) & 0xff;
++    texData[i + 3] = 255;
++  }
++  const tex = gl.createTexture();
++  gl.bindTexture(gl.TEXTURE_2D, tex);
++  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 64, 64, 0, gl.RGBA, gl.UNSIGNED_BYTE, texData);
++  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
++  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
++  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
++
++  (function run() {
++    const start = now();
++    let frames = 0;
++    while (now() - start < TIME_BUDGET) {
++      const t = frames * 0.05;
++      gl.viewport(0, 0, canvas.width, canvas.height);
++      gl.clearColor(0.05, 0.05, 0.1, 1.0);
++      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
++      gl.uniform1f(uTime, t);
++      // Re-upload positions each frame to exercise bufferSubData.
++      gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
++      gl.bufferSubData(gl.ARRAY_BUFFER, 0, pos);
++      gl.drawArrays(gl.TRIANGLE_FAN, 0, COUNT);
++      gl.drawArrays(gl.LINE_LOOP, 0, COUNT);
++      if ((frames & 15) === 0) {
++        // readPixels exercises sync path
++        const px = new Uint8Array(4);
++        gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
++      }
++      frames++;
++    }
++    console.log(`[webgl] frames=${frames}`);
++  })();
++}
++</script>
++</body>
++</html>
+
+--- /dev/null
++++ b/build/pgo/js-input/css-layout-bench.html
+@@ -0,0 +1,86 @@
++<!DOCTYPE html>
++<html>
++<head>
++<meta charset="utf-8">
++<title>CSS layout bench</title>
++<style>
++  body { margin: 0; font-family: sans-serif; }
++  #stage { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
++  .grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
++  .flex { display: flex; flex-wrap: wrap; gap: 4px; }
++  .box {
++    background: linear-gradient(135deg, #4d6bfe, #8ba0ff);
++    color: white;
++    padding: 4px;
++    border-radius: 4px;
++    will-change: transform;
++  }
++  .cell { min-width: 20px; min-height: 20px; }
++</style>
++</head>
++<body>
++<div id="stage"></div>
++<script>
++// Exercises layout engine: Grid + Flex reflow, style recalc, transform
++// compositing, :nth-child selectors, media-query-ish calc, forced sync layout.
++const TIME_BUDGET = 1500;
++const now = () => performance.now();
++const stage = document.getElementById("stage");
++
++function buildScene(seed) {
++  const frag = document.createDocumentFragment();
++  const grid = document.createElement("div");
++  grid.className = "grid";
++  for (let i = 0; i < 64; i++) {
++    const d = document.createElement("div");
++    d.className = "box cell";
++    d.textContent = String((seed + i) % 1000);
++    d.style.transform = `rotate(${(seed + i) % 360}deg) scale(${0.9 + (i % 5) * 0.02})`;
++    frag.appendChild(d);
++    grid.appendChild(d);
++  }
++  const flex = document.createElement("div");
++  flex.className = "flex";
++  for (let i = 0; i < 96; i++) {
++    const d = document.createElement("div");
++    d.className = "box cell";
++    d.textContent = String((seed * 3 + i) % 777);
++    d.style.transform = `translate(${(i % 7) * 3}px, ${(i % 5) * 3}px)`;
++    frag.appendChild(d);
++    flex.appendChild(d);
++  }
++  return { frag, grid, flex };
++}
++
++(function run() {
++  const start = now();
++  let cycles = 0;
++  while (now() - start < TIME_BUDGET) {
++    const { frag, grid, flex } = buildScene(cycles);
++    stage.innerHTML = "";
++    stage.appendChild(frag);
++    stage.appendChild(grid);
++    stage.appendChild(flex);
++    // Force layout & paint.
++    const h = stage.getBoundingClientRect().height;
++    void stage.offsetHeight;
++    // Query selectors exercise selector matching.
++    const boxes = stage.querySelectorAll(".box");
++    let acc = 0;
++    for (let i = 0; i < boxes.length; i += 7) {
++      acc += boxes[i].offsetWidth;
++    }
++    // Mutate style to force another recalc.
++    for (let i = 0; i < boxes.length; i += 13) {
++      boxes[i].style.background = `hsl(${(cycles + i) % 360}, 70%, 60%)`;
++      boxes[i].style.transform = `translateX(${(cycles + i) % 20}px)`;
++    }
++    void stage.offsetHeight;
++    if (h === 0) console.log("[css] unexpected zero height");
++    cycles++;
++  }
++  console.log(`[css] cycles=${cycles}`);
++})();
++</script>
++</body>
++</html>
+
+--- /dev/null
++++ b/build/pgo/js-input/webanimations-bench.html
+@@ -0,0 +1,130 @@
++<!DOCTYPE html>
++<html>
++<head>
++<meta charset="utf-8">
++<title>Web Animations bench</title>
++<style>
++  body { font: 13px system-ui, sans-serif; margin: 0; color: #333; }
++  #status {
++    position: fixed; top: 4px; left: 4px; z-index: 10;
++    background: rgba(255,255,255,0.85); padding: 2px 6px; border-radius: 3px;
++    font-variant-numeric: tabular-nums; white-space: pre;
++  }
++  #stage { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
++  .dot {
++    position: absolute;
++    width: 10px; height: 10px; border-radius: 5px;
++    background: #4d6bfe;
++    will-change: transform, opacity;
++    top: var(--y, 0px);
++    left: var(--x, 0px);
++  }
++</style>
++</head>
++<body>
++<div id="status">webanimations: starting…</div>
++<div id="stage"></div>
++<script>
++// Exercises Web Animations API:
++//   - many concurrent animations on Element.animate()
++//   - transform / opacity interpolation
++//   - timing functions and iterations
++//   - cancellation and natural completion
++//   - Document.getAnimations()
++//   - Animation.finished promise path
++//
++// Unlike the previous version, waves run to completion (short durations,
++// awaited via the `finished` promise) so the timeline/compositor pipeline
++// actually gets exercised before teardown.
++const TIME_BUDGET = 1500;
++const now = () => performance.now();
++const stage = document.getElementById("stage");
++const statusEl = document.getElementById("status");
++const N_DOTS = 200;
++
++const dots = [];
++for (let i = 0; i < N_DOTS; i++) {
++  const d = document.createElement("div");
++  d.className = "dot";
++  stage.appendChild(d);
++  dots.push(d);
++}
++
++const easings = [
++  "linear",
++  "ease-in",
++  "ease-out",
++  "ease-in-out",
++  "cubic-bezier(0.2, 0.8, 0.3, 1)",
++];
++
++function spawnWave(seed) {
++  const anims = [];
++  const vw = window.innerWidth - 10;
++  const vh = window.innerHeight - 10;
++  for (let i = 0; i < N_DOTS; i++) {
++    const d = dots[i];
++    const x = (i * 17 + seed * 5) % vw;
++    const y = (i * 23 + seed * 7) % vh;
++    // Set base position via CSS custom props so the dot is actually placed
++    // where the animation starts.
++    d.style.setProperty("--x", x + "px");
++    d.style.setProperty("--y", y + "px");
++
++    const dx = ((i % 5) - 2) * 40;
++    const dy = ((i % 7) - 3) * 40;
++    const a = d.animate(
++      [
++        { transform: `translate(0px, 0px) scale(0.5)`, opacity: 0.3 },
++        { transform: `translate(${dx}px, ${dy}px) scale(1.2)`, opacity: 1.0 },
++        { transform: `translate(0px, 0px) scale(0.5)`, opacity: 0.3 },
++      ],
++      {
++        duration: 40 + (i % 8) * 10,   // 40..110 ms
++        iterations: 1,
++        easing: easings[i % easings.length],
++        fill: "none",
++      }
++    );
++    anims.push(a);
++  }
++  return anims;
++}
++
++async function runWave(seed) {
++  const anims = spawnWave(seed);
++  // Await completion of all animations in this wave. This forces the
++  // timeline sampling, interpolation, and teardown codepaths to run.
++  await Promise.all(anims.map(a => a.finished.catch(() => {})));
++  return anims.length;
++}
++
++(async function run() {
++  const start = now();
++  let waves = 0;
++  let totalAnims = 0;
++
++  while (now() - start < TIME_BUDGET) {
++    const n = await runWave(waves);
++    totalAnims += n;
++
++    // Exercise Document.getAnimations() at the boundary between waves.
++    const live = document.getAnimations().length;
++    if (live > 0) { /* touch */ }
++
++    waves++;
++    if ((waves & 3) === 0) {
++      statusEl.textContent =
++        `webanimations: waves=${waves} anims=${totalAnims} ` +
++        `live=${live} elapsed=${(now() - start) | 0}ms`;
++    }
++  }
++
++  statusEl.textContent =
++    `webanimations: done — waves=${waves} anims=${totalAnims}`;
++  console.log(`[webanimations] waves=${waves} anims=${totalAnims}`);
++})();
++</script>
++</body>
++</html
++>
+
+--- /dev/null
++++ b/build/pgo/js-input/svg-bench.html
+@@ -0,0 +1,153 @@
++<!DOCTYPE html>
++<html>
++<head>
++<meta charset="utf-8">
++<title>SVG bench</title>
++<style>
++  body { font: 13px system-ui, sans-serif; margin: 8px; color: #333; }
++  #status { font-variant-numeric: tabular-nums; white-space: pre; }
++  svg { border: 1px solid #ddd; }
++</style>
++</head>
++<body>
++<div id="status">svg-bench: starting…</div>
++<svg id="root" width="800" height="600" xmlns="http://www.w3.org/2000/svg"></svg>
++<script>
++// Exercises SVG DOM: createElementNS, paths, text, gradients, filters,
++// transforms, getBBox, getCTM, path-data parsing.
++const TIME_BUDGET = 1500;
++const now = () => performance.now();
++const NS = "http://www.w3.org/2000/svg";
++const root = document.getElementById("root");
++const statusEl = document.getElementById("status");
++
++let gradCounter = 0;
++let filterCounter = 0;
++
++function makeDefs() {
++  const defs = document.createElementNS(NS, "defs");
++
++  // Linear gradient
++  const lg = document.createElementNS(NS, "linearGradient");
++  const gradId = `g${gradCounter++}`;
++  lg.setAttribute("id", gradId);
++  lg.setAttribute("x1", "0%"); lg.setAttribute("y1", "0%");
++  lg.setAttribute("x2", "100%"); lg.setAttribute("y2", "100%");
++  for (let i = 0; i <= 4; i++) {
++    const stop = document.createElementNS(NS, "stop");
++    stop.setAttribute("offset", `${i * 25}%`);
++    stop.setAttribute("stop-color", `hsl(${i * 90}, 80%, 55%)`);
++    lg.appendChild(stop);
++  }
++  defs.appendChild(lg);
++
++  // Gaussian blur filter
++  const filter = document.createElementNS(NS, "filter");
++  const filterId = `f${filterCounter++}`;
++  filter.setAttribute("id", filterId);
++  filter.setAttribute("x", "-10%"); filter.setAttribute("y", "-10%");
++  filter.setAttribute("width", "120%"); filter.setAttribute("height", "120%");
++  const blur = document.createElementNS(NS, "feGaussianBlur");
++  blur.setAttribute("stdDeviation", "2");
++  filter.appendChild(blur);
++  defs.appendChild(filter);
++
++  return { defs, gradId, filterId };
++}
++
++function buildScene(seed, gradId, filterId) {
++  const frag = document.createDocumentFragment();
++
++  // Paths with gradient fill + transform
++  for (let i = 0; i < 40; i++) {
++    const p = document.createElementNS(NS, "path");
++    const x = (i * 17 + seed) % 800;
++    const y = (i * 23 + seed * 2) % 600;
++    let d = `M ${x} ${y}`;
++    for (let k = 0; k < 6; k++) {
++      d += ` L ${x + ((k * 13) % 200)} ${y + ((k * 7) % 150)}`;
++    }
++    d += " Z";
++    p.setAttribute("d", d);
++    p.setAttribute("fill", `url(#${gradId})`);
++    p.setAttribute("stroke", "#222");
++    p.setAttribute("stroke-width", "1");
++    p.setAttribute("transform", `rotate(${(seed + i) % 360} ${x} ${y})`);
++    frag.appendChild(p);
++  }
++
++  // Text
++  for (let i = 0; i < 30; i++) {
++    const t = document.createElementNS(NS, "text");
++    t.setAttribute("x", (i * 23) % 800);
++    t.setAttribute("y", (i * 19) % 600);
++    t.setAttribute("font-size", "14");
++    t.setAttribute("fill", `hsl(${(i * 41) % 360}, 70%, 40%)`);
++    t.textContent = `label ${seed}-${i}`;
++    frag.appendChild(t);
++  }
++
++  // Circles with filter
++  for (let i = 0; i < 20; i++) {
++    const c = document.createElementNS(NS, "circle");
++    c.setAttribute("cx", (i * 37) % 800);
++    c.setAttribute("cy", (i * 29) % 600);
++    c.setAttribute("r", 8 + (i % 12));
++    c.setAttribute("fill", `hsl(${(i * 17) % 360}, 80%, 60%)`);
++    c.setAttribute("opacity", "0.8");
++    c.setAttribute("filter", `url(#${filterId})`);
++    frag.appendChild(c);
++  }
++
++  return frag;
++}
++
++(function run() {
++  const start = now();
++  let cycles = 0;
++  let acc = 0;
++
++  while (now() - start < TIME_BUDGET) {
++    const { defs, gradId, filterId } = makeDefs();
++    root.innerHTML = "";
++    root.appendChild(defs);
++    const frag = buildScene(cycles, gradId, filterId);
++    root.appendChild(frag);
++
++    // Force layout readback through geometry APIs.
++    const paths = root.querySelectorAll("path");
++    for (let i = 0; i < paths.length; i += 5) {
++      try {
++        const b = paths[i].getBBox();
++        acc += b.width + b.height;
++        const m = paths[i].getCTM();
++        if (m) acc += m.a + m.d;
++      } catch (e) {
++        // getBBox throws on some detached nodes; ignore.
++      }
++    }
++
++    // Re-parse path data via getAttribute to exercise the SVG path parser.
++    const first = paths[0];
++    if (first) {
++      const d = first.getAttribute("d");
++      if (d && d.length < 3) { /* touch */ }
++    }
++
++    // Force repaint.
++    void root.getBoundingClientRect().height;
++    cycles++;
++
++    if ((cycles & 15) === 0) {
++      statusEl.textContent =
++        `svg-bench: cycles=${cycles} elapsed=${(now() - start) | 0}ms`;
++    }
++  }
++
++  statusEl.textContent =
++    `svg-bench: done — cycles=${cycles} bboxAcc=${acc | 0}`;
++  console.log(`[svg] cycles=${cycles} bboxAcc=${acc | 0}`);
++})();
++</script>
++</body>
++</html>
+
+--- /dev/null
++++ b/build/pgo/js-input/workers-bench.html
+@@ -0,0 +1,141 @@
++<!DOCTYPE html>
++<html>
++<head>
++<meta charset="utf-8">
++<title>Web Workers bench</title>
++<style>
++  body { font: 13px system-ui, sans-serif; margin: 8px; color: #333; }
++  #status { font-variant-numeric: tabular-nums; white-space: pre-wrap; }
++</style>
++</head>
++<body>
++<div id="status">workers: starting…</div>
++<script>
++// Exercises Web Workers:
++//   - Worker construction from Blob URL
++//   - postMessage structured-clone serialization
++//   - transferable ArrayBuffers (zero-copy)
++//   - SharedArrayBuffer + Atomics (when available)
++//   - worker.terminate() teardown
++//
++// All errors are captured so a single failing worker can't silently kill
++// the whole run and leave a blank page.
++const TIME_BUDGET = 1500;
++const now = () => performance.now();
++const statusEl = document.getElementById("status");
++
++const WORKER_SRC = `
++  self.onmessage = function(e) {
++    const { buf, sab, n } = e.data;
++    const arr = new Uint32Array(buf);
++    let s = 0;
++    for (let i = 0; i < n; i++) s = (s + arr[i % arr.length]) >>> 0;
++    if (sab) {
++      const sarr = new Uint32Array(sab);
++      Atomics.add(sarr, 0, s);
++      Atomics.notify(sarr, 0);
++    }
++    // Return a fresh buffer back, transferring it to exercise the
++    // transferable path in both directions.
++    const out = new ArrayBuffer(1024);
++    new Uint32Array(out)[0] = s;
++    self.postMessage({ out, s }, [out]);
++  };
++`;
++
++function makeWorker() {
++  const blob = new Blob([WORKER_SRC], { type: "application/javascript" });
++  const url = URL.createObjectURL(blob);
++  const w = new Worker(url);
++  URL.revokeObjectURL(url);
++  return w;
++}
++
++async function run() {
++  const start = now();
++
++  if (typeof Worker === "undefined") {
++    statusEl.textContent = "workers: Worker API unavailable";
++    console.warn("[workers] Worker undefined");
++    return;
++  }
++
++  const hw = navigator.hardwareConcurrency || 4;
++  const N_WORKERS = Math.max(2, hw - 1);
++  const workers = [];
++  for (let i = 0; i < N_WORKERS; i++) {
++    try {
++      workers.push(makeWorker());
++    } catch (e) {
++      console.error("[workers] failed to spawn worker", e);
++    }
++  }
++  if (workers.length === 0) {
++    statusEl.textContent = "workers: failed to spawn any worker";
++    return;
++  }
++
++  const hasSAB = typeof SharedArrayBuffer !== "undefined";
++  const sab = hasSAB ? new SharedArrayBuffer(64) : null;
++
++  let round = 0;
++  let totalJobs = 0;
++  let errors = 0;
++
++  while (now() - start < TIME_BUDGET) {
++    const jobs = [];
++    for (let i = 0; i < workers.length; i++) {
++      const buf = new ArrayBuffer(4096);
++      new Uint32Array(buf).fill(round + i);
++      const w = workers[i];
++      jobs.push(new Promise(resolve => {
++        const onMsg = ev => {
++          w.removeEventListener("message", onMsg);
++          w.removeEventListener("error", onErr);
++          resolve(ev.data);
++        };
++        const onErr = ev => {
++          w.removeEventListener("message", onMsg);
++          w.removeEventListener("error", onErr);
++          errors++;
++          resolve(null);
++        };
++        w.addEventListener("message", onMsg);
++        w.addEventListener("error", onErr);
++        w.postMessage({ buf, sab, n: 1024 }, [buf]);
++      }));
++    }
++
++    try {
++      await Promise.all(jobs);
++    } catch (e) {
++      errors++;
++    }
++    totalJobs += workers.length;
++    round++;
++
++    if ((round & 3) === 0) {
++      statusEl.textContent =
++        `workers: rounds=${round} jobs=${totalJobs} workers=${workers.length} ` +
++        `sab=${hasSAB} errors=${errors} elapsed=${(now() - start) | 0}ms`;
++    }
++  }
++
++  for (const w of workers) {
++    try { w.terminate(); } catch (e) { /* ignore */ }
++  }
++
++  const summary =
++    `[workers] rounds=${round} jobs=${totalJobs} ` +
++    `workers=${workers.length} hw=${hw} sab=${hasSAB} errors=${errors}`;
++  statusEl.textContent = "workers: done — " + summary;
++  console.log(summary);
++}
++
++run().catch(e => {
++  statusEl.textContent = "workers: fatal — " + (e && e.message ? e.message : e);
++  console.error("[workers] fatal", e);
++});
++</script>
++</body>
++</html>
+
+--- /dev/null
++++ b/build/pgo/js-input/wasm-bench.html
+@@ -0,0 +1,246 @@
++<!DOCTYPE html>
++<html>
++<head>
++<meta charset="utf-8">
++<title>WebAssembly bench</title>
++<style>
++  body { font: 13px system-ui, sans-serif; margin: 8px; color: #333; }
++  #status { font-variant-numeric: tabular-nums; white-space: pre-wrap; }
++</style>
++</head>
++<body>
++<div id="status">wasm-bench: starting…</div>
++<script>
++// Exercises WebAssembly:
++//   - sync Module/Instance construction
++//   - async instantiate(bytes)
++//   - JS<->WASM boundary calls (i32)
++//   - indirect calls via call_indirect through an exported table
++//   - memory.grow and i32.load8_u from linear memory
++//   - repeated compile to exercise compiler tier-up
++//
++// Module (WAT):
++//   (module
++//     (memory (export "memory") 1)
++//     (table 2 funcref)
++//     (elem (i32.const 0) $add $sub)
++//     (func $add (export "add") (param i32 i32) (result i32)
++//       local.get 0 local.get 1 i32.add)
++//     (func $sub (export "sub") (param i32 i32) (result i32)
++//       local.get 0 local.get 1 i32.sub)
++//     (func (export "call") (param i32 i32 i32) (result i32)
++//       local.get 1 local.get 2 local.get 0
++//       call_indirect (type 0) (table 0))
++//     (func (export "sum_bytes") (param i32 i32) (result i32)
++//       (local i32 i32)
++//       local.get 1 local.set 2
++//       i32.const 0 local.set 3
++//       block
++//         loop
++//           local.get 2 i32.eqz br_if 1
++//           local.get 3
++//           local.get 0 local.get 2 i32.add
++//           i32.const 1 i32.sub
++//           i32.load8_u
++//           i32.add local.set 3
++//           local.get 2 i32.const 1 i32.sub local.set 2
++//           br 0
++//         end
++//       end
++//       local.get 3))
++const TIME_BUDGET = 1500;
++const now = () => performance.now();
++const statusEl = document.getElementById("status");
++
++const WASM_BYTES = new Uint8Array([
++  // Magic + version
++  0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
++
++  // Type section (id=1, size=0x0e=14, count=2)
++  0x01, 0x0e, 0x02,
++    0x60, 0x02, 0x7f, 0x7f, 0x01, 0x7f,        // (i32,i32) -> i32
++    0x60, 0x03, 0x7f, 0x7f, 0x7f, 0x01, 0x7f,  // (i32,i32,i32) -> i32
++
++  // Function section (id=3, size=0x05, count=4, types [0,0,1,0])
++  0x03, 0x05, 0x04, 0x00, 0x00, 0x01, 0x00,
++
++  // Table section (id=4, size=0x04, count=1, funcref, min=2)
++  0x04, 0x04, 0x01, 0x70, 0x00, 0x02,
++
++  // Memory section (id=5, size=0x03, count=1, min=1)
++  0x05, 0x03, 0x01, 0x00, 0x01,
++
++  // Export section (id=7, size=0x29=41, count=5)
++  0x07, 0x29, 0x05,
++    0x06, 0x6d, 0x65, 0x6d, 0x6f, 0x72, 0x79, 0x02, 0x00,  // "memory" -> memory 0
++    0x03, 0x61, 0x64, 0x64, 0x00, 0x00,                    // "add" -> func 0
++    0x03, 0x73, 0x75, 0x62, 0x00, 0x01,                    // "sub" -> func 1
++    0x04, 0x63, 0x61, 0x6c, 0x6c, 0x00, 0x02,              // "call" -> func 2
++    0x09, 0x73, 0x75, 0x6d, 0x5f, 0x62, 0x79, 0x74, 0x65, 0x73, 0x00, 0x03,  // "sum_bytes" -> func 3
++
++  // Element section (id=9, size=0x08, count=1)
++  0x09, 0x08, 0x01,
++    0x00,              // active, table 0
++    0x41, 0x00, 0x0b,  // offset: i32.const 0
++    0x02, 0x00, 0x01,  // funcs [0, 1]
++
++  // Code section (id=10, size=0x52=82, count=4)
++  0x0a, 0x52, 0x04,
++
++    // body 0: add — size=0x07
++    0x07, 0x00, 0x20, 0x00, 0x20, 0x01, 0x6a, 0x0b,
++
++    // body 1: sub — size=0x07
++    0x07, 0x00, 0x20, 0x00, 0x20, 0x01, 0x6b, 0x0b,
++
++    // body 2: call_indirect — size=0x0b
++    0x0b, 0x00,
++      0x20, 0x01, 0x20, 0x02, 0x20, 0x00, 0x11, 0x00, 0x00,
++    0x0b,
++
++    // body 3: sum_bytes — size=0x34=52
++    0x34,
++      // locals: 2 x i32
++      0x02, 0x01, 0x7f, 0x01, 0x7f,
++      // code
++      0x20, 0x01, 0x21, 0x02,        // local.get 1; local.set 2
++      0x41, 0x00, 0x21, 0x03,        // i32.const 0; local.set 3
++      0x02, 0x40,                    // block
++        0x03, 0x40,                  // loop
++          0x20, 0x02, 0x45,          // local.get 2; i32.eqz
++          0x0d, 0x01,                // br_if 1 (exit block)
++          0x20, 0x03,                // local.get 3
++          0x20, 0x00,                // local.get 0 (ptr)
++          0x20, 0x02, 0x6a,          // local.get 2; i32.add
++          0x41, 0x01, 0x6b,          // i32.const 1; i32.sub
++          0x2d, 0x00, 0x00,          // i32.load8_u
++          0x6a,                      // i32.add
++          0x21, 0x03,                // local.set 3
++          0x20, 0x02,                // local.get 2
++          0x41, 0x01, 0x6b,          // i32.const 1; i32.sub
++          0x21, 0x02,                // local.set 2
++          0x0c, 0x00,                // br 0 (continue)
++        0x0b,                        // end loop
++      0x0b,                          // end block
++      0x20, 0x03,                    // local.get 3
++    0x0b,                            // end func
++]);
++
++function compileAndInstantiate() {
++  const module = new WebAssembly.Module(WASM_BYTES);
++  const instance = new WebAssembly.Instance(module, {});
++  return { module, instance };
++}
++
++(async function run() {
++  const start = now();
++
++  let base;
++  try {
++    base = compileAndInstantiate();
++  } catch (e) {
++    statusEl.textContent = "wasm-bench: compile failed — " + e.message;
++    console.error("[wasm] compile failed", e);
++    return;
++  }
++
++  const add = base.instance.exports.add;
++  const sub = base.instance.exports.sub;
++  const call = base.instance.exports.call;
++  const sumBytes = base.instance.exports.sum_bytes;
++  const memory = base.instance.exports.memory;
++
++  // Sanity: fill 4096 bytes with 7 → sum should be 28672.
++  const init = new Uint8Array(memory.buffer);
++  init.fill(7, 0, 4096);
++  const sanitySum = sumBytes(0, 4096) | 0;
++  if (sanitySum !== 28672) {
++    console.warn("[wasm] sum_bytes sanity check failed:", sanitySum);
++  }
++
++  // Async instantiate path (also exercises the streaming-ish code path).
++  let asyncAdd = add;
++  try {
++    const res = await WebAssembly.instantiate(WASM_BYTES);
++    asyncAdd = res.instance.exports.add;
++  } catch (e) {
++    console.warn("[wasm] async instantiate failed", e);
++  }
++
++  let syncCalls = 0;
++  let boundaryAcc = 0;
++  let indirectCalls = 0;
++  let grows = 0;
++  let compiles = 1;
++  let checksum = sanitySum;
++
++  while (now() - start < TIME_BUDGET) {
++    // Hot JS<->WASM boundary loop.
++    let s = 0;
++    for (let i = 0; i < 20000; i++) {
++      s = add(s, i) | 0;
++      s = asyncAdd(s, 1) | 0;
++      s = sub(s, 1) | 0;
++    }
++    syncCalls += 20000;
++    boundaryAcc = (boundaryAcc + s) | 0;
++
++    // Indirect call through exported table.
++    let acc = 0;
++    for (let i = 0; i < 5000; i++) {
++      acc = (acc + call(i & 1, i, 3)) | 0;
++    }
++    indirectCalls += 5000;
++
++    // Read linear memory through WASM loop.
++    checksum = sumBytes(0, 4096) | 0;
++
++    if (now() - start >= TIME_BUDGET) break;
++
++    // Bounded memory.grow (skip beyond 16 pages to avoid OOM).
++    if (grows < 16) {
++      try {
++        memory.grow(1);
++        grows++;
++      } catch (e) {
++        // Engine cap; recreate the instance.
++        try {
++          base = compileAndInstantiate();
++          compiles++;
++        } catch (e2) {
++          console.error("[wasm] re-instantiate failed", e2);
++          break;
++        }
++      }
++    }
++
++    // Periodic recompile to exercise compiler tiers.
++    if ((syncCalls % 200000) === 0) {
++      try {
++        const m = new WebAssembly.Module(WASM_BYTES);
++        WebAssembly.Module.exports(m);
++        compiles++;
++      } catch (e) {
++        console.error("[wasm] compile error", e);
++        break;
++      }
++    }
++
++    statusEl.textContent =
++      `wasm-bench: sync=${syncCalls} indirect=${indirectCalls} ` +
++      `grows=${grows} compiles=${compiles} checksum=${checksum} ` +
++      `elapsed=${(now() - start) | 0}ms`;
++  }
++
++  statusEl.textContent =
++    `wasm-bench: done — sync=${syncCalls} indirect=${indirectCalls} ` +
++    `grows=${grows} compiles=${compiles} checksum=${checksum} ` +
++    `(expected 28672)`;
++  console.log(
++    `[wasm] syncCalls=${syncCalls} indirect=${indirectCalls} ` +
++    `grows=${grows} compiles=${compiles} checksum=${checksum}`
++  );
++})();
++</script>
++</body>
++</html>
+
+--- /dev/null
++++ b/build/pgo/js-input/fetch-bench.html
+@@ -0,0 +1,250 @@
++<!DOCTYPE html>
++<html>
++<head>
++<meta charset="utf-8">
++<title>Fetch / Networking bench</title>
++<style>
++  body { font: 13px system-ui, sans-serif; margin: 8px; color: #333; }
++  #status { font-variant-numeric: tabular-nums; white-space: pre-wrap; margin-bottom: 8px; }
++  #status.error { color: #b00020; font-weight: bold; }
++  #status.ok { color: #1a7f37; }
++  #where { color: #666; font: 12px monospace; margin-bottom: 8px; }
++  table { border-collapse: collapse; margin: 8px 0; }
++  th, td { border: 1px solid #ccc; padding: 2px 8px; font: 12px monospace; text-align: left; }
++  th { background: #f0f0f0; }
++</style>
++</head>
++<body>
++<div id="where"></div>
++<div id="status">fetch-bench: starting…</div>
++<table id="probe"></table>
++<script>
++// Exercises networking stack: XHR, fetch with ArrayBuffer/text,
++// Promise.all parallelism, request headers, response streaming,
++// AbortController cancellation, AbortSignal.timeout.
++//
++// URL resolution strategy:
++//   1. Try the canonical docroot paths (works under profileserver.py).
++//   2. If they 404, fall back to location.href (the test file itself) so
++//      the benchmark can still run from a plain `python3 -m http.server`
++//      started in the directory that only contains the *-bench.html files.
++const TIME_BUDGET = 1500;
++const now = () => performance.now();
++const statusEl = document.getElementById("status");
++const whereEl = document.getElementById("where");
++const probeEl = document.getElementById("probe");
++
++function setStatus(text, cls = "") {
++  statusEl.textContent = text;
++  statusEl.className = cls;
++}
++
++whereEl.textContent =
++  "page: " + location.href +
++  "  |  protocol: " + location.protocol;
++
++// Candidate URLs. Order matters: first success wins.
++const CANDIDATES = {
++  QUIT:  ["/quit.html", "quit.html"],
++  INDEX: ["/index.html", "index.html"],
++  TEXT:  ["/server-locations.txt", "server-locations.txt"],
++};
++
++// Self-fallback: guaranteed to exist.
++const SELF = location.href.split("?")[0];
++
++async function probeOne(url) {
++  const t0 = now();
++  try {
++    const r = await fetch(url, { cache: "no-store" });
++    const t1 = now();
++    return { ok: r.ok, status: r.status, ms: (t1 - t0) | 0 };
++  } catch (e) {
++    return { ok: false, error: String((e && e.message) || e) };
++  }
++}
++
++async function resolveUrl(name, list) {
++  for (const cand of list) {
++    const r = await probeOne(cand);
++    if (r.ok) return { url: cand, probe: r };
++  }
++  // Nothing worked; fall back to self.
++  const r = await probeOne(SELF);
++  return { url: SELF, probe: r, fallback: true };
++}
++
++async function runProbes() {
++  probeEl.innerHTML = "<tr><th>name</th><th>URL</th><th>status</th><th>time</th></tr>";
++  const resolved = {};
++  for (const [name, list] of Object.entries(CANDIDATES)) {
++    let chosen;
++    for (const cand of list) {
++      const r = await probeOne(cand);
++      const row = probeEl.insertRow(-1);
++      row.insertCell(-1).textContent = name;
++      row.insertCell(-1).textContent = cand;
++      row.insertCell(-1).textContent = r.ok ? String(r.status) : (r.error || "FAIL");
++      row.insertCell(-1).textContent = r.ms != null ? r.ms + " ms" : "-";
++      if (r.ok && !chosen) chosen = cand;
++    }
++    if (chosen) {
++      resolved[name] = chosen;
++    } else {
++      // Fallback to self
++      const r = await probeOne(SELF);
++      const row = probeEl.insertRow(-1);
++      row.insertCell(-1).textContent = name + " (self)";
++      row.insertCell(-1).textContent = SELF;
++      row.insertCell(-1).textContent = r.ok ? String(r.status) : (r.error || "FAIL");
++      row.insertCell(-1).textContent = r.ms != null ? r.ms + " ms" : "-";
++      resolved[name] = SELF;
++    }
++  }
++  return resolved;
++}
++
++function bust(u) {
++  return u + (u.includes("?") ? "&" : "?") + "_=" + Math.random();
++}
++
++function makeFetchers(urls) {
++  const QUIT = urls.QUIT;
++  const INDEX = urls.INDEX;
++  const TEXT = urls.TEXT;
++
++  async function fetchText() {
++    const r = await fetch(bust(TEXT), { cache: "no-store" });
++    if (!r.ok) throw new Error(`HTTP ${r.status} for ${TEXT}`);
++    await r.text();
++  }
++
++  async function fetchArrayBuffer() {
++    const r = await fetch(bust(QUIT), { cache: "no-store" });
++    if (!r.ok) throw new Error(`HTTP ${r.status} for ${QUIT}`);
++    await r.arrayBuffer();
++  }
++
++  async function fetchWithHeaders() {
++    const r = await fetch(bust(INDEX), {
++      cache: "no-store",
++      headers: { "X-PGO-Bench": "1", "Accept": "text/html,*/*;q=0.1" },
++    });
++    if (!r.ok) throw new Error(`HTTP ${r.status} for ${INDEX}`);
++    const t = await r.text();
++    return t.length;
++  }
++
++  function xhrFetch() {
++    return new Promise((resolve, reject) => {
++      const x = new XMLHttpRequest();
++      x.open("GET", bust(QUIT), true);
++      x.responseType = "arraybuffer";
++      x.onload = () =>
++        x.status >= 200 && x.status < 300
++          ? resolve(x.status)
++          : reject(new Error(`XHR ${x.status}`));
++      x.onerror = () => reject(new Error("XHR network error"));
++      x.send();
++    });
++  }
++
++  async function parallel() {
++    const list = [QUIT, INDEX, TEXT, QUIT, INDEX].map(bust);
++    const results = await Promise.all(
++      list.map(u =>
++        fetch(u, { cache: "no-store" }).then(r => {
++          if (!r.ok) throw new Error(`HTTP ${r.status} for ${u}`);
++          return r.arrayBuffer();
++        })
++      )
++    );
++    return results.length;
++  }
++
++  async function abortOnce() {
++    const ac = new AbortController();
++    const p = fetch(bust(INDEX), { signal: ac.signal, cache: "no-store" });
++    ac.abort();
++    try { await p; } catch (e) { /* expected AbortError */ }
++  }
++
++  async function timeoutOnce() {
++    if (typeof AbortSignal === "undefined" ||
++        typeof AbortSignal.timeout !== "function") return;
++    try {
++      await fetch(bust(INDEX), {
++        signal: AbortSignal.timeout(5000),
++        cache: "no-store",
++      });
++    } catch (e) { /* ignore */ }
++  }
++
++  return {
++    fetchText, fetchArrayBuffer, fetchWithHeaders,
++    xhrFetch, parallel, abortOnce, timeoutOnce,
++  };
++}
++
++async function run() {
++  if (location.protocol === "file:") {
++    setStatus(
++      "fetch-bench: skipped — file:// origin cannot use fetch(). " +
++      "Serve this directory over HTTP (e.g. `python3 -m http.server 8888`) " +
++      "or run through build/pgo/profileserver.py.",
++      "error"
++    );
++    return;
++  }
++
++  const start = now();
++  setStatus("fetch-bench: probing URLs …");
++  const urls = await runProbes();
++  setStatus(
++    "fetch-bench: using QUIT=" + urls.QUIT +
++    " INDEX=" + urls.INDEX +
++    " TEXT=" + urls.TEXT,
++    "ok"
++  );
++
++  const F = makeFetchers(urls);
++
++  let textN = 0, abN = 0, hdrN = 0, xhrN = 0, parN = 0, abortN = 0, timeoutN = 0, errN = 0;
++
++  while (now() - start < TIME_BUDGET) {
++    try {
++      await F.fetchText();        textN++;    if (now() - start >= TIME_BUDGET) break;
++      await F.fetchArrayBuffer(); abN++;      if (now() - start >= TIME_BUDGET) break;
++      await F.fetchWithHeaders(); hdrN++;     if (now() - start >= TIME_BUDGET) break;
++      await F.xhrFetch();         xhrN++;     if (now() - start >= TIME_BUDGET) break;
++      await F.parallel();         parN++;     if (now() - start >= TIME_BUDGET) break;
++      await F.abortOnce();        abortN++;   if (now() - start >= TIME_BUDGET) break;
++      await F.timeoutOnce();      timeoutN++;
++    } catch (e) {
++      errN++;
++      console.error("[fetch] error", e);
++      if (errN >= 3) break;
++    }
++
++    setStatus(
++      `fetch-bench: text=${textN} ab=${abN} hdr=${hdrN} xhr=${xhrN} ` +
++      `par=${parN} abort=${abortN} timeout=${timeoutN} err=${errN} ` +
++      `elapsed=${(now() - start) | 0}ms`
++    );
++  }
++
++  const summary =
++    `[fetch] text=${textN} ab=${abN} hdr=${hdrN} xhr=${xhrN} ` +
++    `par=${parN} abort=${abortN} timeout=${timeoutN} err=${errN}`;
++  console.log(summary);
++  setStatus("fetch-bench: done — " + summary, "ok");
++}
++
++run().catch(e => {
++  const msg = "fetch-bench: fatal — " + ((e && e.message) || e);
++  setStatus(msg, "error");
++  console.error("[fetch] fatal", e);
++});
++</script>
++</body>
++</html>
+--- a/third_party/webkit/PerformanceTests/ARES-6/index.html
++++ b/third_party/webkit/PerformanceTests/ARES-6/index.html
+@@ -151,5 +151,29 @@
+     <script src="ml_benchmark.js"></script>
+     <script src="glue.js"></script>
+         
++    <script>
++    (function(){
++      "use strict";
++      var T=["autostart=true","startAutomatically=true","raptor","gecko"];
++      var s=location.search||"";
++      if(!T.some(function(t){return s.indexOf(t)!==-1;}))return;
++      var S=["#home .buttons button","#intro button.landscape-orientation-check",
++             "#start","#start-button","#startButton","button.start","button.start-button",
++             "button[data-action='start']","button[data-action='run']","button.run-button",
++             ".buttons button","#home button","#intro button",
++             "main button:not([disabled])","button:not([disabled])"];
++      var a=0,M=150,I=100;
++      function f(){for(var i=0;i<S.length;i++){var e;try{e=document.querySelector(S[i]);}catch(x){continue;}
++        if(e&&!e.disabled&&e.offsetParent!==null)return e;}return null;}
++      function c(){a++;var b=f();if(b){console.log("[autostart] click",b.id||b.className||b.tagName);
++        try{b.click();}catch(e){console.warn("[autostart]",e);}return;}
++        if(a>=M){console.warn("[autostart] no button after "+M+" attempts");return;}
++        setTimeout(c,I);}
++      function b(){setTimeout(c,I);}
++      if(document.readyState==="complete"||document.readyState==="interactive")b();
++      else{window.addEventListener("load",b);document.addEventListener("DOMContentLoaded",function(){if(a===0)b();});}
++    })();
++    </script>
++
+ </body>
+ </html>
+--- a/third_party/webkit/PerformanceTests/media-capabilities/index.html
++++ b/third_party/webkit/PerformanceTests/media-capabilities/index.html
+@@ -38,5 +38,29 @@
+ </div>
+ <div id=results>
+ </div>
++    <script>
++    (function(){
++      "use strict";
++      var T=["autostart=true","startAutomatically=true","raptor","gecko"];
++      var s=location.search||"";
++      if(!T.some(function(t){return s.indexOf(t)!==-1;}))return;
++      var S=["#home .buttons button","#intro button.landscape-orientation-check",
++             "#start","#start-button","#startButton","button.start","button.start-button",
++             "button[data-action='start']","button[data-action='run']","button.run-button",
++             ".buttons button","#home button","#intro button",
++             "main button:not([disabled])","button:not([disabled])"];
++      var a=0,M=150,I=100;
++      function f(){for(var i=0;i<S.length;i++){var e;try{e=document.querySelector(S[i]);}catch(x){continue;}
++        if(e&&!e.disabled&&e.offsetParent!==null)return e;}return null;}
++      function c(){a++;var b=f();if(b){console.log("[autostart] click",b.id||b.className||b.tagName);
++        try{b.click();}catch(e){console.warn("[autostart]",e);}return;}
++        if(a>=M){console.warn("[autostart] no button after "+M+" attempts");return;}
++        setTimeout(c,I);}
++      function b(){setTimeout(c,I);}
++      if(document.readyState==="complete"||document.readyState==="interactive")b();
++      else{window.addEventListener("load",b);document.addEventListener("DOMContentLoaded",function(){if(a===0)b();});}
++    })();
++    </script>
++
+ </body>
+ </html>
+--- a/third_party/webkit/PerformanceTests/MotionMark/index.html
++++ b/third_party/webkit/PerformanceTests/MotionMark/index.html
+@@ -63,5 +63,29 @@
+             </div>
+         </section>
+     </main>
++    <script>
++    (function(){
++      "use strict";
++      var T=["autostart=true","startAutomatically=true","raptor","gecko"];
++      var s=location.search||"";
++      if(!T.some(function(t){return s.indexOf(t)!==-1;}))return;
++      var S=["#home .buttons button","#intro button.landscape-orientation-check",
++             "#start","#start-button","#startButton","button.start","button.start-button",
++             "button[data-action='start']","button[data-action='run']","button.run-button",
++             ".buttons button","#home button","#intro button",
++             "main button:not([disabled])","button:not([disabled])"];
++      var a=0,M=150,I=100;
++      function f(){for(var i=0;i<S.length;i++){var e;try{e=document.querySelector(S[i]);}catch(x){continue;}
++        if(e&&!e.disabled&&e.offsetParent!==null)return e;}return null;}
++      function c(){a++;var b=f();if(b){console.log("[autostart] click",b.id||b.className||b.tagName);
++        try{b.click();}catch(e){console.warn("[autostart]",e);}return;}
++        if(a>=M){console.warn("[autostart] no button after "+M+" attempts");return;}
++        setTimeout(c,I);}
++      function b(){setTimeout(c,I);}
++      if(document.readyState==="complete"||document.readyState==="interactive")b();
++      else{window.addEventListener("load",b);document.addEventListener("DOMContentLoaded",function(){if(a===0)b();});}
++    })();
++    </script>
++
+ </body>
+ </html>
+--- a/third_party/webkit/PerformanceTests/StyleBench/index.html
++++ b/third_party/webkit/PerformanceTests/StyleBench/index.html
+@@ -75,5 +75,29 @@
+         </p>
+     </section>
+ </main>
++    <script>
++    (function(){
++      "use strict";
++      var T=["autostart=true","startAutomatically=true","raptor","gecko"];
++      var s=location.search||"";
++      if(!T.some(function(t){return s.indexOf(t)!==-1;}))return;
++      var S=["#home .buttons button","#intro button.landscape-orientation-check",
++             "#start","#start-button","#startButton","button.start","button.start-button",
++             "button[data-action='start']","button[data-action='run']","button.run-button",
++             ".buttons button","#home button","#intro button",
++             "main button:not([disabled])","button:not([disabled])"];
++      var a=0,M=150,I=100;
++      function f(){for(var i=0;i<S.length;i++){var e;try{e=document.querySelector(S[i]);}catch(x){continue;}
++        if(e&&!e.disabled&&e.offsetParent!==null)return e;}return null;}
++      function c(){a++;var b=f();if(b){console.log("[autostart] click",b.id||b.className||b.tagName);
++        try{b.click();}catch(e){console.warn("[autostart]",e);}return;}
++        if(a>=M){console.warn("[autostart] no button after "+M+" attempts");return;}
++        setTimeout(c,I);}
++      function b(){setTimeout(c,I);}
++      if(document.readyState==="complete"||document.readyState==="interactive")b();
++      else{window.addEventListener("load",b);document.addEventListener("DOMContentLoaded",function(){if(a===0)b();});}
++    })();
++    </script>
++
+ </body>
+ </html>
 --- a/build/pgo/index.html
 +++ b/build/pgo/index.html
-@@ -127,6 +127,10 @@
-       extendedTimeout
+@@ -53,6 +53,16 @@
+     "js-input/crypto-otp.html",
+     "js-input/collator_bench.html",
+     "js-input/normalizer_bench.html",
++    "js-input/indexeddb-bench.html",
++    "js-input/webcrypto-bench.html",
++    "js-input/canvas2d-bench.html",
++    "js-input/webgl-bench.html",
++    "js-input/css-layout-bench.html",
++    "js-input/webanimations-bench.html",
++    "js-input/svg-bench.html",
++    "js-input/workers-bench.html",
++    "js-input/wasm-bench.html",
++    "js-input/fetch-bench.html",
+     "js-input/sunspider/3d-cube.html",
+     "js-input/sunspider/3d-morph.html",
+     "js-input/sunspider/3d-raytrace.html",
+@@ -121,16 +131,39 @@
+ 
+   // Add items that needs longer timeouts
+   items.push(
+-    new Item("webkit/PerformanceTests/Speedometer/index.html", extendedTimeout),
+     new Item(
+       "http://localhost:8000/index.html?startAutomatically=true",
+-      extendedTimeout
++      superExtendedTimeout
      ),
      new Item(
-+      "http://localhost:8000/index.html?startAutomatically=true",
-+      superExtendedTimeout
+-      "webkit/PerformanceTests/webaudio/index.html?raptor&rendering-buffer-length=30",
+-      extendedTimeout
+-    )
+-  );
++        "webkit/PerformanceTests/ARES-6/index.html?startAutomatically=true",
++        superExtendedTimeout,
 +    ),
 +    new Item(
-       "webkit/PerformanceTests/webaudio/index.html?raptor&rendering-buffer-length=30",
-       extendedTimeout
-     )
++        "webkit/PerformanceTests/media-capabilities/index.html?startAutomatically=true",
++        superExtendedTimeout,
++    ),
++    new Item(
++        "webkit/PerformanceTests/MotionMark/index.html?startAutomatically=true",
++        superExtendedTimeout,
++    ),
++    new Item(
++        "webkit/PerformanceTests/Speedometer/index.html?startAutomatically=true",
++        superExtendedTimeout,
++    ),
++    new Item(
++        "webkit/PerformanceTests/Speedometer3/index.html?startAutomatically=true",
++        superExtendedTimeout,
++    ),
++    new Item(
++        "webkit/PerformanceTests/StyleBench/index.html?startAutomatically=true",
++        superExtendedTimeout,
++    ),
++    new Item(
++        "webkit/PerformanceTests/webaudio/index.html?raptor&rendering-buffer-length=60",
++        superExtendedTimeout,
++    ),
++);
+ 
+   // Add optional items if there is a 'pgo-extended-corpus' provided
+   if (hasExtendedCorpus) {

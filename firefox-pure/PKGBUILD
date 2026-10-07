@@ -7,7 +7,7 @@
 
 pkgname=firefox-pure
 pkgver=157.0
-pkgrel=5
+pkgrel=8
 pkgdesc="Fast, Private & Safe Web Browser"
 url="https://www.firefox.com"
 arch=(x86_64)
@@ -119,7 +119,7 @@ sha256sums=(
   'ba36d057082445350ff852567264b153bc8c46f60cec24e489b67d347dbf5731'
   '1e01d255aebd3ee28c720dfd19116d233aa12dd073541abf249203f6e547792b'
   '909ab754829a3c326413efe643a9e7b34e002bc64ad922c26bb1a4dfc4b6aabb'
-  '87dbb99155a9b726eaf3a78649fa9e2f69aa86f612fcf9ace336c60faf63efc4'
+  '77717e92455c87e207158b9924481d31dcad7c74214c5d0c3f1ed9a3f6351bfa'
 )
 
 prepare() {
