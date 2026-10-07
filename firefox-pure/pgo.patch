@@ -1747,3 +1747,35 @@
  
    // Add optional items if there is a 'pgo-extended-corpus' provided
    if (hasExtendedCorpus) {
+--- a/build/pgo/profileserver.py
++++ b/build/pgo/profileserver.py
+@@ -10,7 +10,11 @@
+ import sys
+ 
+ import mozcrash
+-from mozbuild.base import BinaryNotFoundException, MozbuildObject
++from mozbuild.base import (
++    BinaryNotFoundException,
++    BuildEnvironmentNotFoundException,
++    MozbuildObject,
++)
+ from mozfile import TemporaryDirectory, json
+ from mozhttpd import MozHttpd
+ from mozprofile import FirefoxProfile, Preferences
+@@ -197,7 +201,7 @@
+         # Ensure different pids write to different files
+         # Use absolute path to ensure that Sandbox computes the correct permissions
+         env["LLVM_PROFILE_FILE"] = os.path.join(
+-            os.getcwd(), "default_%p_random_%m.profraw"
++            os.getcwd(), "default_%p.profraw"
+         )
+ 
+         # Write to an output file if we're running in automation
+@@ -313,6 +317,7 @@
+             merge_cmd = [
+                 llvm_profdata,
+                 "merge",
++                "--failure-mode=warn",
+                 "-o",
+                 merged_profdata,
+             ] + profraw_files
