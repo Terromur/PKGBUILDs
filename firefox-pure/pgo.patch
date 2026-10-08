@@ -16,7 +16,7 @@
 +<script>
 +// Exercises IndexedDB: open/upgrade, batch put, cursor iteration via index,
 +// batch get, deleteDatabase. Runs until TIME_BUDGET ms elapsed.
-+const TIME_BUDGET = 1500;
++const TIME_BUDGET = 3000;
 +// Unique DB name per page load so a stale schema from a previous
 +// profileserver run can never collide with this one.
 +const DB_NAME = "pgo-idb-bench-" + Math.random().toString(36).slice(2);
@@ -155,7 +155,7 @@
 +// Each op-type is wrapped in try/catch so one failing algorithm cannot
 +// take down the whole run, and the top-level has an explicit .catch()
 +// so unhandled rejections never silently leave a blank page.
-+const TIME_BUDGET = 1500;
++const TIME_BUDGET = 3000;
 +const now = () => performance.now();
 +const statusEl = document.getElementById("status");
 +
@@ -308,7 +308,7 @@
 +<script>
 +// Exercises Canvas 2D: fills, strokes, gradients, transforms, text, images,
 +// composite ops, clip regions, path ops.
-+const TIME_BUDGET = 1500;
++const TIME_BUDGET = 3000;
 +const now = () => performance.now();
 +const canvas = document.getElementById("c");
 +const ctx = canvas.getContext("2d", { alpha: false });
@@ -411,7 +411,7 @@
 +<script>
 +// Exercises WebGL: buffer uploads, shader compile/link, draw calls,
 +// texture uploads, uniform updates, depth test, blending.
-+const TIME_BUDGET = 1500;
++const TIME_BUDGET = 3000;
 +const now = () => performance.now();
 +const canvas = document.getElementById("c");
 +const gl = canvas.getContext("webgl", { antialias: true, alpha: false });
@@ -553,7 +553,7 @@
 +<script>
 +// Exercises layout engine: Grid + Flex reflow, style recalc, transform
 +// compositing, :nth-child selectors, media-query-ish calc, forced sync layout.
-+const TIME_BUDGET = 1500;
++const TIME_BUDGET = 3000;
 +const now = () => performance.now();
 +const stage = document.getElementById("stage");
 +
@@ -656,7 +656,7 @@
 +// Unlike the previous version, waves run to completion (short durations,
 +// awaited via the `finished` promise) so the timeline/compositor pipeline
 +// actually gets exercised before teardown.
-+const TIME_BUDGET = 1500;
++const TIME_BUDGET = 3000;
 +const now = () => performance.now();
 +const stage = document.getElementById("stage");
 +const statusEl = document.getElementById("status");
@@ -769,7 +769,7 @@
 +<script>
 +// Exercises SVG DOM: createElementNS, paths, text, gradients, filters,
 +// transforms, getBBox, getCTM, path-data parsing.
-+const TIME_BUDGET = 1500;
++const TIME_BUDGET = 3000;
 +const now = () => performance.now();
 +const NS = "http://www.w3.org/2000/svg";
 +const root = document.getElementById("root");
@@ -931,7 +931,7 @@
 +//
 +// All errors are captured so a single failing worker can't silently kill
 +// the whole run and leave a blank page.
-+const TIME_BUDGET = 1500;
++const TIME_BUDGET = 3000;
 +const now = () => performance.now();
 +const statusEl = document.getElementById("status");
 +
@@ -1104,7 +1104,7 @@
 +//         end
 +//       end
 +//       local.get 3))
-+const TIME_BUDGET = 1500;
++const TIME_BUDGET = 3000;
 +const now = () => performance.now();
 +const statusEl = document.getElementById("status");
 +
@@ -1334,7 +1334,7 @@
 +//   2. If they 404, fall back to location.href (the test file itself) so
 +//      the benchmark can still run from a plain `python3 -m http.server`
 +//      started in the directory that only contains the *-bench.html files.
-+const TIME_BUDGET = 1500;
++const TIME_BUDGET = 3000;
 +const now = () => performance.now();
 +const statusEl = document.getElementById("status");
 +const whereEl = document.getElementById("where");
