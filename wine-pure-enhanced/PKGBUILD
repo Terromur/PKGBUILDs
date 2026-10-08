@@ -129,7 +129,7 @@ depends=(
   wayland
   ffmpeg
   unixodbc
-  mingw-w64-mimalloc-git
+  mimalloc
 )
 makedepends=(
   git
@@ -147,6 +147,7 @@ makedepends=(
   clang
   llvm
   lld
+  mimalloc
   "linux-api-headers>=6.14"
 )
 optdepends=(
@@ -422,7 +423,7 @@ build() {
     export CXXFLAGS="${CFLAGS} -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
     export CROSSCFLAGS="${_base_flags} -D_FORTIFY_SOURCE=0" 
     export CROSSCXXFLAGS="${CROSSCFLAGS} -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
-    export CROSSLDFLAGS="-lmimalloc -Wl,/FILEALIGN:4096,/INCREMENTAL:NO,/LTCG,/OPT:REF,/OPT:ICF=3"
+    export CROSSLDFLAGS="-Wl,/FILEALIGN:4096,/INCREMENTAL:NO,/LTCG,/OPT:REF,/OPT:ICF=3"
     export LDFLAGS="-lmimalloc -fuse-ld=lld -flto=auto -O3 -Wl,--lto-O3 -Wl,--lto-CGO3 -Wl,--hash-style=gnu -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs -Wl,--strip-all -Wl,--icf=safe -Wl,--build-id=none -Wl,-z,norelro"
 
   cd "$pkgname-build"
