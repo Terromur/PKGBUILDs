@@ -1,30 +1,26 @@
 # Maintainer: Terromur <terromuroz@proton.me>
-# Maintainer: Vasiliy Stelmachenok <ventureo@yandex.ru>
-## Arch Linux maintainers:
-# Maintainer: Christian Hesse <mail@eworm.de>
-# Maintainer: Robin Candau <antiz@archlinux.org>
-# Contributor: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
-# Contributor: Eivind Uggedal <eivind@uggedal.com>
 
 pkgname=mpv-pure-git
-pkgver=0.41.0.r1084.ga1bf4b6559
+pkgver=0.41.0.r1150.g88eb9f2e73
 pkgrel=1
 pkgdesc='a free, open source, and cross-platform media player'
 arch=('x86_64')
 license=('GPL-2.0-or-later AND LGPL-2.1-or-later')
 url='https://mpv.io/'
 depends=('alsa-lib' 'desktop-file-utils' 'ffmpeg' 'glibc' 'hicolor-icon-theme'
-         'lcms2' 'libarchive' 'libass' 'libdrm' 'libegl' 'libgl' 'libglvnd' 
-         'libjpeg-turbo' 'libplacebo' 'libva' 'libxkbcommon' 'libxss' 
-         'luajit' 'mesa' 'libpipewire' 'wayland' 'zlib')
+         'lcms2' 'libarchive' 'libass' 'libdrm' 'libegl' 'libgl' 'libglvnd'
+         'libjpeg-turbo' 'libplacebo' 'libva' 'libxkbcommon' 'libxss'
+         'luajit' 'mesa' 'libpipewire' 'wayland' 'zlib' 'mimalloc')
 makedepends=('git' 'meson' 'python-docutils' 'ladspa' 'wayland-protocols'
-             'ffnvcodec-headers' 'vulkan-headers')
+             'ffnvcodec-headers' 'vulkan-headers'
+             'clang' 'llvm' 'lld' 'mimalloc' 'mold')
 optdepends=('yt-dlp: for video-sharing websites playback')
 conflicts=('libmpv.so' 'mpv')
 provides=('libmpv.so' 'mpv')
 options=('!emptydirs')
 source=("git+https://github.com/mpv-player/mpv.git")
 sha256sums=('SKIP')
+
 prepare() {
   cd mpv
 }
@@ -38,55 +34,438 @@ pkgver() {
   printf '%s.r%s.g%s' "$_version" "$_revision" "$_shorthash"
 }
 
+export LDFLAGS="-fuse-ld=mold -flto=auto -Wl,--hash-style=gnu -O3 \
+-Wl,--lto-O3 -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs \
+-Wl,--icf=safe -Wl,-z,norelro -Wl,-z,now"
+
+_filter_cflags() {
+  local flags="$1" out="" f
+  for f in $flags; do
+    case "$f" in
+      -flto=auto|-flto=thin|-flto=full|-flto) continue ;;
+      -Wl,--lto-O*|-Wl,-plugin-opt=*) continue ;;
+      -Wl,--strip-all|-Wl,-s) continue ;;
+    esac
+    out+="$f "
+  done
+  echo "${out% }"
+}
+
+_filter_ldflags() {
+  # sanitize_lto=1 strips LTO flags for instrumented stages.
+  local flags="$1" sanitize_lto="$2" out="" f
+  for f in $flags; do
+    case "$f" in
+      -Wl,--strip-all|-Wl,-s) continue ;;
+      -flto=auto|-flto=thin|-flto=full|-flto) [[ "$sanitize_lto" == "1" ]] && continue ;;
+      -Wl,--lto-O*|-Wl,-plugin-opt=*) [[ "$sanitize_lto" == "1" ]] && continue ;;
+    esac
+    out+="$f "
+  done
+  echo "${out% }"
+}
+
+_setup_llvm() {
+  export CC=clang
+  export CXX=clang++
+  export AR=llvm-ar
+  export NM=llvm-nm
+  export STRIP=llvm-strip
+  export RANLIB=llvm-ranlib
+  export READELF=llvm-readelf
+
+  local tool
+  for tool in clang clang++ llvm-ar llvm-nm llvm-ranlib llvm-strip \
+              llvm-readelf llvm-profdata; do
+    command -v "$tool" >/dev/null || {
+      error "Required tool not on PATH: %s" "$tool"; return 1; }
+  done
+
+  msg "clang:      $(clang --version | head -1)"
+  msg "llvm-profdata: $(llvm-profdata --version 2>/dev/null | head -1)"
+}
+
+_flag_check() {
+  local tag="$1"; shift
+  local dir="$srcdir/.flagcheck-$tag"
+  rm -rf "$dir"; mkdir -p "$dir"
+  echo 'int main(void){return 0;}' > "$dir/t.c"
+  "$CC" "$dir/t.c" -o "$dir/t" "$@" >/dev/null 2>&1
+}
+
+_meson_options=(
+  --auto-features auto
+  -Dcaca=disabled
+  -Dcdda=disabled
+  -Dcuda-hwaccel=auto
+  -Dcuda-interop=auto
+  -Ddvbin=disabled
+  -Ddvdnav=disabled
+  -Dgl-x11=disabled
+  -Djavascript=disabled
+  -Dlibarchive=enabled
+  -Dlibbluray=disabled
+  -Dlibmpv=true
+  -Dlua=luajit
+  -Dopenal=disabled
+  -Dpulse=disabled
+  -Drubberband=disabled
+  -Dsdl2-audio=disabled
+  -Dsdl2-gamepad=disabled
+  -Dsdl2-video=disabled
+  -Duchardet=disabled
+  -Dvapoursynth=disabled
+  -Dvdpau=disabled
+  -Dvulkan=auto
+  -Dx11=disabled
+  -Dxv=disabled
+  -Dpython.bytecompile=2
+  -Derrorlogs=false
+  -Dstdsplit=false
+)
+
+_meson_setup() {
+  # $1 = builddir, $2 = c_args, $3 = cpp_args, $4 = link_args,
+  # $5 = lto_bool (true|false), $6 = lto_mode (default|thin)
+  local builddir="$1" cflags="$2" cxxflags="$3" ldflags="$4"
+  local lto="${5:-false}" lto_mode="${6:-default}"
+
+  rm -rf "$builddir"
+  CC="$CC" CXX="$CXX" AR="$AR" NM="$NM" RANLIB="$RANLIB" STRIP="$STRIP" \
+    meson setup "$builddir" mpv \
+      --prefix=/usr \
+      --libdir=lib \
+      --buildtype=plain \
+      --wrap-mode=nodownload \
+      "${_meson_options[@]}" \
+      -Db_lto="$lto" \
+      -Db_lto_mode="$lto_mode" \
+      -Dc_args="$cflags" \
+      -Dcpp_args="$cxxflags" \
+      -Dc_link_args="$ldflags" \
+      -Dcpp_link_args="$ldflags"
+}
+
+_find_mpv_binary() {
+  local builddir="$1" f
+  while IFS= read -r -d '' f; do
+    [[ -x "$f" ]] || continue
+    file -b "$f" 2>/dev/null | grep -q 'ELF.*executable' || continue
+    printf '%s' "$f"; return 0
+  done < <(find "$builddir" -maxdepth 2 -type f -name 'mpv' -print0 2>/dev/null)
+  return 1
+}
+
+_find_mpv_libdir() {
+  local builddir="$1" f
+  while IFS= read -r -d '' f; do
+    printf '%s' "$(dirname "$f")"; return 0
+  done < <(find "$builddir" -maxdepth 2 -type f \
+    -name 'libmpv.so.*' -not -type l -print0 2>/dev/null)
+  printf '%s' "$builddir"
+}
+
+_create_pgo_assets() {
+  local assetdir="$srcdir/pgo-assets"
+  rm -rf "$assetdir"
+  mkdir -p "$assetdir"
+
+  msg "Generating synthetic videos for PGO training"
+
+  ffmpeg -y -nostdin \
+    -f lavfi -i "testsrc2=duration=5:size=640x360:rate=30" \
+    -f lavfi -i "sine=frequency=440:duration=5:sample_rate=48000" \
+    -c:v libx264 -preset ultrafast -crf 28 \
+    -c:a aac -b:a 64k \
+    -movflags +faststart -t 5 \
+    "$assetdir/test_h264.mp4" 2>/dev/null || \
+    warning "failed to produce test_h264.mp4"
+
+  ffmpeg -y -nostdin \
+    -f lavfi -i "testsrc=duration=4:size=320x240:rate=24" \
+    -c:v libvpx-vp9 -crf 50 -b:v 0 -an -t 4 \
+    "$assetdir/test_vp9.webm" 2>/dev/null || \
+    warning "failed to produce test_vp9.webm"
+
+  ffmpeg -y -nostdin \
+    -f lavfi -i "color=c=blue:duration=3:size=160x120:rate=15" \
+    -c:v libx265 -preset ultrafast -crf 40 -an -t 3 \
+    "$assetdir/test_hevc.mp4" 2>/dev/null || \
+    warning "failed to produce test_hevc.mp4"
+
+  ffmpeg -y -nostdin \
+    -f lavfi -i "sine=frequency=880:duration=5:sample_rate=48000" \
+    -c:a flac -compression_level 0 \
+    "$assetdir/test_audio.flac" 2>/dev/null || \
+    warning "failed to produce test_audio.flac"
+
+  ffmpeg -y -nostdin \
+    -f lavfi -i "testsrc2=duration=30:size=480x270:rate=24" \
+    -f lavfi -i "sine=frequency=220:duration=30:sample_rate=48000" \
+    -c:v libx264 -preset ultrafast -crf 32 \
+    -c:a aac -b:a 48k \
+    -movflags +faststart -t 30 \
+    "$assetdir/test_long.mp4" 2>/dev/null || \
+    warning "failed to produce test_long.mp4"
+
+  cat > "$assetdir/test.srt" <<'SRT'
+1
+00:00:00,000 --> 00:00:02,500
+PGO training subtitle line one
+
+2
+00:00:02,500 --> 00:00:05,000
+PGO training subtitle line two
+SRT
+
+  ls -la "$assetdir"
+}
+
+_run_mpv_workload() {
+  local builddir="$1" logfile="$2" loops="${3:-1}"
+  local assetdir="$srcdir/pgo-assets"
+
+  local mpv_bin libdir
+  mpv_bin=$(_find_mpv_binary "$builddir") || {
+    error "mpv binary not found under %s" "$builddir"
+    return 1
+  }
+  libdir=$(_find_mpv_libdir "$builddir")
+
+  msg "training: mpv=%s libdir=%s loops=%s" "$mpv_bin" "$libdir" "$loops"
+
+  (
+    export LD_LIBRARY_PATH="${libdir}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
+    # No timeout: mpv must exit on its own via --length/--frames so
+    # libmpv _fini and PGO runtime flush cleanly. This matters more for
+    # BOLT, but harmless for PGO too.
+    _play() {
+      "$mpv_bin" --no-config --no-terminal --really-quiet \
+        --input-terminal=no --vo=null --ao=null "$@" 2>&1 | tail -5 || true
+    }
+
+    local i v
+    for ((i=0; i<loops; i++)); do
+      # Startup paths
+      "$mpv_bin" --no-config --version         >/dev/null 2>&1 || true
+      "$mpv_bin" --no-config --list-options    >/dev/null 2>&1 || true
+      "$mpv_bin" --no-config --list-properties >/dev/null 2>&1 || true
+
+      # Decode all codecs
+      for v in test_h264.mp4 test_vp9.webm test_hevc.mp4; do
+        [[ -f "$assetdir/$v" ]] && _play --frames=120 "$assetdir/$v"
+      done
+
+      # Audio-only demuxing
+      [[ -f "$assetdir/test_audio.flac" ]] && \
+        _play --frames=200 --no-video "$assetdir/test_audio.flac"
+
+      # Subtitle rendering paths
+      [[ -f "$assetdir/test_h264.mp4" && -f "$assetdir/test.srt" ]] && \
+        _play --frames=90 --sub-file="$assetdir/test.srt" "$assetdir/test_h264.mp4"
+
+      # Seeking — hot loop in demuxer
+      if [[ -f "$assetdir/test_long.mp4" ]]; then
+        _play --frames=30 --start=10 "$assetdir/test_long.mp4"
+        _play --frames=30 --start=20 "$assetdir/test_long.mp4"
+        _play --frames=30 --start=5  "$assetdir/test_long.mp4"
+      fi
+
+      # Continuous playback — fills PGO counters for steady-state loops
+      [[ -f "$assetdir/test_long.mp4" ]] && \
+        _play --length=10 "$assetdir/test_long.mp4"
+
+      # Untimed (fast decode) — pushes different decode paths
+      [[ -f "$assetdir/test_h264.mp4" ]] && \
+        _play --untimed --frames=200 "$assetdir/test_h264.mp4"
+
+      # hwdec autodetect path (may no-op on CPU only)
+      [[ -f "$assetdir/test_h264.mp4" ]] && \
+        _play --frames=60 --hwdec=auto "$assetdir/test_h264.mp4"
+
+      # lavfi source — pipes through different input path
+      _play --frames=90 "lavfi://[testsrc2=duration=3:size=320x240:rate=30]"
+
+      # Audio + video without video output
+      [[ -f "$assetdir/test_h264.mp4" ]] && \
+        _play --no-video --frames=200 "$assetdir/test_h264.mp4"
+    done
+  ) >"$logfile" 2>&1
+}
+
+_merge_profraws() {
+  local out="$1" dir="$2"
+  local -a files=()
+  mapfile -d '' files < <(find "$dir" -maxdepth 1 -type f -name '*.profraw' \
+    -size +0c -print0)
+  ((${#files[@]})) || { error "No profraw in %s" "$dir"; return 1; }
+  # -sparse removed: it can inhibit PGO optimizations.
+  llvm-profdata merge --failure-mode=all -output="$out" "${files[@]}"
+}
+
+_verify_build() {
+  msg "Verifying final binaries"
+
+  local mpv_bin
+  mpv_bin=$(_find_mpv_binary "$srcdir/build") || {
+    error "mpv binary missing under %s" "$srcdir/build"
+    find "$srcdir/build" -maxdepth 2 -type f -name 'mpv*' >&2 || true
+    return 1
+  }
+  msg "  verify binary: %s" "$mpv_bin"
+
+  local libdir
+  libdir=$(_find_mpv_libdir "$srcdir/build")
+  msg "  verify libdir: %s" "$libdir"
+
+  (
+    export LD_LIBRARY_PATH="${libdir}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    "$mpv_bin" --no-config --version >/dev/null || exit 1
+    if [[ -f "$srcdir/pgo-assets/test_h264.mp4" ]]; then
+      timeout 10 "$mpv_bin" --no-config --no-terminal --really-quiet \
+        --vo=null --ao=null --frames=30 \
+        "$srcdir/pgo-assets/test_h264.mp4" || exit 1
+    fi
+  ) || {
+    error "verify: mpv failed to run"
+    return 1
+  }
+
+  msg "Verification passed"
+}
+
 build() {
-  local _meson_options=(
-    --auto-features auto
-    --buildtype=release
-    -Dcaca=disabled
-    -Dcdda=disabled
-    -Dcuda-hwaccel=auto
-    -Dcuda-interop=auto
-    -Ddvbin=disabled
-    -Ddvdnav=disabled
-    -Dgl-x11=disabled
-    -Djavascript=disabled
-    -Dlibarchive=enabled
-    -Dlibbluray=disabled
-    -Dlibmpv=true
-    -Dlua=luajit
-    -Dopenal=disabled
-    -Dpulse=disabled
-    -Drubberband=disabled
-    -Dsdl2-audio=disabled
-    -Dsdl2-gamepad=disabled
-    -Dsdl2-video=disabled
-    -Duchardet=disabled
-    -Dvapoursynth=disabled
-    -Dvdpau=disabled
-    -Dvulkan=auto
-    -Dx11=disabled
-    -Dxv=disabled
-    -Doptimization=3
-    -Db_lto=true
-    -Dpython.bytecompile=2
-    -Derrorlogs=false
-    -Dstdsplit=false
+  _setup_llvm || return 1
+
+  # Sanitize makepkg.conf flags once.
+  local orig_cflags="$(_filter_cflags "$CFLAGS")"
+  local orig_cxxflags="$(_filter_cflags "$CXXFLAGS")"
+  local orig_ldflags="$(_filter_ldflags "$LDFLAGS" 1)"
+
+  local pgo_dir="$srcdir/pgo"
+  local cs_dir="$srcdir/cspgo"
+
+  rm -rf "$pgo_dir" "$cs_dir" \
+         "$srcdir/build-pgo" "$srcdir/build-cs" "$srcdir/build"
+  mkdir -p "$pgo_dir" "$cs_dir"
+
+  _create_pgo_assets
+
+  # -fprofile-update=atomic is critical for multithreaded decode.
+  local atomic_flag=""
+  if _flag_check atomic -fprofile-update=atomic; then
+    atomic_flag=" -fprofile-update=atomic"
+    msg "using -fprofile-update=atomic"
+  fi
+
+  # Value profiling feeds indirect call promotion in the second stage.
+  local vp_flag=""
+  if _flag_check vp -mllvm -enable-value-profiling; then
+    vp_flag=" -mllvm -enable-value-profiling -mllvm -vp-counters-per-site=300"
+    msg "using value profiling (-vp-counters-per-site=300)"
+  fi
+
+  # ICP on the consume stage — raise number of promoted targets.
+  local icp_flag=""
+  if _flag_check icp -mllvm -icp-max-prom=3; then
+    icp_flag=" -mllvm -icp-max-prom=3"
+  fi
+
+  local instr_flags=(
+    -g3 -fno-omit-frame-pointer ${atomic_flag}
+    -Xclang -mllvm -Xclang -runtime-counter-relocation
+    ${vp_flag}
+  )
+  local pw_flags=(-Wno-profile-instr-unprofiled)
+  local prefix_maps=(
+    "-ffile-prefix-map=$srcdir=/usr/src/debug/$pkgname"
+    "-fdebug-prefix-map=$srcdir=/usr/src/debug/$pkgname"
+    "-fmacro-prefix-map=$srcdir=/usr/src/debug/$pkgname"
   )
 
-  arch-meson mpv build "${_meson_options[@]}"
+  msg "Stage 1/4: STD-PGO instrumented build (LTO off)"
+  local c1="$orig_cflags -O3 ${prefix_maps[*]} ${instr_flags[*]} -fprofile-generate=$pgo_dir"
+  local cxx1="$orig_cxxflags -O3 ${prefix_maps[*]} ${instr_flags[*]} -fprofile-generate=$pgo_dir"
+  local l1="$orig_ldflags -fprofile-generate=$pgo_dir"
 
-  meson compile -C build
+  _meson_setup build-pgo "$c1" "$cxx1" "$l1" false || return 1
+  meson compile -C build-pgo || return 1
+
+  msg "Stage 1: training workload"
+  LLVM_PROFILE_FILE="$pgo_dir/mpv-%m-%p.profraw" \
+    _run_mpv_workload "$srcdir/build-pgo" "$srcdir/train-stage1.log" 1
+
+  _merge_profraws "$srcdir/standard.profdata" "$pgo_dir" || return 1
+  msg "Standard profile: %s" "$(du -h "$srcdir/standard.profdata" | cut -f1)"
+
+  msg "Stage 2/4: CS-PGO instrumented build (LTO off)"
+  local c2="$orig_cflags -O3 ${prefix_maps[*]} ${instr_flags[*]} ${pw_flags[*]} -fprofile-use=$srcdir/standard.profdata -fcs-profile-generate=$cs_dir"
+  local cxx2="$orig_cxxflags -O3 ${prefix_maps[*]} ${instr_flags[*]} ${pw_flags[*]} -fprofile-use=$srcdir/standard.profdata -fcs-profile-generate=$cs_dir"
+  local l2="$orig_ldflags -fprofile-use=$srcdir/standard.profdata -fcs-profile-generate=$cs_dir ${pw_flags[*]}"
+
+  _meson_setup build-cs "$c2" "$cxx2" "$l2" false || return 1
+  meson compile -C build-cs || return 1
+
+  msg "Stage 2: training workload"
+  LLVM_PROFILE_FILE="$cs_dir/mpv-cs-%m-%p.profraw" \
+    _run_mpv_workload "$srcdir/build-cs" "$srcdir/train-stage2.log" 1
+
+  _merge_profraws "$srcdir/cs.profdata" "$cs_dir" || return 1
+
+  msg "Stage 3/4: final profile merge (standard seeds CS)"
+  llvm-profdata merge --failure-mode=all \
+    -output="$srcdir/merged.profdata" \
+    "$srcdir/standard.profdata" "$srcdir/cs.profdata" || return 1
+  msg "Merged profile: %s" "$(du -h "$srcdir/merged.profdata" | cut -f1)"
+
+  msg "Stage 4/4: final optimized build (Full LTO ON)"
+  local c3="$orig_cflags -O3 -g3 ${prefix_maps[*]} ${pw_flags[*]} ${icp_flag} -fprofile-use=$srcdir/merged.profdata"
+  local cxx3="$orig_cxxflags -O3 -g3 ${prefix_maps[*]} ${pw_flags[*]} ${icp_flag} -fprofile-use=$srcdir/merged.profdata"
+  # Restore LTO flags for final stage.
+  local ld_final="$(_filter_ldflags "$LDFLAGS" 0)"
+  local l3="$ld_final -fprofile-use=$srcdir/merged.profdata ${pw_flags[*]}"
+
+  _meson_setup build "$c3" "$cxx3" "$l3" true default || return 1
+  meson compile -C build || return 1
+
+  # Sanity: PGO must have been applied.
+  if ! grep -q 'fprofile-use' "$srcdir/build/build.ninja" 2>/dev/null; then
+    error "PGO was not applied in the final build"
+    return 1
+  fi
+
+  # Sanity: Full LTO must be enabled.
+  if ! grep -qE -- '-flto(=full)?([[:space:]]|$)' "$srcdir/build/build.ninja" 2>/dev/null; then
+    warning "Full LTO flag (-flto) not seen in build.ninja; check Meson b_lto_mode"
+  fi
+
+  # Sanity: profile must be substantial.
+  local profsize
+  profsize=$(stat -c %s "$srcdir/merged.profdata" 2>/dev/null || echo 0)
+  if (( profsize < 1000000 )); then
+    warning "Merged profile is only $((profsize/1024)) KiB; training may be insufficient"
+  else
+    msg "Merged profile size: $((profsize/1024/1024)) MiB — good coverage"
+  fi
+
+  _verify_build || return 1
+
+  msg "Build completed successfully (Full LTO + PGO + CS-PGO)"
 }
 
 package() {
-  meson install -C build --destdir "${pkgdir}"
+  cd mpv
 
-  # delete private entries only required for static linking 
-  sed -i -e '/Requires.private/d' -e '/Libs.private/d' "${pkgdir}"/usr/lib/pkgconfig/mpv.pc
+  meson install -C "$srcdir/build" --destdir "$pkgdir" --no-rebuild
 
-  install -m0644 mpv/DOCS/{encoding.rst,tech-overview.txt} \
+  # Remove private entries only required for static linking.
+  sed -i -e '/Requires.private/d' -e '/Libs.private/d' \
+    "${pkgdir}"/usr/lib/pkgconfig/mpv.pc
+
+  install -m0644 DOCS/{encoding.rst,tech-overview.txt} \
     "${pkgdir}"/usr/share/doc/mpv
-    
-  install -m0644 mpv/TOOLS/{umpv,mpv_identify.sh,stats-conv.py,idet.sh,lua/*} \
+
+  install -m0644 TOOLS/{umpv,mpv_identify.sh,stats-conv.py,idet.sh,lua/*} \
     -D -t "${pkgdir}"/usr/share/mpv/scripts
 }

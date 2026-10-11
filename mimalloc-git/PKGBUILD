@@ -1,0 +1,651 @@
+#Maintainer: Terromur <terromuroz@proton.me>
+
+pkgname=mimalloc
+pkgver=3.5.3
+pkgrel=6.1
+pkgdesc='General-purpose allocator with excellent performance characteristics'
+arch=(x86_64 aarch64)
+url='https://github.com/microsoft/mimalloc'
+license=(MIT)
+depends=(glibc)
+makedepends=(git cmake ninja clang llvm lld)
+provides=("mimalloc=$pkgver")
+conflicts=(mimalloc)
+options=(!strip)
+source=("$pkgname::git+$url#tag=v${pkgver}"
+)
+b2sums=('SKIP')
+
+pkgver() {
+  cd "$pkgname"
+  git describe --tags | sed 's/^v//'
+}
+
+_generate_training_c() {
+  cat > "$srcdir/mimalloc_training.c" <<'TRAINEOF'
+#define _POSIX_C_SOURCE 200809L
+#include <mimalloc.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <pthread.h>
+#include <stdint.h>
+#include <unistd.h>
+
+#define MAX_PTRS          8192
+#define SMALL_CEIL        256       /* bin allocation ceiling      */
+#define MEDIUM_CEIL       4096
+#define LARGE_CEIL        (256 * 1024)
+#define HUGE_CEIL         (8 * 1024 * 1024)
+#define TOUCH_CAP         8192      /* max bytes to memset         */
+#define NUM_ROUNDS        3
+
+typedef struct {
+  void*       ptrs[MAX_PTRS];
+  size_t      sizes[MAX_PTRS];
+  int         count;
+  int         id;
+  unsigned    seed;
+} tstate_t;
+
+static inline void slot_free(tstate_t* s, int i) {
+  if (s->ptrs[i]) { mi_free(s->ptrs[i]); s->ptrs[i] = NULL; s->sizes[i] = 0; }
+}
+
+static inline int next_slot(tstate_t* s) {
+  return (s->count++) % MAX_PTRS;
+}
+
+static inline void touch(void* p, size_t n) {
+  memset(p, 0xAB, n < TOUCH_CAP ? n : TOUCH_CAP);
+}
+
+static void phase_small(tstate_t* s) {
+  for (int i = 0; i < 2000; i++) {
+    int idx = next_slot(s);
+    slot_free(s, idx);
+    size_t sz = (rand_r(&s->seed) % SMALL_CEIL) + 1;
+    void* p = mi_malloc(sz);
+    if (p) { s->ptrs[idx] = p; s->sizes[idx] = sz; touch(p, sz); }
+  }
+}
+
+static void phase_medium(tstate_t* s) {
+  for (int i = 0; i < 500; i++) {
+    int idx = next_slot(s);
+    slot_free(s, idx);
+    size_t sz = SMALL_CEIL + rand_r(&s->seed) % (MEDIUM_CEIL - SMALL_CEIL);
+    void* p = mi_malloc(sz);
+    if (p) { s->ptrs[idx] = p; s->sizes[idx] = sz; touch(p, sz); }
+  }
+}
+
+static void phase_large(tstate_t* s) {
+  for (int i = 0; i < 100; i++) {
+    int idx = next_slot(s);
+    slot_free(s, idx);
+    size_t sz = MEDIUM_CEIL + rand_r(&s->seed) % (LARGE_CEIL - MEDIUM_CEIL);
+    void* p = mi_malloc(sz);
+    if (p) { s->ptrs[idx] = p; s->sizes[idx] = sz; touch(p, sz); }
+  }
+}
+
+static void phase_huge(tstate_t* s) {
+  for (int i = 0; i < 20; i++) {
+    int idx = next_slot(s);
+    slot_free(s, idx);
+    size_t sz = LARGE_CEIL + rand_r(&s->seed) % (HUGE_CEIL - LARGE_CEIL);
+    void* p = mi_malloc(sz);
+    if (p) { s->ptrs[idx] = p; s->sizes[idx] = sz; touch(p, sz); }
+  }
+}
+
+static void phase_realloc(tstate_t* s) {
+  for (int i = 0; i < 600; i++) {
+    size_t sz = (rand_r(&s->seed) % 1024) + 1;
+    void* p = mi_malloc(sz);
+    if (!p) continue;
+    touch(p, sz);
+
+    /* grow */
+    size_t nsz = sz * 2 + rand_r(&s->seed) % 1024;
+    void* q = mi_realloc(p, nsz);
+    if (q) { p = q; sz = nsz; }
+
+    /* shrink */
+    nsz = sz / 2;
+    if (nsz > 0) {
+      q = mi_realloc(p, nsz);
+      if (q) { p = q; sz = nsz; }
+    }
+
+    /* mi_recalloc – zero-initialized realloc */
+    size_t cnt = (rand_r(&s->seed) % 100) + 1;
+    q = mi_recalloc(p, cnt, 16);
+    if (q) p = q;
+
+    /* mi_reallocn */
+    q = mi_reallocn(p, (rand_r(&s->seed) % 50) + 1, 32);
+    if (q) p = q;
+
+    mi_free(p);
+  }
+}
+
+static void phase_calloc(tstate_t* s) {
+  for (int i = 0; i < 400; i++) {
+    int idx = next_slot(s);
+    slot_free(s, idx);
+    size_t cnt = (rand_r(&s->seed) % 200) + 1;
+    size_t sz  = (rand_r(&s->seed) % 256) + 1;
+    void* p;
+    if (rand_r(&s->seed) & 1)
+      p = mi_calloc(cnt, sz);
+    else
+      p = mi_zalloc(cnt * sz);
+    if (p) { s->ptrs[idx] = p; s->sizes[idx] = cnt * sz; }
+  }
+}
+
+static void phase_aligned(tstate_t* s) {
+  static const size_t aligns[] = {
+    8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 65536, 262144, 1048576
+  };
+  static const int naligns = sizeof(aligns) / sizeof(aligns[0]);
+
+  for (int i = 0; i < 300; i++) {
+    int idx = next_slot(s);
+    slot_free(s, idx);
+    size_t a = aligns[rand_r(&s->seed) % naligns];
+    size_t sz = a * ((rand_r(&s->seed) % 8) + 1);   /* smaller multiplier for big aligns */
+
+    void* p = NULL;
+    switch (rand_r(&s->seed) % 4) {
+      case 0: p = mi_malloc_aligned(sz, a); break;
+      case 1: p = mi_zalloc_aligned(sz, a); break;
+      case 2: p = mi_calloc_aligned(1, sz, a); break;
+      case 3: p = mi_malloc_aligned_at(sz, a, 0); break;
+    }
+    if (p) { s->ptrs[idx] = p; s->sizes[idx] = sz; touch(p, sz); }
+  }
+}
+
+static void phase_heap(tstate_t* s) {
+  mi_heap_t* heap = mi_heap_new();
+  if (!heap) return;
+
+  void* ptrs[256];
+
+  for (int i = 0; i < 256; i++) {
+    size_t sz = (rand_r(&s->seed) % 1024) + 1;
+    if (rand_r(&s->seed) & 1)
+      ptrs[i] = mi_heap_malloc(heap, sz);
+    else
+      ptrs[i] = mi_heap_zalloc(heap, sz);
+    if (ptrs[i]) touch(ptrs[i], sz);
+  }
+
+  for (int i = 0; i < 64; i++) {
+    int idx = rand_r(&s->seed) % 256;
+    if (ptrs[idx]) { mi_free(ptrs[idx]); ptrs[idx] = NULL; }
+    size_t cnt = (rand_r(&s->seed) % 32) + 1;
+    size_t sz  = (rand_r(&s->seed) % 256) + 1;
+    ptrs[idx] = mi_heap_calloc(heap, cnt, sz);
+  }
+
+  for (int i = 0; i < 64; i++) {
+    int idx = rand_r(&s->seed) % 256;
+    if (!ptrs[idx]) continue;
+    size_t nsz = (rand_r(&s->seed) % 2048) + 1;
+    void* p = mi_heap_realloc(heap, ptrs[idx], nsz);
+    if (p) { ptrs[idx] = p; touch(p, nsz < 64 ? nsz : 64); }
+  }
+
+  for (int i = 0; i < 32; i++) {
+    int idx = rand_r(&s->seed) % 256;
+    if (ptrs[idx]) { mi_free(ptrs[idx]); ptrs[idx] = NULL; }
+    size_t a = 1ULL << (rand_r(&s->seed) % 8 + 3);   /* 8..1024 */
+    size_t sz = a * ((rand_r(&s->seed) % 16) + 1);
+    ptrs[idx] = mi_heap_malloc_aligned(heap, sz, a);
+    if (ptrs[idx]) touch(ptrs[idx], sz < 256 ? sz : 256);
+  }
+
+  mi_heap_collect(heap, false);
+
+  for (int i = 0; i < 256; i++)
+    if (ptrs[i]) mi_free(ptrs[i]);
+
+  mi_heap_collect(heap, true);
+  mi_heap_delete(heap);
+}
+
+static void phase_introspect(tstate_t* s) {
+  for (int i = 0; i < 400; i++) {
+    int idx = next_slot(s);
+    slot_free(s, idx);
+    size_t sz = (rand_r(&s->seed) % 128) + 1;    /* small only */
+    void* p = mi_malloc_small(sz);
+    if (!p) continue;
+    s->ptrs[idx] = p;
+    s->sizes[idx] = sz;
+
+    size_t usable = mi_usable_size(p);
+    size_t good   = mi_good_size(sz);
+    (void)usable; (void)good;
+  }
+}
+
+static void phase_strdup(tstate_t* s) {
+  static const char* strs[] = {
+    "hello", "world", "mimalloc", "profile-guided", "optimization",
+    "a somewhat longer string for training coverage"
+  };
+  static const int nstrs = sizeof(strs) / sizeof(strs[0]);
+
+  for (int i = 0; i < 100; i++) {
+    int idx = next_slot(s);
+    slot_free(s, idx);
+    const char* src = strs[rand_r(&s->seed) % nstrs];
+    char* dup = (rand_r(&s->seed) & 1) ? mi_strdup(src) : mi_strndup(src, 16);
+    if (dup) { s->ptrs[idx] = dup; s->sizes[idx] = strlen(dup) + 1; }
+  }
+}
+
+static void phase_burst(tstate_t* s) {
+  for (int b = 0; b < 5; b++) {
+    /* allocate many */
+    for (int i = 0; i < MAX_PTRS / 2; i++) {
+      int idx = next_slot(s);
+      slot_free(s, idx);
+      size_t sz = (rand_r(&s->seed) % 4096) + 1;
+      void* p = mi_malloc(sz);
+      if (p) { s->ptrs[idx] = p; s->sizes[idx] = sz; touch(p, sz); }
+    }
+    for (int i = 0; i < MAX_PTRS / 2; i++) {
+      int idx = rand_r(&s->seed) % MAX_PTRS;
+      slot_free(s, idx);
+    }
+  }
+}
+
+static void phase_mixed(tstate_t* s) {
+  switch (rand_r(&s->seed) % 10) {
+    case 0: phase_small(s);      break;
+    case 1: phase_medium(s);     break;
+    case 2: phase_large(s);      break;
+    case 3: phase_realloc(s);    break;
+    case 4: phase_aligned(s);    break;
+    case 5: phase_heap(s);       break;
+    case 6: phase_calloc(s);     break;
+    case 7: phase_introspect(s); break;
+    case 8: phase_strdup(s);     break;
+    case 9: phase_burst(s);      break;
+  }
+}
+
+static void cleanup(tstate_t* s) {
+  for (int i = 0; i < MAX_PTRS; i++)
+    slot_free(s, i);
+}
+
+static void* thread_worker(void* arg) {
+  tstate_t* s = (tstate_t*)arg;
+  s->seed = (unsigned int)(time(NULL) ^ (uintptr_t)(s->id + 1) * 0x9e3779b9U);
+
+  mi_thread_init();
+
+  phase_small(s);
+  phase_medium(s);
+  phase_large(s);
+  phase_huge(s);
+  phase_realloc(s);
+  phase_calloc(s);
+  phase_aligned(s);
+  phase_heap(s);
+  phase_introspect(s);
+  phase_strdup(s);
+
+  for (int i = 0; i < 60; i++)
+    phase_mixed(s);
+
+  phase_burst(s);
+
+  cleanup(s);
+
+  mi_thread_done();
+  return NULL;
+}
+
+int main(void) {
+  int nthreads = sysconf(_SC_NPROCESSORS_ONLN) * 2;
+  if (nthreads < 4)  nthreads = 4;
+  if (nthreads > 64) nthreads = 64;
+
+  printf("mimalloc PGO training: %d threads × %d rounds\n", nthreads, NUM_ROUNDS);
+
+  mi_process_init();
+
+  pthread_t* threads = (pthread_t*)mi_malloc(sizeof(pthread_t) * (size_t)nthreads);
+  tstate_t*  states  = (tstate_t*)mi_calloc((size_t)nthreads, sizeof(tstate_t));
+  if (!threads || !states) {
+    fprintf(stderr, "Failed to allocate thread state\n");
+    return 1;
+  }
+
+  for (int round = 0; round < NUM_ROUNDS; round++) {
+    printf("  round %d/%d\n", round + 1, NUM_ROUNDS);
+
+    for (int i = 0; i < nthreads; i++) {
+      states[i].id    = i;
+      states[i].count = 0;
+      pthread_create(&threads[i], NULL, thread_worker, &states[i]);
+    }
+    for (int i = 0; i < nthreads; i++)
+      pthread_join(threads[i], NULL);
+
+    /* exercise GC / reclamation between rounds */
+    mi_collect(false);
+  }
+
+  mi_collect(true);
+  mi_thread_done();  /* ensure final counter flush */
+  printf("Training complete.\n");
+  return 0;
+}
+TRAINEOF
+}
+
+build() {
+  cd "$pkgname"
+  _generate_training_c
+
+  export CC=clang
+  export CXX=clang++
+  export AR=llvm-ar
+  export NM=llvm-nm
+  export RANLIB=llvm-ranlib
+
+  local -a _BASE_CFLAGS _BASE_CXXFLAGS _BASE_LDFLAGS
+  read -ra _BASE_CFLAGS  <<< "$CFLAGS"
+  read -ra _BASE_CXXFLAGS <<< "$CXXFLAGS"
+  read -ra _BASE_LDFLAGS <<< "$LDFLAGS"
+
+  local _BASE_CFLAGS_STR="${_BASE_CFLAGS[*]}"
+  local _BASE_CXXFLAGS_STR="${_BASE_CXXFLAGS[*]}"
+  local _BASE_LDFLAGS_STR="${_BASE_LDFLAGS[*]}"
+
+  local _LDFLAGS_NO_STRIP
+  _LDFLAGS_NO_STRIP=$(printf '%s' "$_BASE_LDFLAGS_STR" \
+    | sed -E 's/-Wl,--strip-all//g; s/(^| )--strip-all( |$)/\1\2/g; s/  +/ /g')
+
+  local _cmake_common=(
+    -D CMAKE_INSTALL_PREFIX=/usr
+    -D MI_BUILD_SHARED=ON
+    -D MI_BUILD_STATIC=ON
+    -D MI_BUILD_OBJECT=OFF
+    -D MI_INSTALL_TOPLEVEL=ON
+    -D MI_OVERRIDE=ON
+    -D CMAKE_UNITY_BUILD=OFF
+    -D CMAKE_BUILD_TYPE=Release
+  )
+
+  _pgo_gen_flags() {
+    local dir="$1"
+    echo "-fprofile-generate=${dir} -fprofile-update=atomic" \
+         "-fno-omit-frame-pointer -g3" \
+         "-Xclang -mllvm -Xclang -vp-counters-per-site=300" \
+         "-Xclang -mllvm -Xclang -runtime-counter-relocation"
+  }
+
+  _cspgo_gen_flags() {
+    local profile="$1" dir="$2"
+    echo "-fprofile-use=${profile}" \
+         "-fcs-profile-generate=${dir} -fprofile-update=atomic" \
+         "-fno-omit-frame-pointer -g3" \
+         "-Xclang -mllvm -Xclang -vp-counters-per-site=300" \
+         "-Xclang -mllvm -Xclang -runtime-counter-relocation"
+  }
+
+  _pgo_use_flags() {
+    local profile="$1"
+    echo "-fprofile-use=${profile} -Wno-profile-instr-unprofiled" \
+         "-mllvm -icp-max-prom=3" \
+         "-fno-semantic-interposition"
+  }
+
+  _run_training() {
+    local build_dir="$1"
+    local label="$2"
+    local extra_cflags="$3"
+
+    # Build and run unit tests (exercises many internal paths)
+    ( cd "$build_dir"; ctest --output-on-failure -j"$(nproc)" ) || true
+
+    local -a _train_cflags
+    read -ra _train_cflags <<< "${_BASE_CFLAGS[*]} ${extra_cflags}"
+
+    echo "  [$label] Compiling training program..."
+    clang "${_train_cflags[@]}" -pthread \
+          -I"${srcdir}/$pkgname/include" \
+          -L"${srcdir}/$pkgname/${build_dir}" \
+          "$srcdir/mimalloc_training.c" \
+          -o "$srcdir/mimalloc_training" \
+          -lmimalloc || { echo "ERROR: training compilation failed for $label"; return 1; }
+
+    # Run training workload
+    echo "  [$label] Running training workload..."
+    LD_LIBRARY_PATH="${srcdir}/$pkgname/${build_dir}" \
+      "$srcdir/mimalloc_training" || true
+  }
+
+  local _pgo_dir="$srcdir/pgo"
+  rm -rf "$_pgo_dir"
+  mkdir -p "$_pgo_dir"
+
+  local _s1_flags
+  _s1_flags=$(_pgo_gen_flags "$_pgo_dir")
+
+  echo "==> Stage 1/4: PGO instrumentation build..."
+  cmake -B build-pgo-gen -G Ninja \
+        "${_cmake_common[@]}" \
+        -D "CMAKE_C_FLAGS=${_BASE_CFLAGS_STR} ${_s1_flags}" \
+        -D "CMAKE_CXX_FLAGS=${_BASE_CXXFLAGS_STR} ${_s1_flags}" \
+        -D "CMAKE_EXE_LINKER_FLAGS=${_BASE_LDFLAGS_STR} ${_s1_flags}" \
+        -D "CMAKE_SHARED_LINKER_FLAGS=${_BASE_LDFLAGS_STR} ${_s1_flags}"
+  ninja -C build-pgo-gen
+
+  _run_training build-pgo-gen "stage1-pgo" "$_s1_flags"
+
+  # Merge stage-1 profile data
+  echo "  [stage1] Merging profile data..."
+  llvm-profdata merge --failure-mode=all \
+    -output="$_pgo_dir/stage1.profdata" "$_pgo_dir"/*.profraw
+  rm -f "$_pgo_dir"/*.profraw
+
+  local _cs_dir="$srcdir/cspgo"
+  rm -rf "$_cs_dir"
+  mkdir -p "$_cs_dir"
+
+  local _s2_flags
+  _s2_flags=$(_cspgo_gen_flags "$_pgo_dir/stage1.profdata" "$_cs_dir")
+
+  echo "==> Stage 2/4: CS-PGO instrumentation build..."
+  cmake -B build-cspgo-gen -G Ninja \
+        "${_cmake_common[@]}" \
+        -D "CMAKE_C_FLAGS=${_BASE_CFLAGS_STR} ${_s2_flags}" \
+        -D "CMAKE_CXX_FLAGS=${_BASE_CXXFLAGS_STR} ${_s2_flags}" \
+        -D "CMAKE_EXE_LINKER_FLAGS=${_BASE_LDFLAGS_STR} ${_s2_flags}" \
+        -D "CMAKE_SHARED_LINKER_FLAGS=${_BASE_LDFLAGS_STR} ${_s2_flags}"
+  ninja -C build-cspgo-gen
+
+  _run_training build-cspgo-gen "stage2-cspgo" "$_s2_flags"
+
+  echo "  [stage2] Merging CS-PGO + stage-1 profiles..."
+  llvm-profdata merge --failure-mode=all \
+    -output="$_cs_dir/cs.profdata" \
+    "$_pgo_dir/stage1.profdata" \
+    "$_cs_dir"/*.profraw
+  rm -f "$_cs_dir"/*.profraw
+
+  local _s3_flags
+  _s3_flags=$(_pgo_use_flags "$_cs_dir/cs.profdata")
+
+  local _s3_flags_lto="${_s3_flags} -flto=full"
+  local _ld_final="${_LDFLAGS_NO_STRIP} -flto=full -Wl,--lto-O3"
+
+  echo "==> Stage 3/4: Final optimised build (ThinLTO + PGO + CS-PGO)..."
+  cmake -B build-final -G Ninja \
+        "${_cmake_common[@]}" \
+        -D "CMAKE_C_FLAGS=${_BASE_CFLAGS_STR} ${_s3_flags_lto}" \
+        -D "CMAKE_CXX_FLAGS=${_BASE_CXXFLAGS_STR} ${_s3_flags_lto}" \
+        -D "CMAKE_EXE_LINKER_FLAGS=${_ld_final} ${_s3_flags} -Wl,--emit-relocs" \
+        -D "CMAKE_SHARED_LINKER_FLAGS=${_ld_final} ${_s3_flags} -Wl,--emit-relocs"
+  ninja -C build-final
+
+  echo "==> Stage 4/4: BOLT instrumentation and optimisation..."
+
+  local _bolt_dir="$srcdir/bolt"
+  rm -rf "$_bolt_dir"
+  mkdir -p "$_bolt_dir"
+
+  # Locate the shared library in the build directory
+  local _lib_path="${PWD}/build-final/libmimalloc.so"
+  if [ ! -f "$_lib_path" ]; then
+    # Handle versioned soname (e.g. libmimalloc.so.3)
+    _lib_path=$(find "${PWD}/build-final" -maxdepth 2 -name 'libmimalloc*.so*' -type f ! -name '*.a' 2>/dev/null | head -1)
+    if [ -z "$_lib_path" ]; then
+      echo "  WARNING: Could not locate libmimalloc.so for BOLT, skipping BOLT stage"
+      return 0
+    fi
+  fi
+  echo "  BOLT target: ${_lib_path}"
+
+  local _lib_backup="${_bolt_dir}/libmimalloc.so.orig"
+  cp "$_lib_path" "$_lib_backup"
+
+  echo "  Creating BOLT instrumented library..."
+  llvm-bolt "$_lib_backup" \
+    -o "${_bolt_dir}/libmimalloc.so.inst" \
+    --instrument \
+    --instrumentation-file="${_bolt_dir}/mimalloc.fdata" \
+    --instrumentation-sleep-time=5 \
+    > "${_bolt_dir}/bolt-instrument.log" 2>&1 || {
+      echo "  WARNING: BOLT instrumentation failed; skipping BOLT stage"
+      return 0
+    }
+
+  # Place instrumented library in build dir so training program loads it
+  cp "${_bolt_dir}/libmimalloc.so.inst" "$_lib_path"
+
+  echo "  Compiling training program for BOLT..."
+  clang "${_BASE_CFLAGS[@]}" -pthread \
+        -I"${srcdir}/$pkgname/include" \
+        -L"${srcdir}/$pkgname/build-final" \
+        "$srcdir/mimalloc_training.c" \
+        -o "$srcdir/mimalloc_training_bolt" \
+        -lmimalloc || {
+          echo "  WARNING: BOLT training compilation failed, restoring original library"
+          cp "$_lib_backup" "$_lib_path"
+          return 0
+        }
+
+  echo "  Running BOLT training workload..."
+  LD_LIBRARY_PATH="${srcdir}/$pkgname/build-final" \
+    "$srcdir/mimalloc_training_bolt" || true
+
+  # Restore the original (pre-BOLT) library for the optimisation step
+  cp "$_lib_backup" "$_lib_path"
+
+  local _fdata_files=()
+  for f in "${_bolt_dir}"/mimalloc.fdata "${_bolt_dir}"/mimalloc.fdata.*; do
+    [ -s "$f" ] && _fdata_files+=("$f")
+  done
+  # If no PID-suffixed files, check for the base file
+  if [ ${#_fdata_files[@]} -eq 0 ] && [ -s "${_bolt_dir}/mimalloc.fdata" ]; then
+    _fdata_files=("${_bolt_dir}/mimalloc.fdata")
+  fi
+
+  if [ ${#_fdata_files[@]} -eq 0 ]; then
+    echo "  WARNING: No BOLT profile data collected, skipping BOLT optimisation"
+    rm -rf "$_bolt_dir"
+    return 0
+  fi
+
+  local _merged_fdata="${_bolt_dir}/merged.fdata"
+  if [ ${#_fdata_files[@]} -gt 1 ]; then
+    echo "  Merging ${#_fdata_files[@]} BOLT profile files..."
+    merge-fdata "${_fdata_files[@]}" > "$_merged_fdata"
+  else
+    _merged_fdata="${_fdata_files[0]}"
+  fi
+
+  if [ ! -s "$_merged_fdata" ]; then
+    echo "  WARNING: BOLT profile data is empty, skipping BOLT optimisation"
+    rm -rf "$_bolt_dir"
+    return 0
+  fi
+
+  # Architecture-specific flags
+  local _bolt_arch_flags=""
+  if [ "$(uname -m)" = "x86_64" ]; then
+    _bolt_arch_flags="--x86-strip-redundant-address-size"
+  fi
+
+  echo "  Applying BOLT optimisations..."
+  llvm-bolt "$_lib_backup" \
+    -o "${_lib_path}.bolt" \
+    --data="$_merged_fdata" \
+    --dyno-stats \
+    --lite=false \
+    --icf=safe \
+    --plt=hot \
+    --peepholes=double-jumps,useless-branches \
+    --indirect-call-promotion=calls \
+    --reorder-blocks=ext-tsp \
+    --reorder-functions=cdsort \
+    --split-all-cold \
+    --split-eh \
+    --split-functions \
+    --split-strategy=profile2 \
+    --use-gnu-stack \
+    ${_bolt_arch_flags} \
+    > "${_bolt_dir}/bolt-apply.log" 2>&1 || {
+      echo "  WARNING: BOLT optimisation failed; using pre-BOLT library"
+      cat "${_bolt_dir}/bolt-apply.log" | tail -20
+      rm -rf "$_bolt_dir"
+      return 0
+    }
+
+  if [ -f "${_lib_path}.bolt" ]; then
+    mv -f "${_lib_path}.bolt" "$_lib_path"
+    echo "  BOLT optimisation successful"
+    grep -E 'BOLT-INFO:.*(out of.*functions in the binary|executed instructions|taken branches)' \
+      "${_bolt_dir}/bolt-apply.log" | head -5 || true
+  else
+    echo "  WARNING: BOLT output not found; using pre-BOLT library"
+  fi
+
+  # Clean up BOLT working files
+  rm -rf "$_bolt_dir"
+}
+
+check() {
+  cd "$pkgname/build-final"
+  LD_LIBRARY_PATH="$PWD" ctest --output-on-failure -j"$(nproc)"
+}
+
+package() {
+  cd "$pkgname"
+  DESTDIR="$pkgdir" cmake --install build-final
+
+  install -Dm644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname"
+
+  # Manual stripping (required because options=(!strip))
+  find "$pkgdir" -type f \( -name '*.so*' -o -name '*.a' -o -executable \) -print0 2>/dev/null | \
+    while IFS= read -r -d '' file; do
+      if llvm-strip --strip-unneeded "$file" 2>/dev/null || llvm-strip --strip-all "$file" 2>/dev/null; then
+        : # stripped successfully
+      fi
+    done
+}

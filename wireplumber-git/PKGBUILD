@@ -1,25 +1,25 @@
-# Maintaier: Terromur <terromuroz@proton.me>
-# Maintainer: David Runge <dvzrv@archlinux.org>
-# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+# Maintainer: Terromur <terromuroz@proton.me>
 
 pkgbase=wireplumber
 pkgname=(
   wireplumber
   libwireplumber
 )
-pkgver=0.5.17.r30.g251d742
+pkgver=0.5.18.r6.g2461b1c
 pkgrel=1
 pkgdesc="Session / policy manager implementation for PipeWire"
 url="https://pipewire.pages.freedesktop.org/wireplumber/"
 arch=(x86_64)
 license=(MIT)
 makedepends=(
+  clang
   doxygen
   git
   glib2
   glib2-devel
   gobject-introspection
   graphviz
+  llvm
   lua
   meson
   pipewire
@@ -39,32 +39,446 @@ prepare() {
   cd $pkgbase
 }
 
+_ver=${pkgver:0:3}
+
+_meson_options_common=(
+  -D b_ndebug=false
+  -D b_pie=false
+  -D optimization=3
+  -D debug=false
+  -D strip=false
+  -D stdsplit=false
+  -D python.bytecompile=2
+  -D errorlogs=false
+  -D doc=disabled
+  -D elogind=disabled
+  -D system-lua=true
+  -D systemd=enabled
+  -D systemd-system-service=false
+  -D systemd-user-service=true
+  --buildtype=release
+  --wrap-mode=nofallback
+)
+
+_pgo_instrument_mllvm=(
+  -Xclang -mllvm -Xclang -vp-counters-per-site=300
+  -Xclang -mllvm -Xclang -runtime-counter-relocation
+)
+
+_bolt_apply_flags=(
+  -update-debug-sections
+  -reorder-blocks=ext-tsp
+  -reorder-functions=hfsort+
+  -split-functions
+  -icf=1
+  -inline-all
+  -split-eh
+  -reorder-functions-use-hot-size
+  -peepholes=none
+  -jump-tables=aggressive
+  -inline-ap
+  -indirect-call-promotion=all
+  -dyno-stats
+  -use-gnu-stack
+  -frame-opt=hot
+)
+
+_filter_cflags() {
+  local flags="$1" out="" f
+  for f in $flags; do
+    case "$f" in
+      -flto=auto|-flto=thin|-flto=full|-flto) continue ;;
+      -Wl,--lto-O*|-Wl,-plugin-opt=*) continue ;;
+      -Wl,--strip-all|-Wl,-s) continue ;;
+    esac
+    out+="$f "
+  done
+  echo "${out% }"
+}
+
+_filter_ldflags() {
+  local flags="$1" sanitize_lto="$2"
+  local out="" f
+  for f in $flags; do
+    case "$f" in
+      -Wl,--strip-all|-Wl,-s) continue ;;
+      -flto=auto|-flto=thin|-flto=full|-flto) [[ "$sanitize_lto" == "1" ]] && continue ;;
+      -Wl,--lto-O*|-Wl,-plugin-opt=*) [[ "$sanitize_lto" == "1" ]] && continue ;;
+    esac
+    out+="$f "
+  done
+  echo "${out% }"
+}
+
+_setup_stage() {
+  local builddir="$1" pgo_args="$2" lto_bool="$3" lto_mode="${4:-default}"
+  shift 4 2>/dev/null || shift $#
+  rm -rf "$builddir"
+  arch-meson $pkgbase "$builddir" \
+    "${_meson_options_common[@]}" \
+    -D b_lto="$lto_bool" \
+    -D b_lto_mode="$lto_mode" \
+    -Dc_args="$pgo_args ${_pgo_instrument_mllvm[*]}" \
+    -Dcpp_args="$pgo_args ${_pgo_instrument_mllvm[*]}" \
+    -Dc_link_args="$pgo_args -Wl,--emit-relocs" \
+    -Dcpp_link_args="$pgo_args -Wl,--emit-relocs" \
+    "$@"
+}
+
+_run_real_workload() {
+  local wp_bin="$1"
+  local runtime pw_pid wp_pid log_pw log_wp i
+  runtime=$(mktemp -d -p "$srcdir" wp-runtime.XXXXXX)
+  chmod 700 "$runtime"
+  log_pw="$srcdir/pipewire-training.log"
+  log_wp="$srcdir/wireplumber-training.log"
+
+  command -v pipewire >/dev/null 2>&1 || {
+    echo "  -> pipewire binary missing; skipping real workload"
+    rm -rf "$runtime"; return 0
+  }
+  [[ -x "$wp_bin" ]] || {
+    echo "  -> wireplumber binary missing at $wp_bin"
+    rm -rf "$runtime"; return 1
+  }
+
+  echo "  -> starting private pipewire daemon"
+  XDG_RUNTIME_DIR="$runtime" timeout 120 pipewire >"$log_pw" 2>&1 &
+  pw_pid=$!
+  for i in $(seq 1 60); do
+    [[ -S "$runtime/pipewire-0" ]] && break
+    kill -0 "$pw_pid" 2>/dev/null || break
+    sleep 0.1
+  done
+  if [[ ! -S "$runtime/pipewire-0" ]]; then
+    echo "  -> pipewire did not come up; skipping real workload"
+    tail -20 "$log_pw" 2>/dev/null
+    kill "$pw_pid" 2>/dev/null; wait "$pw_pid" 2>/dev/null || true
+    rm -rf "$runtime"; return 0
+  fi
+
+  echo "  -> starting wireplumber against private pipewire"
+  XDG_RUNTIME_DIR="$runtime" timeout 120 "$wp_bin" >"$log_wp" 2>&1 &
+  wp_pid=$!
+  sleep 2
+
+  for i in $(seq 1 40); do
+    XDG_RUNTIME_DIR="$runtime" pw-cli ls Node   >/dev/null 2>&1 || true
+    XDG_RUNTIME_DIR="$runtime" pw-cli ls Link   >/dev/null 2>&1 || true
+    XDG_RUNTIME_DIR="$runtime" pw-cli ls Client >/dev/null 2>&1 || true
+    XDG_RUNTIME_DIR="$runtime" pw-cli ls Device >/dev/null 2>&1 || true
+    XDG_RUNTIME_DIR="$runtime" pw-cli ls Metadata >/dev/null 2>&1 || true
+  done
+
+  for i in $(seq 1 15); do
+    XDG_RUNTIME_DIR="$runtime" pw-cli create-node adapter \
+      "{ factory.name=support.null-audio-sink node.name=pgo-$i media.class=Audio/Sink object.linger=false }" \
+      >/dev/null 2>&1 || true
+  done
+  XDG_RUNTIME_DIR="$runtime" pw-cli ls Node >/dev/null 2>&1 || true
+
+  for i in $(seq 1 20); do
+    XDG_RUNTIME_DIR="$runtime" pw-dump >/dev/null 2>&1 || true
+  done
+
+  if command -v pw-cat >/dev/null 2>&1; then
+    local wav=""
+    shopt -s nullglob
+    local -a wavs=(/usr/share/sounds/alsa/*.wav /usr/share/sounds/*.wav)
+    shopt -u nullglob
+    if (( ${#wavs[@]} )); then
+      wav="${wavs[0]}"
+      echo "  -> pw-cat playback: $wav"
+      XDG_RUNTIME_DIR="$runtime" timeout 8 pw-cat --playback "$wav" \
+        >/dev/null 2>&1 || true
+    fi
+  fi
+
+  kill -TERM "$wp_pid" 2>/dev/null || true
+  for i in $(seq 1 30); do
+    kill -0 "$wp_pid" 2>/dev/null || break
+    sleep 0.1
+  done
+  kill -KILL "$wp_pid" 2>/dev/null || true
+  wait "$wp_pid" 2>/dev/null || true
+
+  kill -TERM "$pw_pid" 2>/dev/null || true
+  for i in $(seq 1 30); do
+    kill -0 "$pw_pid" 2>/dev/null || break
+    sleep 0.1
+  done
+  kill -KILL "$pw_pid" 2>/dev/null || true
+  wait "$pw_pid" 2>/dev/null || true
+
+  rm -rf "$runtime"
+  echo "  -> real workload done"
+  return 0
+}
+
+_collect_profraws() {
+  local dir="$1" out="$2"
+  local -a files=()
+  shopt -s nullglob
+  files=("$dir"/*.profraw)
+  shopt -u nullglob
+  ((${#files[@]})) || { error "No .profraw in %s" "$dir"; return 1; }
+  llvm-profdata merge --failure-mode=all \
+    -output="$out" "${files[@]}"
+  [[ -s "$out" ]]
+}
+
+_run_bolt() {
+  local binary="$1" name="$2"
+  local instr_bin="$srcdir/${name}.instr"
+  local bolt_data_prefix="$srcdir/bolt-${name}"
+  local bolt_bin="$srcdir/${name}.bolt"
+  local merged_fdata="$srcdir/bolt-${name}.fdata"
+
+  echo "  -> instrumenting $name with BOLT"
+  llvm-bolt "$binary" -instrument -o "$instr_bin" \
+    -instrumentation-file="$bolt_data_prefix" \
+    -instrumentation-file-append-pid \
+    -instrumentation-sleep-time=10 \
+    2>&1 || {
+    warning "llvm-bolt -instrument failed for $name; skipping BOLT"
+    return 0
+  }
+
+  [[ -x "$instr_bin" ]] || {
+    warning "BOLT instrumented binary not produced; skipping"
+    return 0
+  }
+
+  echo "  -> running instrumented workload for $name"
+  local runtime
+  runtime=$(mktemp -d -p "$srcdir" bolt-runtime.XXXXXX)
+  chmod 700 "$runtime"
+
+  XDG_RUNTIME_DIR="$runtime" timeout 240 pipewire \
+    >"$srcdir/bolt-pw.log" 2>&1 &
+  local pw_pid=$!
+  for i in $(seq 1 60); do
+    [[ -S "$runtime/pipewire-0" ]] && break
+    kill -0 "$pw_pid" 2>/dev/null || break
+    sleep 0.1
+  done
+
+  if [[ ! -S "$runtime/pipewire-0" ]]; then
+    echo "  -> pipewire did not come up; skipping BOLT workload"
+    kill "$pw_pid" 2>/dev/null; wait "$pw_pid" 2>/dev/null || true
+    rm -rf "$runtime" "$instr_bin"
+    return 0
+  fi
+
+  XDG_RUNTIME_DIR="$runtime" timeout 240 "$instr_bin" \
+    >"$srcdir/bolt-wp.log" 2>&1 &
+  local wp_pid=$!
+  sleep 2
+
+  for i in $(seq 1 60); do
+    XDG_RUNTIME_DIR="$runtime" pw-cli ls Node   >/dev/null 2>&1 || true
+    XDG_RUNTIME_DIR="$runtime" pw-cli ls Link   >/dev/null 2>&1 || true
+    XDG_RUNTIME_DIR="$runtime" pw-cli ls Client >/dev/null 2>&1 || true
+    XDG_RUNTIME_DIR="$runtime" pw-cli ls Device >/dev/null 2>&1 || true
+    XDG_RUNTIME_DIR="$runtime" pw-cli ls Metadata >/dev/null 2>&1 || true
+  done
+  for i in $(seq 1 25); do
+    XDG_RUNTIME_DIR="$runtime" pw-cli create-node adapter \
+      "{ factory.name=support.null-audio-sink node.name=bolt-$i media.class=Audio/Sink object.linger=false }" \
+      >/dev/null 2>&1 || true
+  done
+  for i in $(seq 1 80); do
+    XDG_RUNTIME_DIR="$runtime" pw-dump >/dev/null 2>&1 || true
+  done
+
+  kill -TERM "$wp_pid" 2>/dev/null || true
+  for i in $(seq 1 60); do
+    kill -0 "$wp_pid" 2>/dev/null || break
+    sleep 0.1
+  done
+  kill -KILL "$wp_pid" 2>/dev/null || true
+  wait "$wp_pid" 2>/dev/null || true
+
+  kill -TERM "$pw_pid" 2>/dev/null || true
+  wait "$pw_pid" 2>/dev/null || true
+  rm -rf "$runtime" "$instr_bin"
+
+  local -a fdata_files=()
+  shopt -s nullglob
+  fdata_files=("$bolt_data_prefix"*)
+  shopt -u nullglob
+
+  if (( ${#fdata_files[@]} == 0 )); then
+    echo "  -> no BOLT profile files produced; skipping BOLT"
+    return 0
+  fi
+
+  if (( ${#fdata_files[@]} == 1 )); then
+    mv "${fdata_files[0]}" "$merged_fdata"
+  else
+    echo "  -> merging ${#fdata_files[@]} BOLT profiles"
+    if ! merge-fdata "${fdata_files[@]}" > "$merged_fdata"; then
+      warning "merge-fdata failed; skipping BOLT"
+      rm -f "${fdata_files[@]}"
+      return 0
+    fi
+    rm -f "${fdata_files[@]}"
+  fi
+
+  [[ -s "$merged_fdata" ]] || {
+    echo "  -> merged BOLT profile empty; skipping"
+    return 0
+  }
+
+  echo "  -> applying BOLT optimizations to $name"
+  llvm-bolt "$binary" -o "$bolt_bin" -data="$merged_fdata" \
+    "${_bolt_apply_flags[@]}" 2>&1 || {
+    warning "llvm-bolt failed; keeping original binary"
+    return 0
+  }
+
+  if [[ -x "$bolt_bin" ]]; then
+    mv "$bolt_bin" "$binary"
+    echo "  -> BOLT applied to $name"
+  fi
+  return 0
+}
+
 build() {
-  local meson_options=(
-      -D b_ndebug=false \
-      -D b_pie=false \
-      --buildtype=release \
-      --wrap-mode=nofallback \
-      -D doc=disabled \
-      -D elogind=disabled \
-      -D system-lua=true \
-      -D tests=false \
-      -D dbus-tests=false \
-      -D errorlogs=false \
-      -D python.bytecompile=2 \
-      -D b_lto=true \
-      -D optimization=3 \
-      -D debug=false \
-      -D strip=true \
-      -D stdsplit=false
+  export CC=clang
+  export CXX=clang++
+
+  export CFLAGS="$(_filter_cflags "$CFLAGS")"
+  export CXXFLAGS="$(_filter_cflags "$CXXFLAGS")"
+  export LDFLAGS="$(_filter_ldflags "$LDFLAGS" 1)"
+
+  local pgo_dir="$srcdir/pgo"
+  rm -rf "$pgo_dir" build-instrumented build-cs-instrumented build
+  mkdir -p "$pgo_dir/standard/unit" "$pgo_dir/standard/real" \
+           "$pgo_dir/cs/unit" "$pgo_dir/cs/real"
+
+  local wp_daemon="src/wireplumber"
+
+  echo "==> Stage 1/6: STD-PGO instrumented build (LTO OFF)"
+  _setup_stage build-instrumented \
+    "-fprofile-generate=${pgo_dir}/standard" \
+    "false" "default" \
+    -Dtests=true -Ddbus-tests=true
+  meson compile -C build-instrumented
+
+  echo "==> Stage 1a: meson test (unit class)"
+  (
+    cd build-instrumented
+    export LLVM_PROFILE_FILE="${pgo_dir}/standard/unit/%p.profraw"
+    meson test --timeout-multiplier=5 --print-errorlogs || \
+      echo "    (some tests failed; profiles still collected)"
   )
 
-  arch-meson $pkgbase build "${meson_options[@]}"
+  echo "==> Stage 1b: real pipewire+wireplumber session (real class)"
+  LLVM_PROFILE_FILE="${pgo_dir}/standard/real/%p.profraw" \
+    _run_real_workload "$srcdir/build-instrumented/$wp_daemon"
+
+  echo "==> Stage 1c: merge standard profile"
+  local unit_prof="$pgo_dir/standard-unit.profdata"
+  local real_prof="$pgo_dir/standard-real.profdata"
+  local have_unit=0 have_real=0
+  _collect_profraws "$pgo_dir/standard/unit" "$unit_prof" && have_unit=1
+  _collect_profraws "$pgo_dir/standard/real" "$real_prof" && have_real=1
+
+  if ((have_real && have_unit)); then
+    llvm-profdata merge --failure-mode=all \
+      --weighted-input=1,"$unit_prof" \
+      --weighted-input=5,"$real_prof" \
+      -output="$pgo_dir/standard.profdata"
+  elif ((have_real)); then
+    cp "$real_prof" "$pgo_dir/standard.profdata"
+  elif ((have_unit)); then
+    cp "$unit_prof" "$pgo_dir/standard.profdata"
+  else
+    error "Stage 1: no usable profile generated"
+    return 1
+  fi
+  [[ -s "$pgo_dir/standard.profdata" ]] || { error "empty standard profile"; return 1; }
+  msg "standard.profdata: $(du -h "$pgo_dir/standard.profdata" | cut -f1)"
+
+  echo "==> Stage 2/6: CS-PGO instrumented build (LTO OFF)"
+  _setup_stage build-cs-instrumented \
+    "-fprofile-use=${pgo_dir}/standard.profdata -fcs-profile-generate=${pgo_dir}/cs -Wno-profile-instr-unprofiled" \
+    "false" "default" \
+    -Dtests=true -Ddbus-tests=true
+  meson compile -C build-cs-instrumented
+
+  echo "==> Stage 2a: meson test (unit class)"
+  (
+    cd build-cs-instrumented
+    export LLVM_PROFILE_FILE="${pgo_dir}/cs/unit/%p.profraw"
+    meson test --timeout-multiplier=5 --print-errorlogs || \
+      echo "    (some tests failed; profiles still collected)"
+  )
+
+  echo "==> Stage 2b: real session (real class)"
+  LLVM_PROFILE_FILE="${pgo_dir}/cs/real/%p.profraw" \
+    _run_real_workload "$srcdir/build-cs-instrumented/$wp_daemon"
+
+  echo "==> Stage 2c: merge CS profile with standard"
+  local cs_unit_prof="$pgo_dir/cs-unit.profdata"
+  local cs_real_prof="$pgo_dir/cs-real.profdata"
+  local have_cs_unit=0 have_cs_real=0
+  _collect_profraws "$pgo_dir/cs/unit" "$cs_unit_prof" && have_cs_unit=1
+  _collect_profraws "$pgo_dir/cs/real" "$cs_real_prof" && have_cs_real=1
+
+  if ((have_cs_real && have_cs_unit)); then
+    llvm-profdata merge --failure-mode=all \
+      --weighted-input=1,"$cs_unit_prof" \
+      --weighted-input=5,"$cs_real_prof" \
+      -output="$pgo_dir/cs.profdata"
+  elif ((have_cs_real)); then
+    cp "$cs_real_prof" "$pgo_dir/cs.profdata"
+  elif ((have_cs_unit)); then
+    cp "$cs_unit_prof" "$pgo_dir/cs.profdata"
+  else
+    warning "Stage 2: no CS profile; falling back to standard"
+    cp "$pgo_dir/standard.profdata" "$pgo_dir/cs.profdata"
+  fi
+
+  echo "==> Stage 2d: final merge (standard seeds CS)"
+  llvm-profdata merge --failure-mode=all \
+    -output="$pgo_dir/final.profdata" \
+    "$pgo_dir/standard.profdata" \
+    "$pgo_dir/cs.profdata"
+  [[ -s "$pgo_dir/final.profdata" ]] || { error "empty final profile"; return 1; }
+  msg "final.profdata: $(du -h "$pgo_dir/final.profdata" | cut -f1)"
+
+  echo "==> Stage 3/6: final PGO build (ThinLTO ON)"
+  _setup_stage build \
+    "-fprofile-use=${pgo_dir}/final.profdata -Wno-profile-instr-unprofiled" \
+    "true" "default" \
+    -Dtests=false -Ddbus-tests=false
   meson compile -C build
+
+  # Sanity: PGO must have been applied
+  grep -q 'fprofile-use' "$srcdir/build/build.ninja" || {
+    error "PGO was not applied to the final build"
+    return 1
+  }
+  # Sanity: relocations must be present for BOLT
+  readelf -S "$srcdir/build/src/wireplumber" 2>/dev/null | grep -q '\.rela\.text' || {
+    warning "секция .rela.text not found"
+  }
+
+  echo "==> Stage 4/6: BOLT optimization for wireplumber daemon"
+  _run_bolt "$srcdir/build/src/wireplumber" "wireplumber"
+
+  echo "==> Build complete (PGO + CS-PGO + BOLT)"
+}
+
+check() {
+  meson test -C build --print-errorlogs
 }
 
 _pick() {
-  local p="$1" f d; shift
+  local p="$1" f d
+  shift
   for f; do
     d="$srcdir/$p/${f#$pkgdir/}"
     mkdir -p "$(dirname "$d")"
@@ -72,8 +486,6 @@ _pick() {
     rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
   done
 }
-
-_ver=${pkgver:0:3}
 
 package_wireplumber() {
   depends=(
@@ -90,7 +502,6 @@ package_wireplumber() {
 
   (
     cd "$pkgdir"
-
     _pick libw usr/lib/libwireplumber-$_ver.so*
     _pick libw usr/lib/girepository-1.0
     _pick libw usr/lib/pkgconfig
@@ -114,5 +525,3 @@ package_libwireplumber() {
 
   install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 $pkgbase/LICENSE
 }
-
-# vim:set sw=2 sts=-1 et:

@@ -1,10 +1,7 @@
 # Maintainer: Terromur <terromuroz@proton.me>
-# Maintainer: Xuanrui Qi <me@xuanruiqi.com>
-# Contributor: Antonin Décimo <antonin dot decimo at gmail dot com>
-# Contributor: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=xorg-xwayland-pure-git
-pkgver=24.1.13.r1185.g1d815d00f
+pkgver=24.1.14.r1226.gad26c26bf
 pkgrel=1
 arch=('x86_64')
 license=(
@@ -25,14 +22,19 @@ license=(
   X11-distribute-modifications-variant)
 groups=('xorg')
 url="https://xorg.freedesktop.org"
-pkgdesc="Run X clients under Wayland (git version)"
+pkgdesc="Run X clients under Wayland"
 depends=('nettle' 'libepoxy' 'systemd-libs' 'libxfont2'
          'pixman' 'xorg-server-common' 'libxcvt' 'mesa'
          'libglvnd' 'libxau' 'wayland' 'libdrm' 'libtirpc'
-         'libei' 'libxshmfence' 'glibc')
+         'libei' 'libxshmfence' 'glibc' 'mimalloc')
 makedepends=('meson' 'xorgproto' 'xtrans' 'libxkbfile' 'dbus'
              'xorg-font-util' 'wayland-protocols' 'mesa-libgl'
-             'systemd' 'git')
+             'systemd' 'git'
+             'clang' 'llvm' 'llvm-bolt'
+             'weston' 'glmark2' 'xorg-x11perf' 'xdotool' 'xclip'
+             'xorg-xrandr' 'xorg-xprop' 'xorg-xdpyinfo'
+             'vulkan-tools' 'mesa-utils'
+             'libx11' 'libxcb' 'libxi' 'libxext' 'mold' 'mimalloc')
 source=("xserver::git+https://gitlab.freedesktop.org/xorg/xserver.git"
 0001-Revert-xwayland-Restrict-allow-commit-to-the-window-.patch
 xwayland-pointer-warp-fix.patch
@@ -55,7 +57,6 @@ pkgver() {
 }
 
 prepare() {
-
     local src
     for src in "${source[@]}"; do
         src="${src%%::*}"
@@ -66,45 +67,945 @@ prepare() {
     done
 }
 
+export LDFLAGS="-fuse-ld=mold -lmimalloc -Wl,--hash-style=gnu -Wl,--lto-O3 -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs -Wl,--icf=safe -Wl,-z,norelro -Wl,--emit-relocs -Wl,-z,now"
+
+_pgo_mllvm=(
+  -mllvm -vp-counters-per-site=128
+  -mllvm -runtime-counter-relocation
+)
+
+_anti_pie_cflags=(-fno-pie)
+_anti_pie_ldflags=(-no-pie)
+
+_profile_silence=(
+  -Wno-profile-instr-unprofiled
+)
+
+_prefix_map_flags=(
+  "-ffile-prefix-map=${srcdir}/xserver=/usr/src/debug/${pkgname}"
+  "-ffile-prefix-map=${srcdir}=/usr/src/debug/${pkgname}"
+)
+
+_split_flags() {
+  local -n _out="$2"
+  _out=()
+  if [[ -n "${!1:-}" ]]; then
+    read -r -a _out <<< "${!1}"
+  fi
+  return 0
+}
+
+_meson_array() {
+  local arg first=1
+  for arg in "$@"; do
+    arg=${arg//\\/\\\\}
+    arg=${arg//\'/\\\'}
+    (( first )) || printf ', '
+    printf "'%s'" "$arg"
+    first=0
+  done
+}
+
+_emit_meson_native() {
+  local out="$1"
+  local -n _cf="$2" _cxf="$3" _lf="$4"
+  cat > "$out" <<EOF
+[built-in options]
+c_args      = [$(_meson_array "${_cf[@]}")]
+cpp_args    = [$(_meson_array "${_cxf[@]}")]
+c_link_args = [$(_meson_array "${_lf[@]}")]
+cpp_link_args = [$(_meson_array "${_lf[@]}")]
+
+[binaries]
+c      = 'clang'
+cpp    = 'clang++'
+ar     = 'llvm-ar'
+nm     = 'llvm-nm'
+ranlib = 'llvm-ranlib'
+strip  = 'llvm-strip'
+EOF
+}
+
+_meson() { env -u CFLAGS -u CXXFLAGS -u CPPFLAGS -u LDFLAGS "$@"; }
+
+_compile_xwayland() {
+  _meson meson compile -C "$1" hw/xwayland/Xwayland
+}
+
+_xw_amd_detected=""
+_xw_have_amd_gpu() {
+  [[ -n "$_xw_amd_detected" ]] && { [[ "$_xw_amd_detected" == 1 ]]; return $?; }
+  local v
+  shopt -s nullglob
+  for v in /sys/class/drm/card*/device/vendor; do
+    [[ -r "$v" ]] || continue
+    if [[ "$(<"$v")" == "0x1002" ]]; then
+      _xw_amd_detected=1; shopt -u nullglob; return 0
+    fi
+  done
+  shopt -u nullglob
+  _xw_amd_detected=0
+  return 1
+}
+
+_xw_amd_active() {
+  case "${XW_PGO_AMD_PROFILE:-auto}" in
+    1|true|yes|on)   return 0 ;;
+    0|false|no|off)  return 1 ;;
+    *)               _xw_have_amd_gpu ;;
+  esac
+}
+
+_xw_find_radv_icd() {
+  local p
+  shopt -s nullglob
+  for p in \
+      /usr/share/vulkan/icd.d/radeon_icd.x86_64.json \
+      /usr/share/vulkan/icd.d/radeon_icd.json \
+      /usr/share/vulkan/icd.d/radeon_icd*.json; do
+    [[ -r "$p" ]] || continue
+    printf '%s\n' "$p"; shopt -u nullglob; return 0
+  done
+  shopt -u nullglob; return 1
+}
+
+_xw_append_gpu_env() {
+  local -n _envref="$1"
+  _envref=()
+  if _xw_amd_active; then
+    _envref+=("MESA_LOADER_DRIVER_OVERRIDE=radeonsi")
+    local icd
+    icd="$(_xw_find_radv_icd 2>/dev/null || true)"
+    [[ -n "$icd" ]] && _envref+=(
+      "VK_DRIVER_FILES=$icd"
+      "VK_ICD_FILENAMES=$icd"
+      "DISABLE_LAYER_AMD_SWITCHABLE_GRAPHICS_1=1"
+    )
+  fi
+  [[ -n "${XW_PGO_DRI_PRIME:-}" ]] && _envref+=("DRI_PRIME=${XW_PGO_DRI_PRIME}")
+  return 0
+}
+
+_spawn_weston() {
+  local runtime="$1" sock="$2" log="$3"
+  local renderer pid
+  local -a wenv=()
+  _xw_append_gpu_env wenv
+  for renderer in gl pixman; do
+    : > "$log"
+    setsid env "${wenv[@]}" dbus-run-session -- \
+      weston --backend=headless --socket="$sock" \
+             --idle-time=0 --renderer="$renderer" >"$log" 2>&1 &
+    pid=$!
+    for _ in {1..120}; do
+      [[ -S "$runtime/$sock" ]] && { echo "$pid"; return 0; }
+      kill -0 "$pid" 2>/dev/null || break
+      sleep 0.1
+    done
+    kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
+    wait "$pid" 2>/dev/null || true
+  done
+  return 1
+}
+
+_spawn_xwayland() {
+  local bin="$1" log="$2" df disp pid
+  df=$(mktemp)
+  : > "$log"
+  "$bin" -ac -noreset -displayfd 3 3>"$df" >"$log" 2>&1 &
+  pid=$!
+  for _ in {1..150}; do
+    [[ -s "$df" ]] && break
+    kill -0 "$pid" 2>/dev/null || break
+    sleep 0.1
+  done
+  disp=$(< "$df"); rm -f "$df"
+  if [[ -z "$disp" ]]; then
+    kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
+    return 1
+  fi
+  printf '%s:%s\n' "$pid" "$disp"
+}
+
+_emit_trainer() {
+  cat > "${srcdir}/xwayland_trainer.c" <<'TRAINER_EOF'
+#define _POSIX_C_SOURCE 200809L
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/Xatom.h>
+#include <X11/extensions/XShm.h>
+#include <X11/extensions/XInput2.h>
+#include <X11/cursorfont.h>
+#include <X11/Xlib-xcb.h>
+#include <xcb/xcb.h>
+#include <xcb/present.h>
+#include <xcb/shm.h>
+#include <xcb/xinput.h>
+#include <xcb/dri3.h>
+#include <xcb/sync.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/types.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <time.h>
+
+#define W 1280
+#define H 720
+#define IGNORE(x) ((void)(x))
+
+static volatile int g_err_count = 0;
+static int eh(Display *d, XErrorEvent *e) {
+    char buf[128]; XGetErrorText(d, e->error_code, buf, sizeof(buf));
+    g_err_count++; return 0;
+}
+static int io_eh(Display *d) { IGNORE(d); return 0; }
+static void sync_round(Display *d) { XSync(d, False); }
+
+static Visual *find_argb_visual(Display *d, int *depth_out) {
+    XVisualInfo tpl = { .screen = DefaultScreen(d), .depth = 32, .class = TrueColor };
+    int n = 0;
+    long mask = VisualScreenMask | VisualDepthMask | VisualClassMask;
+    XVisualInfo *vi = XGetVisualInfo(d, mask, &tpl, &n);
+    Visual *v = NULL;
+    if (vi && n > 0) { v = vi[0].visual; if (depth_out) *depth_out = vi[0].depth; }
+    if (vi) XFree(vi);
+    return v;
+}
+
+static void damage_burst(Display *d, Window w, GC gc, int iters) {
+    for (int i = 0; i < iters; ++i) {
+        XSetForeground(d, gc, (unsigned long)(i * 0x010203));
+        XFillRectangle(d, w, gc, (i * 13) % (W - 64), (i * 17) % (H - 64), 64, 64);
+        if ((i & 0x3f) == 0) XFlush(d);
+    }
+    sync_round(d);
+}
+
+static void cursor_churn(Display *d, Window w) {
+    static const unsigned shapes[] = {
+        XC_arrow, XC_X_cursor, XC_watch, XC_crosshair, XC_hand1, XC_hand2,
+        XC_left_ptr, XC_xterm, XC_fleur, XC_sb_h_double_arrow,
+        XC_sb_v_double_arrow, XC_pencil,
+    };
+    XColor fg = { .red = 0xFFFF, .green = 0xFFFF, .blue = 0xFFFF,
+                  .flags = DoRed|DoGreen|DoBlue };
+    XColor bg = { .red = 0, .green = 0, .blue = 0,
+                  .flags = DoRed|DoGreen|DoBlue };
+    for (size_t i = 0; i < sizeof(shapes)/sizeof(*shapes); ++i) {
+        Cursor c = XCreateFontCursor(d, shapes[i]);
+        if (!c) continue;
+        XDefineCursor(d, w, c);
+        XRecolorCursor(d, c, &fg, &bg);
+        XFreeCursor(d, c);
+    }
+    Pixmap bp = XCreatePixmap(d, w, 16, 16, 1);
+    Pixmap mp = XCreatePixmap(d, w, 16, 16, 1);
+    Cursor pc = XCreatePixmapCursor(d, bp, mp, &fg, &bg, 0, 0);
+    if (pc) XFreeCursor(d, pc);
+    XFreePixmap(d, bp); XFreePixmap(d, mp);
+    XUndefineCursor(d, w);
+    sync_round(d);
+}
+
+static void atom_storm(Display *d) {
+    static const char *names[] = {
+        "WM_NAME","WM_ICON_NAME","WM_CLASS","WM_HINTS","WM_NORMAL_HINTS",
+        "WM_PROTOCOLS","WM_DELETE_WINDOW","WM_TAKE_FOCUS","WM_STATE",
+        "WM_CHANGE_STATE","WM_CLIENT_MACHINE","WM_COMMAND","WM_WINDOW_ROLE",
+        "_NET_WM_NAME","_NET_WM_ICON_NAME","_NET_WM_VISIBLE_NAME",
+        "_NET_WM_STATE","_NET_WM_STATE_FULLSCREEN","_NET_WM_STATE_HIDDEN",
+        "_NET_WM_STATE_MAXIMIZED_VERT","_NET_WM_STATE_MAXIMIZED_HORZ",
+        "_NET_ACTIVE_WINDOW","_NET_WM_PID","_NET_WM_USER_TIME","_NET_WM_OPACITY",
+        "_NET_WM_WINDOW_TYPE","_NET_WM_WINDOW_TYPE_DIALOG",
+        "_NET_WM_WINDOW_TYPE_NORMAL","_NET_WM_WINDOW_TYPE_UTILITY",
+        "_NET_WM_WINDOW_TYPE_TOOLBAR","_NET_WM_WINDOW_TYPE_SPLASH",
+        "_NET_WM_ICON","_NET_WM_OPAQUE_REGION","_NET_WM_BYPASS_COMPOSITOR",
+        "_NET_FRAME_EXTENTS","_NET_WM_DESKTOP","_NET_WORKAREA",
+        "_NET_CURRENT_DESKTOP","_NET_NUMBER_OF_DESKTOPS",
+        "_MOTIF_WM_HINTS","_GTK_FRAME_EXTENTS","_GTK_THEME_VARIANT",
+        "_GTK_HIDE_TITLEBAR_WHEN_MAXIMIZED","_KDE_NET_WM_BLUR_BEHIND_REGION",
+        "_KDE_NET_WM_WINDOW_TYPE_OVERRIDE","UTF8_STRING","STRING",
+        "CLIPBOARD","PRIMARY","SECONDARY","TARGETS","INCR","MULTIPLE",
+        "TIMESTAMP","ATOM_PAIR","COMPOUND_TEXT","TEXT","C_STRING",
+        "XdndAware","XdndProxy","XdndTypeList","XdndActionCopy",
+        "XdndActionMove","XdndActionList","XdndSelection",
+    };
+    enum { NA = sizeof(names)/sizeof(*names) };
+    Atom atoms[NA];
+    XInternAtoms(d, (char **)names, NA, False, atoms);
+    char *bulk[NA] = { 0 };
+    if (XGetAtomNames(d, atoms, NA, bulk))
+        for (int i = 0; i < NA; ++i) if (bulk[i]) XFree(bulk[i]);
+    sync_round(d);
+}
+
+static void property_burst(Display *d, Window w) {
+    Atom utf8 = XInternAtom(d, "UTF8_STRING", False);
+    Atom net_name = XInternAtom(d, "_NET_WM_NAME", False);
+    Atom pid_atom = XInternAtom(d, "_NET_WM_PID", False);
+    long pid = (long)getpid();
+    XChangeProperty(d, w, XA_WM_NAME, XA_STRING, 8, PropModeReplace,
+                    (const unsigned char *)"xw-trainer", 10);
+    XChangeProperty(d, w, net_name, utf8, 8, PropModeReplace,
+                    (const unsigned char *)"xw-trainer", 10);
+    XChangeProperty(d, w, pid_atom, XA_CARDINAL, 32, PropModeReplace,
+                    (const unsigned char *)&pid, 1);
+    Atom type; int fmt; unsigned long n, after; unsigned char *prop;
+    if (XGetWindowProperty(d, w, net_name, 0, 64, False, AnyPropertyType,
+                            &type, &fmt, &n, &after, &prop) == Success && prop)
+        XFree(prop);
+    XDeleteProperty(d, w, pid_atom);
+    sync_round(d);
+}
+
+static void pixmap_churn(Display *d, Window w, int s) {
+    int depth = DefaultDepth(d, s);
+    for (int i = 0; i < 32; ++i) {
+        Pixmap p = XCreatePixmap(d, w, 256, 256, (unsigned)depth);
+        if (p) {
+            GC gc = XCreateGC(d, p, 0, NULL);
+            if (gc) {
+                XSetForeground(d, gc, 0x123456);
+                XFillRectangle(d, p, gc, 0, 0, 256, 256);
+                XCopyArea(d, p, w, gc, 0, 0, 256, 256, i * 4, i * 4);
+                XFreeGC(d, gc);
+            }
+            XFreePixmap(d, p);
+        }
+    }
+    sync_round(d);
+}
+
+static void shm_roundtrip(Display *d, Window w, int s) {
+    if (!XShmQueryExtension(d)) return;
+    int depth = DefaultDepth(d, s);
+    Visual *vis = DefaultVisual(d, s);
+    XShmSegmentInfo seg = { 0 };
+    XImage *img = XShmCreateImage(d, vis, (unsigned)depth, ZPixmap, NULL,
+                                  &seg, 512, 512);
+    if (!img) return;
+    seg.shmid = shmget(IPC_PRIVATE,
+                       (size_t)img->bytes_per_line * (size_t)img->height,
+                       IPC_CREAT | 0600);
+    if (seg.shmid < 0) { XDestroyImage(img); return; }
+    seg.shmaddr = shmat(seg.shmid, NULL, 0);
+    img->data = seg.shmaddr;
+    seg.readOnly = False;
+    if (seg.shmaddr != (void *)-1 && XShmAttach(d, &seg)) {
+        sync_round(d);
+        for (int y = 0; y < 512; ++y)
+            memset(seg.shmaddr + y * img->bytes_per_line, y & 0xff,
+                   (size_t)img->bytes_per_line);
+        GC gc = XCreateGC(d, w, 0, NULL);
+        if (gc) {
+            XShmPutImage(d, w, gc, img, 0, 0, 0, 0, 512, 512, False);
+            sync_round(d);
+            XFreeGC(d, gc);
+        }
+        XShmDetach(d, &seg);
+        sync_round(d);
+    }
+    if (seg.shmaddr != (void *)-1) shmdt(seg.shmaddr);
+    shmctl(seg.shmid, IPC_RMID, NULL);
+    XDestroyImage(img);
+}
+
+static void xi2_cycle(Display *d, Window w) {
+    int op = 0, ev = 0, er = 0;
+    if (!XQueryExtension(d, "XInputExtension", &op, &ev, &er)) return;
+    int major = 2, minor = 3;
+    if (XIQueryVersion(d, &major, &minor) != Success) return;
+    int ndev = 0;
+    XIDeviceInfo *devs = XIQueryDevice(d, XIAllDevices, &ndev);
+    if (devs) XIFreeDeviceInfo(devs);
+    unsigned char mask_bits[XIMaskLen(XI_LASTEVENT)] = { 0 };
+    XISetMask(mask_bits, XI_KeyPress);
+    XISetMask(mask_bits, XI_KeyRelease);
+    XISetMask(mask_bits, XI_ButtonPress);
+    XISetMask(mask_bits, XI_ButtonRelease);
+    XISetMask(mask_bits, XI_Motion);
+    XISetMask(mask_bits, XI_Enter); XISetMask(mask_bits, XI_Leave);
+    XISetMask(mask_bits, XI_FocusIn); XISetMask(mask_bits, XI_FocusOut);
+    XISetMask(mask_bits, XI_HierarchyChanged);
+    XISetMask(mask_bits, XI_DeviceChanged);
+    XIEventMask em = { .deviceid = XIAllMasterDevices,
+                       .mask_len = sizeof(mask_bits),
+                       .mask = mask_bits };
+    XISelectEvents(d, w, &em, 1); sync_round(d);
+    em.mask_len = 0; em.mask = NULL;
+    XISelectEvents(d, w, &em, 1); sync_round(d);
+}
+
+static void present_loop(Display *d, Window w, int s, int frames) {
+    xcb_connection_t *c = XGetXCBConnection(d);
+    if (!c) return;
+    const xcb_query_extension_reply_t *ext =
+        xcb_get_extension_data(c, &xcb_present_id);
+    if (!ext || !ext->present) return;
+    xcb_present_query_version_cookie_t qv =
+        xcb_present_query_version(c, XCB_PRESENT_MAJOR_VERSION,
+                                  XCB_PRESENT_MINOR_VERSION);
+    xcb_present_query_version_reply_t *qvr =
+        xcb_present_query_version_reply(c, qv, NULL);
+    if (qvr) free(qvr);
+    xcb_present_event_t eid = xcb_generate_id(c);
+    xcb_present_select_input(c, eid, (xcb_window_t)w,
+                             XCB_PRESENT_EVENT_MASK_COMPLETE_NOTIFY |
+                             XCB_PRESENT_EVENT_MASK_IDLE_NOTIFY);
+    int depth = DefaultDepth(d, s);
+    xcb_pixmap_t pm = xcb_generate_id(c);
+    xcb_create_pixmap(c, (uint8_t)depth, pm, (xcb_window_t)w, W, H);
+    xcb_flush(c);
+    for (int i = 0; i < frames; ++i) {
+        xcb_present_pixmap(c, (xcb_window_t)w, pm, (uint32_t)(i + 1),
+                            0, 0, 0, 0, XCB_NONE, XCB_NONE, XCB_NONE,
+                            XCB_PRESENT_OPTION_NONE, 0, 0, 0, 0, NULL);
+        if ((i & 0xf) == 0) xcb_flush(c);
+    }
+    xcb_flush(c);
+    for (int i = 0; i < 50; ++i) {
+        xcb_generic_event_t *e;
+        while ((e = xcb_poll_for_event(c)) != NULL) free(e);
+        struct timespec ts = { 0, 1000000 };
+        nanosleep(&ts, NULL);
+    }
+    xcb_free_pixmap(c, pm);
+    xcb_present_select_input(c, eid, (xcb_window_t)w, 0);
+    xcb_flush(c);
+}
+
+static void window_churn(Display *d, Window w) {
+    for (int i = 0; i < 8; ++i) {
+        XMoveResizeWindow(d, w, 16 * i, 8 * i, (unsigned)(W - 32 * i),
+                          (unsigned)(H - 16 * i));
+        XSync(d, False);
+    }
+    XMoveResizeWindow(d, w, 0, 0, W, H);
+    XUnmapWindow(d, w); XSync(d, False);
+    XMapWindow(d, w); XSync(d, False);
+}
+
+static Window create_argb_child(Display *d, Window parent) {
+    int depth = 32;
+    Visual *vis = find_argb_visual(d, &depth);
+    if (!vis) return 0;
+    XSetWindowAttributes swa = { 0 };
+    swa.colormap = XCreateColormap(d, parent, vis, AllocNone);
+    swa.border_pixel = 0; swa.background_pixel = 0;
+    Window c = XCreateWindow(d, parent, 0, 0, 256, 256, 0, depth,
+                              InputOutput, vis,
+                              CWColormap | CWBorderPixel | CWBackPixel, &swa);
+    if (c) { XMapWindow(d, c); sync_round(d); }
+    return c;
+}
+
+int main(void) {
+    XSetErrorHandler(eh);
+    XSetIOErrorHandler(io_eh);
+    Display *d = XOpenDisplay(NULL);
+    if (!d) { fprintf(stderr, "xwayland_trainer: cannot open DISPLAY\n"); return 1; }
+    int s = DefaultScreen(d);
+    Window root = RootWindow(d, s);
+    XSetWindowAttributes swa = {
+        .event_mask = ExposureMask | StructureNotifyMask | ButtonPressMask
+                      | ButtonReleaseMask | KeyPressMask | KeyReleaseMask
+                      | PointerMotionMask | EnterWindowMask | LeaveWindowMask
+                      | FocusChangeMask | PropertyChangeMask,
+        .background_pixel = BlackPixel(d, s),
+    };
+    Window w = XCreateWindow(d, root, 0, 0, W, H, 0,
+                              CopyFromParent, InputOutput, CopyFromParent,
+                              CWEventMask | CWBackPixel, &swa);
+    XStoreName(d, w, "xwayland_trainer");
+    XMapWindow(d, w); sync_round(d);
+    GC gc = XCreateGC(d, w, 0, NULL);
+    atom_storm(d);
+    property_burst(d, w);
+    window_churn(d, w);
+    cursor_churn(d, w);
+    pixmap_churn(d, w, s);
+    shm_roundtrip(d, w, s);
+    xi2_cycle(d, w);
+    damage_burst(d, w, gc, 1000);
+    present_loop(d, w, s, 256);
+    Window argb = create_argb_child(d, w);
+    if (argb) {
+        GC gc2 = XCreateGC(d, argb, 0, NULL);
+        if (gc2) { damage_burst(d, argb, gc2, 200); XFreeGC(d, gc2); }
+        XDestroyWindow(d, argb);
+    }
+    XFreeGC(d, gc);
+    XDestroyWindow(d, w);
+    XSync(d, False);
+    XCloseDisplay(d);
+    return 0;
+}
+TRAINER_EOF
+}
+
+_build_trainer() {
+  echo "  -> emitting + compiling xwayland_trainer"
+  _emit_trainer
+  clang -O2 -fPIC -pthread \
+    "${srcdir}/xwayland_trainer.c" \
+    -o "${srcdir}/xwayland_trainer" \
+    -lX11 -lX11-xcb -lxcb -lxcb-present -lxcb-shm \
+    -lxcb-xinput -lxcb-dri3 -lxcb-sync -lXi -lXext \
+    || return 1
+}
+
+_smoke_test_trainer() {
+  command -v Xwayland >/dev/null 2>&1 || {
+    echo "  -> system Xwayland not installed; skipping smoke-test"
+    return 0
+  }
+  local rd sock wlog xlog wpid info xpid disp rc
+  rd=$(mktemp -d); chmod 700 "$rd"
+  sock="xw-smoke-$$"
+  wlog="$rd/weston.log"; xlog="$rd/xw.log"
+  wpid=$(XDG_RUNTIME_DIR="$rd" _spawn_weston "$rd" "$sock" "$wlog") || {
+    echo "  -> smoke-test: weston spawn failed"; tail -40 "$wlog"
+    rm -rf "$rd"; return 1
+  }
+  info=$(XDG_RUNTIME_DIR="$rd" WAYLAND_DISPLAY="$sock" \
+         _spawn_xwayland "$(command -v Xwayland)" "$xlog") || {
+    echo "  -> smoke-test: Xwayland spawn failed"; tail -40 "$xlog"
+    kill -TERM -- "-$wpid" 2>/dev/null; wait "$wpid" 2>/dev/null
+    rm -rf "$rd"; return 1
+  }
+  xpid="${info%%:*}"; disp="${info##*:}"
+  local -a _gpu_env=()
+  _xw_append_gpu_env _gpu_env
+  DISPLAY=":$disp" XDG_RUNTIME_DIR="$rd" WAYLAND_DISPLAY="$sock" \
+    timeout -k 2 30 env "${_gpu_env[@]}" "${srcdir}/xwayland_trainer" \
+    > "$rd/smoke.log" 2>&1
+  rc=$?
+  kill "$xpid" 2>/dev/null; wait "$xpid" 2>/dev/null
+  kill -TERM -- "-$wpid" 2>/dev/null; wait "$wpid" 2>/dev/null
+  if (( rc != 0 )); then
+    echo "  -> trainer SMOKE-TEST FAILED rc=$rc"
+    tail -40 "$rd/smoke.log"; tail -40 "$xlog"
+    rm -rf "$rd"; return 1
+  fi
+  echo "  -> trainer smoke-test OK (rc=0)"
+  rm -rf "$rd"
+}
+
+_run_workload() {
+  local xway_bin="$1" stage="$2" profile_dir="$3"
+  local rd sock wlog xlog wpid info xpid disp
+
+  unset LLVM_PROFILE_FILE
+  if [[ -n "$profile_dir" ]]; then
+    mkdir -p "$profile_dir"
+    export LLVM_PROFILE_FILE="$profile_dir/xwayland-%m-%p.profraw"
+  fi
+
+  rd=$(mktemp -d -p "$srcdir" "xw-runtime-${stage}.XXXXXX")
+  chmod 700 "$rd"
+  sock="xw-pgo-${stage}-$$"
+  wlog="$srcdir/weston-${stage}.log"
+  wpid=$(XDG_RUNTIME_DIR="$rd" _spawn_weston "$rd" "$sock" "$wlog") || {
+    echo "  -> weston spawn failed; aborting stage ${stage}"
+    tail -40 "$wlog"; rm -rf "$rd"; return 1
+  }
+  export XDG_RUNTIME_DIR="$rd" WAYLAND_DISPLAY="$sock"
+  unset DISPLAY
+
+  xlog="$srcdir/xwayland-${stage}.log"
+  info=$(_spawn_xwayland "$xway_bin" "$xlog") || {
+    echo "  -> instrumented Xwayland spawn failed"; tail -40 "$xlog"
+    kill -TERM -- "-$wpid" 2>/dev/null; wait "$wpid" 2>/dev/null
+    rm -rf "$rd"; return 1
+  }
+  xpid="${info%%:*}"; disp="${info##*:}"
+  export DISPLAY=":$disp"
+  echo "  -> Xwayland up, DISPLAY=$DISPLAY (pid $xpid)"
+
+  local ready=0 _
+  for _ in {1..50}; do
+    if xdpyinfo >/dev/null 2>&1; then ready=1; break; fi
+    kill -0 "$xpid" 2>/dev/null || break
+    sleep 0.1
+  done
+  if (( ! ready )); then
+    echo "  -> Xwayland never accepted clients"; tail -40 "$xlog"
+    kill "$xpid" 2>/dev/null; wait "$xpid" 2>/dev/null
+    kill -TERM -- "-$wpid" 2>/dev/null; wait "$wpid" 2>/dev/null
+    rm -rf "$rd"; return 1
+  fi
+
+  local -a _gpu_env=()
+  _xw_append_gpu_env _gpu_env
+
+  local ok=0 fail=0 i rc
+  echo "  -> trainer x 16 iterations"
+  for i in $(seq 1 16); do
+    timeout -k 2 30 env "${_gpu_env[@]}" "${srcdir}/xwayland_trainer" \
+      >/dev/null 2>&1
+    rc=$?
+    if (( rc == 0 )); then ok=$((ok+1)); else
+      fail=$((fail+1)); echo "  -> trainer iter $i FAILED rc=$rc"
+    fi
+  done
+  echo "  -> trainer: $ok/$((ok+fail)) iterations OK"
+
+  _run() { local secs="$1"; shift
+    timeout -k 2 "$secs" env "${_gpu_env[@]}" "$@" >/dev/null 2>&1 || true
+  } 2>/dev/null
+
+  command -v glxgears >/dev/null && {
+    _run 6 env vblank_mode=0 glxgears -fullscreen
+    _run 4 env vblank_mode=0 glxgears
+  }
+  if command -v glmark2 >/dev/null; then
+    local scene
+    for scene in \
+      'build:use-vbo=true:duration=2.0' \
+      'build:use-vbo=false:duration=2.0' \
+      'texture:texture-filter=nearest:duration=2.0' \
+      'texture:texture-filter=mipmap:duration=2.0' \
+      'shading:shading=phong:duration=2.0' \
+      'shading:shading=cel:duration=2.0' \
+      'jellyfish:duration=2.0' 'shadow:duration=2.0' \
+      'refract:duration=2.0' 'terrain:duration=2.0'
+    do _run 6 glmark2 --size 1280x720 -b "$scene"; done
+  fi
+  _run 5 xdpyinfo -ext all
+  _run 5 xrandr --query
+  _run 5 xprop -root
+  command -v glxinfo >/dev/null && { _run 5 glxinfo -B; _run 5 glxinfo -l; }
+  local t
+  for t in -noop -rect100 -fillrect100 -copywinwin500 -putimage500 \
+           -getimage500 -shmput500 -line10 -seg100 -circle10 \
+           -aa10text -rgb10text -scroll500
+  do _run 4 x11perf -time 0.5 -repeat 1 "$t"; done
+  if command -v xclip >/dev/null; then
+    printf 'xw-pgo-clip\n' | _run 3 xclip -selection clipboard
+    _run 3 xclip -o -selection clipboard
+  fi
+  if command -v xdotool >/dev/null; then
+    _run 3 xdotool mousemove 100 100
+    _run 3 xdotool mousemove 800 600
+    _run 3 xdotool click 1
+    _run 3 xdotool key Return
+    _run 3 xdotool key alt+Tab
+  fi
+  if command -v vkcube >/dev/null; then
+    _run 8 vkcube --wsi xlib --suppress_popups --width 1280 --height 720 \
+      || _run 8 vkcube --suppress_popups
+  fi
+
+  kill -TERM "$xpid" 2>/dev/null
+  local _wait_t
+  for _wait_t in $(seq 1 100); do
+    kill -0 "$xpid" 2>/dev/null || break
+    sleep 0.1
+  done
+  kill -0 "$xpid" 2>/dev/null && {
+    echo "  -> Xwayland did not exit gracefully in 10s; SIGKILL"
+    kill -KILL "$xpid" 2>/dev/null
+  }
+  wait "$xpid" 2>/dev/null
+
+  if [[ "$stage" == 4 ]]; then
+    local _flush; local -a _peek=()
+    for _flush in $(seq 1 300); do
+      shopt -s nullglob
+      # Match both xway.fdata and xway.fdata.<pid>.fdata.
+      _peek=("$srcdir/bolt"/xway.fdata "$srcdir/bolt"/xway.fdata.*)
+      shopt -u nullglob
+      (( ${#_peek[@]} > 0 )) && break
+      sleep 0.1
+    done
+    (( ${#_peek[@]} > 0 )) \
+      && echo "  -> BOLT .fdata files after ${_flush}*0.1s: ${#_peek[@]}" \
+      || echo "  -> BOLT .fdata NOT FOUND after 30s grace"
+  fi
+
+  kill -TERM -- "-$wpid" 2>/dev/null || kill -TERM "$wpid" 2>/dev/null || true
+  wait "$wpid" 2>/dev/null || true
+  rm -rf "$rd"
+  unset XDG_RUNTIME_DIR WAYLAND_DISPLAY DISPLAY
+
+  (( ok > 0 )) || { echo "  -> ALL trainer iterations failed"; return 1; }
+  return 0
+}
+
+_count_profraw() {
+  local d="$1" n
+  shopt -s nullglob
+  local files=("$d"/*.profraw)
+  shopt -u nullglob
+  echo "${#files[@]}"
+}
+
 build() {
+  export CC=clang CXX=clang++
+  export CCACHE_DISABLE=1
+  ulimit -s unlimited 2>/dev/null || true
 
-  arch-meson xserver build \
-      -D b_ndebug=false \
-      -D b_pie=false \
-      -D b_lto=true \
-      --buildtype=release \
-      --wrap-mode=nofallback \
-    -D ipv6=false \
-    -D xvfb=false \
-    -D xnest=false \
-    -D xdmcp=false \
-    -D xcsecurity=false \
-    -D xorg=false \
-    -D xephyr=false \
-    -D xwayland=true \
-    -D xwin=false \
-    -D xquartz=false \
-    -D dri3=true \
-    -D glamor=true \
-    -D debug=false \
-    -D optimization=3 \
-    -D strip=true \
-    -D python.bytecompile=2 \
-    -D errorlogs=false \
-    -D stdsplit=false \
-    -D xkb_dir=/usr/share/X11/xkb \
-    -D xkb_output_dir=/var/lib/xkb
+  cd "$srcdir/xserver"
+  rm -rf build-pgo build-cspgo build-final \
+         "$srcdir/pgo_raw" "$srcdir/cs_pgo_raw" "$srcdir/bolt" \
+         "$srcdir/profdata1.prof" "$srcdir/final.prof"
 
-  ninja -C build
+  local -a base_cppflags=() base_cflags=() base_cxxflags=() base_ldflags=()
+  _split_flags CPPFLAGS base_cppflags
+  _split_flags CFLAGS   base_cflags
+  _split_flags CXXFLAGS base_cxxflags
+  _split_flags LDFLAGS  base_ldflags
+
+  local common_opts=(
+    --prefix /usr
+    --wrap-mode=nofallback
+    --buildtype=plain
+    -Dipv6=true
+    -Dxwayland_ei=socket
+    -Dxvfb=false -Dxnest=false -Dxephyr=false
+    -Dxorg=false -Dxwin=false -Dxquartz=false
+    -Dxwayland=true
+    -Dglx=true
+    -Dxdmcp=false -Dxdm-auth-1=false
+    -Dinput_thread=auto
+    -Dlisten_tcp=false -Dlisten_unix=true -Dlisten_local=true
+    -Dsystemd_notify=auto
+    -Ddpms=true
+    -Dxf86bigfont=false
+    -Dscreensaver=true
+    -Dxres=true
+    -Dxace=true
+    -Dxselinux=false
+    -Dxinerama=false
+    -Dxcsecurity=false
+    -Dxv=true
+    -Dmitshm=true
+    -Dsha1=libnettle
+    -Ddri3=true -Ddrm=true -Dglamor=true
+    -Dlibdecor=auto
+    -Ddocs=false -Ddevel-docs=false -Ddocs-pdf=false
+    -Dxkb_dir=/usr/share/X11/xkb
+    -Dxkb_output_dir=/var/lib/xkb
+    -Db_ndebug=true
+    -Db_pie=false
+  )
+
+  _build_trainer || { echo "Error: trainer build failed"; return 1; }
+  _smoke_test_trainer || {
+    echo "Error: trainer smoke-test failed -- refusing to start PGO chain"
+    return 1
+  }
+
+  echo "-> Stage 1: IR-PGO instrumented build (LTO off)"
+  local -a pgo_cf=("${_prefix_map_flags[@]}" "${base_cppflags[@]}"
+                   "${base_cflags[@]}" "${_anti_pie_cflags[@]}"
+                   "-fprofile-generate=${srcdir}/pgo_raw" "${_pgo_mllvm[@]}")
+  local -a pgo_cxxf=("${_prefix_map_flags[@]}" "${base_cppflags[@]}"
+                     "${base_cxxflags[@]}" "${_anti_pie_cflags[@]}"
+                     "-fprofile-generate=${srcdir}/pgo_raw" "${_pgo_mllvm[@]}")
+  local -a pgo_lf=("${base_ldflags[@]}" "${_anti_pie_ldflags[@]}"
+                   "-fprofile-generate=${srcdir}/pgo_raw")
+  _emit_meson_native meson-native-pgo.ini pgo_cf pgo_cxxf pgo_lf
+  _meson meson setup build-pgo "${common_opts[@]}" \
+                                 -Db_lto=false \
+                                 --native-file=meson-native-pgo.ini
+  _compile_xwayland build-pgo
+
+  echo "-> Stage 1: workload"
+  _run_workload "$PWD/build-pgo/hw/xwayland/Xwayland" 1 "$srcdir/pgo_raw" || {
+    echo "Error: Stage 1 workload failed"; return 1
+  }
+  (( $(_count_profraw "$srcdir/pgo_raw") > 0 )) || {
+    echo "Error: Stage 1 produced no .profraw"; return 1
+  }
+  llvm-profdata merge --failure-mode=all \
+    -output="$srcdir/profdata1.prof" "$srcdir/pgo_raw"/*.profraw
+  [[ -s "$srcdir/profdata1.prof" ]] || {
+    echo "Error: stage 1 merge empty"; return 1
+  }
+
+  echo "-> Stage 2: CS-PGO instrumented build (LTO off)"
+  local -a cs_cf=("${_prefix_map_flags[@]}" "${base_cppflags[@]}"
+                  "${base_cflags[@]}" "${_anti_pie_cflags[@]}"
+                  "-fcs-profile-generate=${srcdir}/cs_pgo_raw"
+                  "-fprofile-use=${srcdir}/profdata1.prof"
+                  "${_profile_silence[@]}" "${_pgo_mllvm[@]}")
+  local -a cs_cxxf=("${_prefix_map_flags[@]}" "${base_cppflags[@]}"
+                    "${base_cxxflags[@]}" "${_anti_pie_cflags[@]}"
+                    "-fcs-profile-generate=${srcdir}/cs_pgo_raw"
+                    "-fprofile-use=${srcdir}/profdata1.prof"
+                    "${_profile_silence[@]}" "${_pgo_mllvm[@]}")
+  local -a cs_lf=("${base_ldflags[@]}" "${_anti_pie_ldflags[@]}"
+                  "-fcs-profile-generate=${srcdir}/cs_pgo_raw"
+                  "-fprofile-use=${srcdir}/profdata1.prof")
+  _emit_meson_native meson-native-cspgo.ini cs_cf cs_cxxf cs_lf
+  _meson meson setup build-cspgo "${common_opts[@]}" \
+                                   -Db_lto=false \
+                                   --native-file=meson-native-cspgo.ini
+  _compile_xwayland build-cspgo
+
+  echo "-> Stage 2: workload"
+  _run_workload "$PWD/build-cspgo/hw/xwayland/Xwayland" 2 "$srcdir/cs_pgo_raw" \
+    || { echo "Error: Stage 2 workload failed"; return 1; }
+
+  if (( $(_count_profraw "$srcdir/cs_pgo_raw") > 0 )); then
+    # Merge order: stage1 FIRST (per LLVM CSPGO docs), CS raw after.
+    llvm-profdata merge --failure-mode=all \
+      -output="$srcdir/final.prof" \
+      "$srcdir/profdata1.prof" "$srcdir/cs_pgo_raw"/*.profraw
+  else
+    echo "Warn: stage 2 produced no CS profraw; using stage1 as final"
+    cp "$srcdir/profdata1.prof" "$srcdir/final.prof"
+  fi
+  [[ -s "$srcdir/final.prof" ]] || {
+    echo "Error: final merged profile empty"; return 1
+  }
+
+  echo "-> Stage 3: final PGO build (Full LTO ON, --emit-relocs for BOLT)"
+  local -a fin_cf=("${_prefix_map_flags[@]}" "${base_cppflags[@]}"
+                   "${base_cflags[@]}" "${_anti_pie_cflags[@]}"
+                   "-fprofile-use=${srcdir}/final.prof" "${_profile_silence[@]}"
+                   "-flto=full"
+                   "-mllvm" "-icp-max-prom=3"
+                   "-mllvm" "-enable-ext-tsp-block-placement=1")
+  local -a fin_cxxf=("${_prefix_map_flags[@]}" "${base_cppflags[@]}"
+                     "${base_cxxflags[@]}" "${_anti_pie_cflags[@]}"
+                     "-fprofile-use=${srcdir}/final.prof" "${_profile_silence[@]}"
+                     "-flto=full"
+                     "-mllvm" "-icp-max-prom=3"
+                     "-mllvm" "-enable-ext-tsp-block-placement=1")
+  local -a fin_lf=("${base_ldflags[@]}" "${_anti_pie_ldflags[@]}"
+                   "-fprofile-use=${srcdir}/final.prof"
+                   "-flto=full" "-Wl,--lto-O3"
+                   "-Wl,--emit-relocs")
+  _emit_meson_native meson-native-final.ini fin_cf fin_cxxf fin_lf
+  _meson meson setup build-final "${common_opts[@]}" \
+                                   -Db_lto=true -Db_lto_mode=default \
+                                   --native-file=meson-native-final.ini
+  _compile_xwayland build-final
+
+  # Sanity: Full LTO applied.
+  if ! grep -qE -- '-flto(=full)?([[:space:]]|$)' build-final/build.ninja 2>/dev/null; then
+    echo "Warn: Full LTO flag (-flto) not seen in build-final/build.ninja"
+  fi
+
+  command -v llvm-bolt >/dev/null 2>&1 || {
+    echo "-> Stage 4: llvm-bolt missing; final binary is PGO+LTO-only"
+    return 0
+  }
+
+  echo "-> Stage 4a: BOLT instrument"
+  local bolt="$srcdir/bolt"
+  mkdir -p "$bolt"
+  local xway="$PWD/build-final/hw/xwayland/Xwayland"
+  cp -f "$xway" "$bolt/Xwayland.orig"
+
+  llvm-bolt "$bolt/Xwayland.orig" \
+    --instrument \
+    --lite=false \
+    --instrumentation-file="$bolt/xway.fdata" \
+    --instrumentation-file-append-pid \
+    --instrumentation-sleep-time=3 \
+    --instrumentation-no-counters-clear \
+    -o "$bolt/Xwayland.instr" || {
+      echo "Warn: BOLT instrumentation failed; keeping PGO+LTO binary"
+      return 0
+    }
+
+  echo "-> Stage 4b: BOLT training workload"
+  _run_workload "$bolt/Xwayland.instr" 4 "" || {
+    echo "Warn: BOLT training failed; keeping PGO+LTO binary"
+    return 0
+  }
+
+  echo "-> Stage 4c: merge .fdata"
+  local _retry
+  shopt -s nullglob
+  # Match both xway.fdata and xway.fdata.<pid>.fdata.
+  local fdata=("$bolt"/xway.fdata "$bolt"/xway.fdata.*)
+  shopt -u nullglob
+  if (( ${#fdata[@]} == 0 )); then
+    for _retry in $(seq 1 100); do
+      sleep 0.1
+      shopt -s nullglob
+      fdata=("$bolt"/xway.fdata "$bolt"/xway.fdata.*)
+      shopt -u nullglob
+      (( ${#fdata[@]} > 0 )) && break
+    done
+  fi
+  # Drop zero-byte files.
+  if (( ${#fdata[@]} > 0 )); then
+    local _keep=()
+    for _f in "${fdata[@]}"; do
+      [[ -s "$_f" ]] && _keep+=("$_f")
+    done
+    fdata=("${_keep[@]}")
+  fi
+  if (( ${#fdata[@]} == 0 )); then
+    echo "Warn: no non-empty .fdata produced; keeping PGO+LTO binary"
+    ls -la "$bolt/" 2>&1 | head -10
+    return 0
+  fi
+  echo "  -> ${#fdata[@]} .fdata file(s) to merge"
+  if (( ${#fdata[@]} == 1 )); then
+    cp -f "${fdata[0]}" "$bolt/merged.fdata"
+  elif command -v merge-fdata >/dev/null 2>&1; then
+    merge-fdata "${fdata[@]}" -o "$bolt/merged.fdata" || \
+      cat "${fdata[@]}" > "$bolt/merged.fdata"
+  else
+    cat "${fdata[@]}" > "$bolt/merged.fdata"
+  fi
+  [[ -s "$bolt/merged.fdata" ]] || { echo "Warn: empty merged .fdata"; return 0; }
+
+  if llvm-bolt "$bolt/Xwayland.orig" \
+       --data="$bolt/merged.fdata" \
+       --lite=false \
+       --relocs \
+       --reorder-blocks=ext-tsp \
+       --reorder-functions=cdsort \
+       --split-functions \
+       --split-strategy=profile2 \
+       --split-all-cold \
+       --split-eh \
+       --icf=safe \
+       --indirect-call-promotion=calls \
+       --peepholes=double-jumps,useless-branches \
+       --simplify-conditional-tail-calls \
+       --simplify-rodata-loads \
+       --inline-small-functions \
+       --inline-memcpy \
+       --plt=hot \
+       --tail-duplication=cache \
+       --x86-strip-redundant-address-size \
+       --use-gnu-stack \
+       --dyno-stats \
+       -o "$bolt/Xwayland.bolt" >"$bolt/bolt.log" 2>&1
+  then
+    # Sanity: BOLT output must be a valid ELF.
+    if ! readelf -h "$bolt/Xwayland.bolt" >/dev/null 2>&1; then
+      echo "Warn: BOLT output is not a valid ELF; keeping PGO+LTO binary"
+      return 0
+    fi
+    install -m755 "$bolt/Xwayland.bolt" "$xway"
+    echo "-> BOLT-optimised Xwayland installed."
+    grep -E 'BOLT-INFO.*(out of.*functions|executed instructions|taken branches)' \
+      "$bolt/bolt.log" | head -5 || true
+  else
+    echo "Warn: BOLT optimise failed; keeping PGO+LTO binary"
+    tail -20 "$bolt/bolt.log"
+  fi
 }
 
 package() {
-  DESTDIR="${pkgdir}" ninja -C build install
+  cd "$srcdir/xserver"
+  DESTDIR="$pkgdir" _meson meson install -C build-final --no-rebuild
   # xorg-server-common file /usr/lib/xorg/protocol.txt
-  rm "${pkgdir}"/usr/lib/xorg/protocol.txt
-  rmdir "${pkgdir}"/usr/lib/xorg
-  rm "${pkgdir}"/usr/share/man/man1/Xserver.1
+  rm -f "$pkgdir"/usr/lib/xorg/protocol.txt
+  rmdir --ignore-fail-on-non-empty "$pkgdir"/usr/lib/xorg 2>/dev/null || true
+  rm -f "$pkgdir"/usr/share/man/man1/Xserver.1
 
-  # license
-  install -m644 -Dt "${pkgdir}/usr/share/licenses/${pkgname}" xserver/COPYING
+  install -Dm644 COPYING "$pkgdir/usr/share/licenses/${pkgname}/COPYING"
 }

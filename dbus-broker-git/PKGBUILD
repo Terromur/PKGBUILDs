@@ -1,0 +1,872 @@
+#Maintainer: Terromur <terromuroz@proton.me>
+
+pkgbase=dbus-broker-git
+pkgname=(
+  dbus-broker-git
+  dbus-broker-units-git
+)
+pkgver=37.102.g2956b5d
+pkgrel=4
+pkgdesc='Linux D-Bus Message Broker'
+arch=(x86_64)
+url='https://github.com/bus1/dbus-broker/wiki'
+license=(GPL-3.0-or-later)
+depends=(
+  'audit>=3.0'
+  'expat>=2.2'
+  glibc
+  'libcap-ng>=0.6'
+  libgcc
+  'systemd-libs>=230'
+  mimalloc
+)
+makedepends=(
+  bolt
+  clang
+  dbus
+  git
+  jq
+  mold
+  mimalloc
+  llvm
+  llvm-bolt
+  'meson>=1.3'
+  ninja
+  procps-ng
+  python
+  rust
+  rust-bindgen
+  systemd
+)
+source=(
+  "$pkgbase::git+https://github.com/bus1/dbus-broker"
+  'c-dvar-1::git+https://github.com/c-util/c-dvar#branch=v1'
+  'c-ini-1::git+https://github.com/c-util/c-ini#branch=v1'
+  'c-list-3::git+https://github.com/c-util/c-list#branch=v3'
+  'c-rbtree-3::git+https://github.com/c-util/c-rbtree#branch=v3'
+  'c-shquote-1::git+https://github.com/c-util/c-shquote#branch=v1'
+  'c-stdaux-1::git+https://github.com/c-util/c-stdaux#branch=v1'
+  'c-utf8-1::git+https://github.com/c-util/c-utf8#branch=v1'
+  'libc-rs-0.2::git+https://github.com/rust-lang/libc#branch=libc-0.2'
+  'sys-1::git+https://github.com/bus1/sys#branch=v1'
+  '0001-units-Enable-statically.patch'
+)
+sha256sums=(
+  SKIP SKIP SKIP SKIP SKIP SKIP SKIP SKIP SKIP SKIP SKIP
+)
+
+: "${_bolt_broadcast_exp:=18}"
+: "${_bolt_replies_exp:=18}"
+: "${_bolt_pipeline_exp:=8}"
+: "${_bolt_bench_iterations:=300}"
+: "${_allow_unoptimized:=0}"
+
+pkgver() {
+  cd "$srcdir/$pkgbase" || return
+  git describe --long --tags | sed 's/^v//;s/-/./g'
+}
+
+prepare() {
+  cd "$srcdir/$pkgbase" || return
+  git reset --hard HEAD
+  git clean -df
+
+  patch -Np1 -i "$srcdir/0001-units-Enable-statically.patch" || return 1
+  
+  local sp
+  for sp in dvar-1 ini-1 list-3 rbtree-3 shquote-1 stdaux-1 utf8-1; do
+    ln -sfn "$(realpath --relative-to=subprojects "$srcdir/c-$sp")" \
+      "subprojects/libc$sp"
+  done
+  ln -sfn "$(realpath --relative-to=subprojects "$srcdir/sys-1")" \
+    subprojects/sys-1
+
+  # Meson's libc wrap supplies these files separately. Since makepkg provides
+  # the git checkout itself, install the packagefiles before linking it in.
+  cp -a subprojects/packagefiles/libc-rs/. "$srcdir/libc-rs-0.2/"
+  ln -sfn "$(realpath --relative-to=subprojects "$srcdir/libc-rs-0.2")" \
+    subprojects/libc-rs-0.2
+}
+
+export LDFLAGS="-fuse-ld=mold -lmimalloc -Wl,--hash-style=gnu -Wl,--lto-O3 -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs -Wl,--icf=safe -Wl,-z,norelro -Wl,--emit-relocs -Wl,-z,now"
+
+_setup_toolchain() {
+  local tool
+  for tool in clang clang++ ld.lld llvm-ar llvm-nm llvm-ranlib llvm-strip \
+              llvm-profdata llvm-bolt merge-fdata rustc bindgen; do
+    command -v "$tool" >/dev/null || {
+      error 'Required tool is not on PATH: %s' "$tool"; return 1; }
+  done
+
+  cat > "$srcdir/meson-native.ini" <<'EOF'
+[binaries]
+c = 'clang'
+cpp = 'clang++'
+ar = 'llvm-ar'
+nm = 'llvm-nm'
+ranlib = 'llvm-ranlib'
+strip = 'llvm-strip'
+rust = 'rustc'
+EOF
+
+  if [[ -z ${LIBCLANG_PATH:-} ]]; then
+    local lc
+    for lc in /usr/lib/libclang.so /usr/lib/llvm-*/lib/libclang.so; do
+      [[ -e $lc ]] && { export LIBCLANG_PATH=${lc%/*}; break; }
+    done
+    [[ -n ${LIBCLANG_PATH:-} ]] && msg2 'Pinned LIBCLANG_PATH=%s' "$LIBCLANG_PATH"
+  fi
+
+  local host major cand ver
+  host=$(rustc -vV | sed -n 's/^host: //p')
+  major=$(rustc -vV | sed -n 's/^LLVM version: \([0-9][0-9]*\).*/\1/p')
+  _rust_profdata=''
+  for cand in "$(rustc --print sysroot)/lib/rustlib/$host/bin/llvm-profdata" \
+              "/usr/bin/llvm-profdata-$major" \
+              "/usr/lib/llvm-$major/bin/llvm-profdata" \
+              /usr/bin/llvm-profdata; do
+    [[ -x $cand ]] || continue
+    ver=$("$cand" --version 2>/dev/null || :)
+    grep -Eq "LLVM version ${major}([.]|$)" <<< "$ver" && { _rust_profdata=$cand; break; }
+  done
+  [[ -n $_rust_profdata ]] || {
+    error 'No llvm-profdata matching rustc LLVM %s was found' "$major"
+    error 'Install llvm-tools for the rust toolchain, or matching llvm%s' "$major"
+    return 1
+  }
+
+  local rlibs=()
+  shopt -s nullglob
+  rlibs=("$(rustc --print target-libdir)"/libprofiler_builtins-*.rlib)
+  shopt -u nullglob
+  ((${#rlibs[@]} == 1)) || {
+    error 'Unable to identify a unique rustc profiler_builtins rlib'; return 1; }
+  _rust_profiler=${rlibs[0]}
+
+  msg2 'clang path:         %s' "$(command -v clang)"
+  msg2 'llvm-bolt path:     %s' "$(command -v llvm-bolt)"
+  msg2 'C toolchain:        %s' "$(clang --version | head -n1)"
+  msg2 'BOLT:               %s' "$(llvm-bolt --version | sed -n 2p)"
+  msg2 'Rust toolchain:     %s' "$(rustc --version)"
+  msg2 'Rust profdata:      %s' "$_rust_profdata"
+}
+
+: "${_lto_mode:=full}"   # full|thin|none
+: "${_lto_cgo:=3}"       # link-time codegen optimization level
+
+_meson_setup() {
+  local builddir=$1 c_extra=${2:-} link_extra=${3:-} rust_extra=${4:-}
+  local lto_mode=${5:-none}
+  rm -rf "$builddir"
+
+  local lto='' lto_link='' rust_lto=''
+  case "$lto_mode" in
+    thin)
+      lto='-flto=thin'
+      lto_link='-flto=thin -Wl,--lto-O3'
+      rust_lto='-Cembed-bitcode=yes -Clto=thin'
+      ;;
+    full)
+      lto='-flto=full'
+      lto_link='-flto=full -Wl,--lto-O3'
+      rust_lto='-Cembed-bitcode=yes -Clto=fat'
+      ;;
+    none) : ;;
+    *)
+      error 'Invalid lto_mode: %s' "$lto_mode"; return 1 ;;
+  esac
+
+  meson setup "$builddir" "$srcdir/$pkgbase" \
+    --native-file="$srcdir/meson-native.ini" \
+    --prefix=/usr \
+    --libdir=lib \
+    --buildtype=plain \
+    --wrap-mode=forcefallback \
+    -Daudit=true \
+    -Ddocs=false \
+    -Dsystem-console-users=gdm,sddm,lightdm,lxdm \
+    "-Dc_args=${CFLAGS} ${lto} ${c_extra}" \
+    "-Dc_link_args=${LDFLAGS} ${lto_link} ${c_extra} ${link_extra}" \
+    "-Drust_args=${RUSTFLAGS:-} ${rust_lto} -Copt-level=3 ${rust_extra} -Cpanic=unwind"
+}
+
+_merge_raw() {
+  local tool=$1 out=$2 dir=$3 files=()
+  mapfile -d '' files < <(find "$dir" -maxdepth 1 -type f -name '*.profraw' \
+    -size +0c -print0)
+  ((${#files[@]})) || { error 'No profile data in %s' "$dir"; return 1; }
+  "$tool" merge --failure-mode=all "${files[@]}" -o "$out" || return 1
+  [[ -s $out ]]
+}
+
+_merge_shares() {
+  local tool=$1 out=$2 view=$3; shift 3
+  local scale=20000000 share prof count weight weighted=() view_args=()
+  [[ $view == cs ]] && view_args=(--showcs)
+  while (($#)); do
+    share=$1; prof=$2; shift 2
+    if [[ ! -s $prof ]]; then
+      warning '_merge_shares: skipping empty profile %s (share=%s)' \
+        "$prof" "$share"
+      continue
+    fi
+    count=$("$tool" show "${view_args[@]}" "$prof" |
+      sed -n 's/^Total count: //p' | head -n1)
+    [[ $count =~ ^[1-9][0-9]*$ ]] || continue
+    weight=$(((share * scale + count / 2) / count)); ((weight > 0)) || weight=1
+    weighted+=("--weighted-input=$weight,$prof")
+  done
+  ((${#weighted[@]})) || { error 'No usable profiles for %s' "$out"; return 1; }
+  "$tool" merge --failure-mode=all "${weighted[@]}" -o "$out" || return 1
+  [[ -s $out ]]
+}
+
+_write_workload() {
+  _train="$srcdir/dbus-broker-train"
+  cat > "$_train" <<'__TRAIN__'
+#!/usr/bin/bash
+set -u
+B=${1:?usage: train BUILD_DIR [class]}
+MODE=${2:-all}
+case $MODE in all|real|integration|benchmark|bolt-real) ;; *) exit 2 ;; esac
+want() { [[ $MODE == all || $MODE == "$1" ]]; }
+
+B=$(cd "$B" && pwd) || exit 0
+SESSION=$B/src/dbus-broker-session
+LAUNCH=$B/src/dbus-broker-launch
+BROKER=$B/src/dbus-broker
+[[ -x $SESSION && -x $LAUNCH && -x $BROKER ]] || exit 0
+
+export DBUS_BROKER_TEST_BROKER="$BROKER"
+
+ulimit -n "$(ulimit -Hn)" 2>/dev/null || :
+
+WORK=$(mktemp -d)
+OUTER=""
+cleanup() {
+        pkill -TERM -P $$ 2>/dev/null || :
+        [[ -n $OUTER ]] && kill -TERM "$OUTER" 2>/dev/null || :
+        sleep 0.2
+        rm -rf "$WORK"
+}
+trap cleanup EXIT HUP INT TERM
+mkdir -p "$WORK/services" "$WORK/services2" "$WORK/conf.d"
+
+# Provide a private one for the duration of training.
+if [[ -z ${DBUS_SESSION_BUS_ADDRESS:-} ]] && command -v dbus-daemon >/dev/null; then
+        mkdir -p "$WORK/xdg"; chmod 700 "$WORK/xdg"
+        dbus-daemon --session --address="unix:path=$WORK/xdg/bus" --nofork \
+                >/dev/null 2>&1 &
+        OUTER=$!
+        for _ in $(seq 1 100); do [[ -S $WORK/xdg/bus ]] && break; sleep 0.05; done
+        if [[ -S $WORK/xdg/bus ]]; then
+                export XDG_RUNTIME_DIR="$WORK/xdg"
+        else
+                kill -TERM "$OUTER" 2>/dev/null || :; OUTER=""
+        fi
+fi
+
+cat >"$WORK/included.conf" <<'EOF'
+<!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+<busconfig><limit name="max_connections_per_user">512</limit></busconfig>
+EOF
+cat >"$WORK/conf.d/10-extra.conf" <<'EOF'
+<!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+<busconfig><limit name="max_replies_per_connection">1024</limit></busconfig>
+EOF
+
+cat >"$WORK/session.conf" <<EOF
+<!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+<busconfig>
+  <type>session</type>
+  <listen>unix:tmpdir=$WORK</listen>
+  <servicedir>$WORK/services</servicedir>
+  <servicedir>$WORK/services2</servicedir>
+  <include ignore_missing="yes">$WORK/included.conf</include>
+  <include ignore_missing="yes">$WORK/absent.conf</include>
+  <includedir>$WORK/conf.d</includedir>
+  <keep_umask/>
+  <policy context="default">
+    <allow send_destination="*" eavesdrop="true"/>
+    <allow receive_sender="*" eavesdrop="true"/>
+    <allow own="*"/>
+    <allow user="*"/>
+    <allow send_type="method_call"/>
+    <allow send_type="signal"/>
+    <allow send_interface="org.example.Interface"/>
+    <allow send_interface="org.example.Interface" send_member="Signal0"/>
+    <allow send_path="/org/example/Object0"/>
+    <deny send_destination="org.example.Denied"/>
+    <deny receive_sender="org.example.Denied"/>
+    <deny own="org.example.DeniedName"/>
+  </policy>
+  <policy user="$(id -un)">
+    <allow own_prefix="org.example"/>
+    <allow send_destination="org.freedesktop.DBus"/>
+  </policy>
+  <policy group="$(id -gn)"><allow send_destination="*"/></policy>
+  <policy at_console="true"><allow send_destination="*"/></policy>
+  <policy at_console="false"><allow send_destination="*"/></policy>
+  <apparmor mode="disabled"/>
+  <associate own="org.example.Associated" context="default"/>
+  <limit name="max_incoming_bytes">134217728</limit>
+  <limit name="max_outgoing_bytes">134217728</limit>
+  <limit name="max_incoming_unix_fds">128</limit>
+  <limit name="max_outgoing_unix_fds">128</limit>
+  <limit name="max_message_size">16777216</limit>
+  <limit name="max_message_unix_fds">64</limit>
+  <limit name="max_match_rules_per_connection">4096</limit>
+  <limit name="max_names_per_connection">512</limit>
+  <limit name="max_connections_per_user">256</limit>
+  <limit name="max_pending_service_starts">128</limit>
+  <limit name="max_replies_per_connection">512</limit>
+  <limit name="service_start_timeout">5000</limit>
+  <limit name="auth_timeout">5000</limit>
+</busconfig>
+EOF
+
+cat >"$WORK/services/org.example.Activatable.service" <<'EOF'
+[D-BUS Service]
+Name=org.example.Activatable
+Exec=/bin/false
+EOF
+cat >"$WORK/services/org.example.Systemd.service" <<'EOF'
+[D-BUS Service]
+Name=org.example.Systemd
+Exec=/bin/false
+SystemdService=dbus-org.example.Systemd.service
+EOF
+cat >"$WORK/services2/org.example.Second.service" <<'EOF'
+[D-BUS Service]
+Name=org.example.Second
+Exec=/bin/true
+EOF
+printf '[D-BUS Service]\nExec=/bin/false\n' >"$WORK/services/broken-no-name.service"
+printf 'not an ini file\n[[[\n' >"$WORK/services/broken-syntax.service"
+
+cat >"$WORK/controller.sh" <<'EOF'
+#!/usr/bin/bash
+set -u
+BUS=${DBUS_SESSION_BUS_ADDRESS:-}
+[[ -n $BUS ]] || exit 0
+command -v dbus-send >/dev/null || exit 0
+D() { timeout 8 dbus-send --bus="$BUS" "$@" >/dev/null 2>&1 || :; }
+
+MON=()
+if command -v dbus-monitor >/dev/null; then
+        base=$(timeout 5 dbus-send --bus="$BUS" --print-reply \
+                --dest=org.freedesktop.DBus /org/freedesktop/DBus \
+                org.freedesktop.DBus.ListNames 2>/dev/null | grep -c '":1\.')
+        for spec in \
+                "type='signal'" \
+                "type='signal',sender='org.freedesktop.DBus'" \
+                "type='signal',interface='org.example.Interface'" \
+                "type='signal',path_namespace='/org/example'" \
+                "type='signal',arg0namespace='org.example'" \
+                "type='method_call'"; do
+                timeout 300 dbus-monitor --address "$BUS" "$spec" >/dev/null 2>&1 &
+                MON+=($!)
+        done
+        want=$((base + ${#MON[@]}))
+        for _ in $(seq 1 60); do
+                now=$(timeout 5 dbus-send --bus="$BUS" --print-reply \
+                        --dest=org.freedesktop.DBus /org/freedesktop/DBus \
+                        org.freedesktop.DBus.ListNames 2>/dev/null | grep -c '":1\.')
+                ((now >= want)) && break
+                sleep 0.05
+        done
+fi
+
+# Driver dispatch: each dbus-send is a full connect/SASL/Hello/teardown cycle.
+for i in $(seq 1 60); do
+        D --dest=org.freedesktop.DBus --print-reply /org/freedesktop/DBus org.freedesktop.DBus.Hello
+        D --dest=org.freedesktop.DBus --print-reply /org/freedesktop/DBus org.freedesktop.DBus.ListNames
+        D --dest=org.freedesktop.DBus --print-reply /org/freedesktop/DBus org.freedesktop.DBus.ListActivatableNames
+        D --dest=org.freedesktop.DBus --print-reply /org/freedesktop/DBus org.freedesktop.DBus.GetId
+        D --dest=org.freedesktop.DBus --print-reply /org/freedesktop/DBus org.freedesktop.DBus.NameHasOwner string:org.freedesktop.DBus
+        D --dest=org.freedesktop.DBus --print-reply /org/freedesktop/DBus org.freedesktop.DBus.GetNameOwner string:org.freedesktop.DBus
+        D --dest=org.freedesktop.DBus --print-reply /org/freedesktop/DBus org.freedesktop.DBus.GetConnectionUnixUser string:org.freedesktop.DBus
+        D --dest=org.freedesktop.DBus --print-reply /org/freedesktop/DBus org.freedesktop.DBus.GetConnectionUnixProcessID string:org.freedesktop.DBus
+        D --dest=org.freedesktop.DBus --print-reply /org/freedesktop/DBus org.freedesktop.DBus.RequestName string:org.example.Owner$((i % 16)) uint32:0
+        D --dest=org.freedesktop.DBus --print-reply /org/freedesktop/DBus org.freedesktop.DBus.GetNameOwner string:org.example.Missing
+        D --dest=org.example.Missing --print-reply /org/example/Object org.example.Interface.Missing
+        if ((i % 5 == 0)); then
+                D --dest=org.freedesktop.DBus --print-reply /org/freedesktop/DBus org.freedesktop.DBus.GetConnectionCredentials string:org.freedesktop.DBus
+                D --dest=org.freedesktop.DBus --print-reply /org/freedesktop/DBus org.freedesktop.DBus.GetConnectionSELinuxSecurityContext string:org.freedesktop.DBus
+                D --dest=org.freedesktop.DBus --print-reply /org/freedesktop/DBus org.freedesktop.DBus.ListQueuedOwners string:org.freedesktop.DBus
+                D --dest=org.freedesktop.DBus --print-reply /org/freedesktop/DBus org.freedesktop.DBus.StartServiceByName string:org.example.Activatable uint32:0
+                D --dest=org.freedesktop.DBus --print-reply /org/freedesktop/DBus org.freedesktop.DBus.UpdateActivationEnvironment dict:string:string:TRAINING,1
+                D --dest=org.freedesktop.DBus --print-reply /org/freedesktop/DBus org.freedesktop.DBus.Peer.Ping
+        fi
+done
+
+for i in $(seq 1 600); do
+        D --type=signal "/org/example/Object$((i % 32))" \
+                "org.example.Interface.Signal$((i % 8))" \
+                string:"org.example.Payload$((i % 17))" string:"value-$i" uint32:"$i"
+        ((i % 20)) || D --type=signal "/org/freedesktop/NetworkManager/Devices/$((i % 8))" \
+                org.freedesktop.DBus.Properties.PropertiesChanged \
+                string:org.freedesktop.NetworkManager.Device string:State uint32:"$i"
+done
+
+# Queue/copy paths across the size classes that select different code paths.
+for n in 0 1 7 63 255 1024 4096 16384 60000; do
+        payload=$(head -c "$n" /dev/zero | tr '\0' x)
+        for i in $(seq 1 12); do
+                D --type=signal /org/example/Payload org.example.Interface.Payload string:"$payload"
+        done
+done
+
+# Activation, introspection, error replies and runtime reconfiguration.
+for i in $(seq 1 20); do
+        D --dest=org.example.Activatable --print-reply /org/example/Activatable org.example.Interface.Ping
+        D --dest=org.freedesktop.DBus --print-reply /org/freedesktop/DBus org.freedesktop.DBus.Introspectable.Introspect
+        D --dest=org.freedesktop.DBus --print-reply /bad/path org.freedesktop.DBus.ListNames
+        D --dest=org.freedesktop.DBus --print-reply /org/freedesktop/DBus org.freedesktop.DBus.AddMatch string:"type='signal',interface='org.example.Interface',member='Signal$((i % 8))',path_namespace='/org/example'"
+done
+# ReloadConfig drives the launcher back through launcher_parse_config(),
+# launcher_load_services() and launcher_set_policy() at runtime.
+for i in 1 2 3; do
+        D --dest=org.freedesktop.DBus --print-reply /org/freedesktop/DBus org.freedesktop.DBus.ReloadConfig
+done
+
+if ((${#MON[@]})); then
+        kill -TERM "${MON[@]}" 2>/dev/null || :
+        wait "${MON[@]}" 2>/dev/null || :
+fi
+EOF
+chmod +x "$WORK/controller.sh"
+
+if want real; then
+        ok=0
+        for round in $(seq 1 4); do
+                if timeout 180 "$SESSION" --dbus-broker="$LAUNCH" \
+                        --config-file="$WORK/session.conf" \
+                        -- "$WORK/controller.sh" >/dev/null 2>&1; then
+                        ok=$((ok + 1))
+                fi
+                # dbus-broker-session's `impl Drop for Session` SIGTERMs the
+                # launcher and returns immediately without waiting. Since BOLT
+                # flushes counters from an exit handler, a launcher still
+                # shutting down contributes nothing. Wait for it.
+                for _ in $(seq 1 40); do
+                        pgrep -x dbus-broker-launch >/dev/null 2>&1 || break
+                        sleep 0.05
+                done
+        done
+        ((ok >= 3)) || exit 1
+
+        # dbus-daemon mode drives the session's dd_pipe/dd_address/dd_spawn
+        # branches, which the launcher rounds never touch.
+        if command -v dbus-daemon >/dev/null; then
+                timeout 120 "$SESSION" --dbus-daemon="$(command -v dbus-daemon)" \
+                        --config-file="$WORK/session.conf" \
+                        -- "$WORK/controller.sh" >/dev/null 2>&1 || :
+        fi
+
+        # Rust CLI parser: help/usage/diagnostics and every failure branch.
+        for round in $(seq 1 8); do
+                timeout 10 "$SESSION" --help >/dev/null 2>&1 || :
+                timeout 10 "$SESSION" >/dev/null 2>&1 || :
+                timeout 10 "$SESSION" --unknown-option -- /bin/true >/dev/null 2>&1 || :
+                timeout 10 "$SESSION" -- >/dev/null 2>&1 || :
+                timeout 10 "$SESSION" --config-file=/nonexistent -- /bin/true >/dev/null 2>&1 || :
+                timeout 10 "$SESSION" --dbus-broker=/nonexistent -- /bin/true >/dev/null 2>&1 || :
+                timeout 30 "$SESSION" --dbus-broker="$LAUNCH" \
+                        --config-file="$WORK/session.conf" -- /bin/true >/dev/null 2>&1 || :
+                if command -v dbus-daemon >/dev/null; then
+                        timeout 30 "$SESSION" --dbus-daemon="$(command -v dbus-daemon)" \
+                                --config-file="$WORK/session.conf" -- /bin/true >/dev/null 2>&1 || :
+                fi
+        done
+
+        # Cheap CLI and argument-validation surfaces of the two C programs.
+        for round in $(seq 1 12); do
+                "$BROKER" --help >/dev/null 2>&1 || :
+                "$BROKER" --version >/dev/null 2>&1 || :
+                "$BROKER" --max-bytes=-1 >/dev/null 2>&1 || :
+                "$BROKER" --max-fds=-1 >/dev/null 2>&1 || :
+                "$BROKER" --max-matches=-1 >/dev/null 2>&1 || :
+                "$BROKER" --max-objects=-1 >/dev/null 2>&1 || :
+                "$BROKER" --controller=-1 >/dev/null 2>&1 || :
+                "$BROKER" --log=-1 >/dev/null 2>&1 || :
+                "$BROKER" --machine-id=bad >/dev/null 2>&1 || :
+                "$BROKER" --machine-id=0123456789abcdef0123456789abcdef --controller=999999 >/dev/null 2>&1 || :
+                "$LAUNCH" --help >/dev/null 2>&1 || :
+                "$LAUNCH" --version >/dev/null 2>&1 || :
+                "$LAUNCH" --scope=invalid >/dev/null 2>&1 || :
+                "$LAUNCH" --verbose --audit --scope=user --config-file=/nonexistent >/dev/null 2>&1 || :
+                "$LAUNCH" unexpected-argument >/dev/null 2>&1 || :
+        done
+fi
+
+if want integration; then
+        DBUS_BROKER_TEST_BROKER="$BROKER" timeout 900 meson test -C "$B" \
+                --no-rebuild --suite dbus-broker:dbus-broker \
+                --timeout-multiplier 5 >/dev/null 2>&1 || exit 1
+fi
+
+if want benchmark; then
+        for gen in bench-connect bench-message; do
+                [[ -x $B/test/dbus/$gen ]] || continue
+                start=$(date +%s)
+                timeout 1800 "$B/test/dbus/$gen" >/dev/null 2>&1
+                rc=$?
+                if ((rc != 0)); then
+                        printf 'train: WARNING: %s exited %s after %ss - profile weight will be low\n' \
+                                "$gen" "$rc" "$(( $(date +%s) - start ))" >&2
+                        exit 1
+                fi
+        done
+fi
+if want bolt-real; then
+        ok=0
+        for round in 1 2; do
+                if timeout 600 "$SESSION" --dbus-broker="$LAUNCH" \
+                        --config-file="$WORK/session.conf" \
+                        -- "$WORK/controller.sh" >/dev/null 2>&1; then
+                        ok=$((ok + 1))
+                fi
+                # Longer wait than the real class: instrumented launcher
+                # needs more time to run DT_FINI and write .fdata.
+                for _ in $(seq 1 200); do
+                        pgrep -x dbus-broker-launch >/dev/null 2>&1 || break
+                        sleep 0.1
+                done
+        done
+        ((ok >= 1)) || exit 1
+
+        timeout 60 "$SESSION" --dbus-broker="$LAUNCH" \
+                --config-file="$WORK/session.conf" -- /bin/true \
+                >/dev/null 2>&1 || :
+        timeout 30 "$SESSION" --help >/dev/null 2>&1 || :
+fi
+exit 0
+__TRAIN__
+  chmod +x "$_train"
+}
+
+_train_run() {
+  local builddir=$1 class=$2 profile_dir=${3:-}
+  local -a env=(
+    "DBUS_BROKER_BENCH_ITERATIONS=$_bolt_bench_iterations"
+    "DBUS_BROKER_BENCH_BROADCAST_MAX_EXP=$_bolt_broadcast_exp"
+    "DBUS_BROKER_BENCH_REPLIES_MAX_EXP=$_bolt_replies_exp"
+    "DBUS_BROKER_BENCH_PIPELINE_MAX_EXP=$_bolt_pipeline_exp"
+  )
+  [[ -n $profile_dir ]] && env+=("LLVM_PROFILE_FILE=$profile_dir/%m-%p.profraw")
+  env "${env[@]}" "$_train" "$builddir" "$class"
+}
+
+_train_units() {
+  local builddir=$1 profile_dir=$2 tests=()
+  mapfile -t tests < <(meson introspect "$builddir" --tests | jq -r '
+    .[] | select((.suite|type)=="array" and (.suite|index("dbus-broker:unit")))
+        | select(.name != "D-Bus I/O Queues") | .name')
+  ((${#tests[@]})) || return 0
+  LLVM_PROFILE_FILE="$profile_dir/%m-%p.profraw" \
+    meson test -C "$builddir" --no-rebuild --timeout-multiplier=5 \
+      "${tests[@]}" >/dev/null 2>&1 || :
+}
+
+build() {
+  _setup_toolchain
+  _write_workload
+
+  local P="$srcdir/pgo"
+  local b_std="$srcdir/build-c-std" b_cs="$srcdir/build-c-cs"
+  local b_rust="$srcdir/build-rust" b_final="$srcdir/build"
+  local class
+  rm -rf "$P" "$b_std" "$b_cs" "$b_rust" "$b_final"
+  for class in real integration benchmark unit; do
+    mkdir -p "$P/std-$class" "$P/cs-$class"
+  done
+  mkdir -p "$P/rust-real" "$P/rust-unit" "$P/bolt"
+
+  local have_c=0 have_cs=0 have_rust=0
+  local c_final="$P/c-std.profdata" rust_final="$P/rust.profdata"
+  local rust_use=''
+
+  msg2 'Phase R: Rust PGO instrumentation'
+  if _meson_setup "$b_rust" '' \
+       "-Wl,--whole-archive,$_rust_profiler,--no-whole-archive" \
+       "-Cprofile-generate=$P/rust-real" \
+     && meson compile -C "$b_rust"; then
+    _train_run "$b_rust" real "$P/rust-real" || :
+    _train_units "$b_rust" "$P/rust-unit"
+    if _merge_raw "$_rust_profdata" "$P/rust-real.profdata" "$P/rust-real" &&
+       _merge_raw "$_rust_profdata" "$P/rust-unit.profdata" "$P/rust-unit" &&
+       _merge_shares "$_rust_profdata" "$rust_final" normal \
+         95 "$P/rust-real.profdata" \
+          5 "$P/rust-unit.profdata"; then
+      have_rust=1
+      rust_use="-Cprofile-use=$rust_final"
+      msg2 'Phase R: Rust profile collected'
+    else
+      warning 'No Rust profile collected; Rust will build -O3 without PGO'
+    fi
+  else
+    warning 'Rust instrumentation build failed; continuing without Rust PGO'
+  fi
+
+  local vp='-Xclang -mllvm -Xclang -vp-counters-per-site=50'
+  vp+=' -Xclang -mllvm -Xclang -runtime-counter-relocation'
+  msg2 'Phase 1: C IR-PGO instrumentation'
+  if _meson_setup "$b_std" "$vp -fprofile-generate=$P/std-real" '' "$rust_use" &&
+     meson compile -C "$b_std"; then
+    for class in real integration benchmark; do
+      _train_run "$b_std" "$class" "$P/std-$class" || :
+    done
+    _train_units "$b_std" "$P/std-unit"
+    local got=0
+    for class in real integration benchmark unit; do
+      if _merge_raw llvm-profdata "$P/std-$class.profdata" "$P/std-$class"; then
+        got=$((got + 1))
+      else
+        warning 'STD: class %s produced no usable profile' "$class"
+      fi
+    done
+    ((got)) || { error 'STD: every workload class failed to merge'; return 1; }
+    if _merge_shares llvm-profdata "$c_final" normal \
+         60 "$P/std-real.profdata" \
+         30 "$P/std-benchmark.profdata" \
+          9 "$P/std-integration.profdata" \
+          1 "$P/std-unit.profdata"; then
+      have_c=1
+    fi
+  fi
+  if ((!have_c)) && ((!_allow_unoptimized)); then
+    error 'C PGO produced no profile - refusing to ship an unoptimized package.'
+    error 'Set _allow_unoptimized=1 to build anyway.'
+    return 1
+  fi
+
+  if ((have_c)); then
+    msg2 'Phase 2: C context-sensitive PGO'
+    if _meson_setup "$b_cs" \
+         "$vp -fprofile-use=$c_final -fcs-profile-generate=$P/cs-real" \
+         '' "$rust_use" \
+       && meson compile -C "$b_cs"; then
+      for class in real integration benchmark; do
+        _train_run "$b_cs" "$class" "$P/cs-$class" || :
+      done
+      _train_units "$b_cs" "$P/cs-unit"
+      local got=0
+      for class in real integration benchmark unit; do
+        if _merge_raw llvm-profdata "$P/cs-$class.profdata" "$P/cs-$class"; then
+          got=$((got + 1))
+        else
+          warning 'CS: class %s produced no usable profile' "$class"
+        fi
+      done
+      ((got)) || { error 'CS: every workload class failed to merge'; return 1; }
+      if _merge_shares llvm-profdata "$P/c-cs.profdata" cs \
+           60 "$P/cs-real.profdata" \
+           30 "$P/cs-benchmark.profdata" \
+            9 "$P/cs-integration.profdata" \
+            1 "$P/cs-unit.profdata" \
+         && llvm-profdata merge --failure-mode=all \
+              "$c_final" "$P/c-cs.profdata" -o "$P/c-final.profdata" \
+         && [[ -s "$P/c-final.profdata" ]]; then
+        c_final="$P/c-final.profdata"
+        have_cs=1
+      else
+        warning 'CS-PGO merge failed; using first-round C profile'
+      fi
+    else
+      warning 'CS-PGO build failed; using first-round C profile'
+    fi
+  fi
+
+  msg2 'Phase 3: final build (C PGO=%s CS=%s, Rust PGO=%s, LTO=%s)' \
+    "$have_c" "$have_cs" "$have_rust" "$_lto_mode"
+  local c_use=''
+  ((have_c)) && c_use="-fprofile-use=$c_final -Wno-profile-instr-unprofiled"
+  local c_final_extra='-fno-semantic-interposition'
+  c_final_extra+=' -mllvm -icp-max-prom=3'
+  c_final_extra+=' -mllvm -enable-ext-tsp-block-placement=1'
+
+  _meson_setup "$b_final" "$c_use $c_final_extra" \
+    '-Wl,--emit-relocs -Wl,-z,now' "$rust_use" "$_lto_mode"
+  meson compile -C "$b_final"
+  meson test -C "$b_final" --no-rebuild --print-errorlogs --timeout-multiplier=5
+
+  local -a bins=(dbus-broker dbus-broker-launch dbus-broker-session)
+  local bin path bolt="$P/bolt" ok_bins=0
+
+  msg2 'Phase 4a: BOLT instrumentation'
+  for bin in "${bins[@]}"; do
+    case "$bin" in
+      dbus-broker-launch|dbus-broker-session)
+        msg2 '  skipping BOLT for %s (fork/exec or Rust runtime)' "$bin"
+        continue
+        ;;
+    esac
+
+    path="$b_final/src/$bin"
+    [[ -f $path ]] || continue
+    cp -a "$path" "$bolt/$bin.pgo"
+    if llvm-bolt "$bolt/$bin.pgo" --instrument --lite=false \
+         --instrumentation-file="$bolt/$bin.fdata" \
+         --instrumentation-file-append-pid \
+         --instrumentation-sleep-time=5 \
+         -o "$path" 2>/dev/null; then
+      msg2 '  instrumented: %s' "$bin"
+    else
+      warning 'BOLT instrumentation failed for %s; keeping PGO binary' "$bin"
+      cp -a "$bolt/$bin.pgo" "$path"
+      rm -f "$bolt/$bin.pgo"
+    fi
+  done
+
+  msg2 'Phase 4b: BOLT profile collection'
+  local _pre _post
+  for class in bolt-real integration benchmark; do
+    _pre=$(find "$bolt" -maxdepth 1 -name '*.fdata.*' -type f 2>/dev/null | wc -l)
+    _train_run "$b_final" "$class" || \
+      warning 'BOLT: workload class %s exited non-zero' "$class"
+    sleep 1
+    _post=$(find "$bolt" -maxdepth 1 -name '*.fdata.*' -type f 2>/dev/null | wc -l)
+    msg2 'BOLT class %-12s produced %s profile files' \
+      "$class" "$((_post - _pre))"
+  done
+  sleep 2
+
+  msg2 'Phase 4c: BOLT optimization'
+
+  local -a bolt_opts=(
+    --lite=false
+    --reorder-blocks=ext-tsp
+    --split-functions --split-all-cold --split-eh --split-strategy=profile2
+    --icf=safe
+    --plt=all
+    --peepholes=all
+    --x86-strip-redundant-address-size
+    --tail-duplication=cache
+    --reg-reassign
+    --sctc-mode=heuristic
+    --use-gnu-stack
+    --thread-count="$(nproc)"
+    --dyno-stats
+  )
+
+  local files merged log order gap
+  for bin in "${bins[@]}"; do
+    case "$bin" in
+      dbus-broker-launch|dbus-broker-session) continue ;;
+    esac
+    path="$b_final/src/$bin"
+    [[ -f "$bolt/$bin.pgo" ]] || continue
+    merged="$bolt/$bin.merged.fdata"
+    log="$bolt/$bin.log"
+
+    shopt -s nullglob
+    files=("$bolt/$bin.fdata".*)
+    shopt -u nullglob
+    if ((${#files[@]} == 0)) || ! merge-fdata "${files[@]}" > "$merged" ||
+       [[ ! -s $merged ]]; then
+      warning 'No BOLT profile for %s; restoring PGO binary' "$bin"
+      mv -f "$bolt/$bin.pgo" "$path"
+      continue
+    fi
+
+    gap=$(llvm-bolt "$bolt/$bin.pgo" --data="$merged" --print-profile-stats \
+            --lite=false --reorder-blocks=none --reorder-functions=none \
+            -o /dev/null 2>&1 |
+          sed -n 's/.*call graph flow conservation gap \([0-9.]*\)%.*/\1/p' |
+          head -n1)
+    if [[ $gap =~ ^[0-9.]+$ ]] && awk -v g="$gap" 'BEGIN{exit !(g<=1.0)}'; then
+      order=cdsort
+    else
+      order=exec-count
+    fi
+
+    if llvm-bolt "$bolt/$bin.pgo" --data="$merged" \
+         --reorder-functions="$order" "${bolt_opts[@]}" \
+         -o "$bolt/$bin.out" >"$log" 2>&1; then
+      readelf -h "$bolt/$bin.out" >/dev/null 2>&1 || {
+        warning '%s: BOLT output is not a valid ELF; restoring PGO binary' "$bin"
+        mv -f "$bolt/$bin.pgo" "$path"; continue; }
+      mv -f "$bolt/$bin.out" "$path"
+      rm -f "$bolt/$bin.pgo"
+      ok_bins=$((ok_bins + 1))
+
+      local _cov _gain
+      _cov=$(sed -n \
+        's/.*BOLT-INFO: \([0-9]*\) out of \([0-9]*\) functions in the binary.*/\1/p' \
+        "$log" | head -n1)
+      _gain=$(grep 'executed instructions' "$log" | tail -n1 |
+              grep -oE '\(-[0-9.]+%\)' | tr -dc '0-9.')
+      if [[ $_cov =~ ^[0-9]+$ ]] && ((_cov < 15)); then
+        warning '%s: BOLT matched only %s functions - too little to order hot code.' \
+          "$bin" "$_cov"
+        warning '  Likely: (a) a workload class produced no profile;'
+        warning '  (b) Full LTO + ICF left few symbol boundaries.'
+      fi
+      if [[ -n $_gain ]] && awk -v g="$_gain" 'BEGIN{exit !(g < 0.05)}'; then
+        warning '%s: BOLT changed <0.05%% of executed instructions.' "$bin"
+      fi
+      msg2 '%s: %s, ordering=%s, %s' "$bin" \
+        "$(sed -n 's/.*BOLT-INFO: \([0-9]* out of [0-9]* functions in the binary ([0-9.]*%)\).*/\1/p' "$log" | head -n1)" \
+        "$order" \
+        "$(grep 'executed instructions' "$log" | tail -n1 | grep -oE '\([-+][0-9.]+%\)')"
+    else
+      warning 'BOLT optimization failed for %s; restoring PGO binary' "$bin"
+      cat "$log"
+      mv -f "$bolt/$bin.pgo" "$path"
+    fi
+  done
+
+  # Never ship an instrumented binary, whatever happened above.
+  for bin in "${bins[@]}"; do
+    [[ -f "$bolt/$bin.pgo" ]] && mv -f "$bolt/$bin.pgo" "$b_final/src/$bin"
+  done
+
+  if ((ok_bins == 0)) && ((!_allow_unoptimized)); then
+    error 'BOLT optimized no binary at all - refusing to ship.'
+    return 1
+  fi
+
+  msg2 'Phase 5: verifying the BOLT-optimized stack'
+  "$_train" "$b_final" real >/dev/null 2>&1 || \
+    warning 'Post-BOLT session replay reported an error'
+  meson test -C "$b_final" --no-rebuild --print-errorlogs --timeout-multiplier=5
+}
+
+_pick() {
+  local p=$1 f d
+  shift
+  for f; do
+    d="$srcdir/$p/${f#"$pkgdir"/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")" || true
+  done
+}
+
+check() {
+  meson test -C "$srcdir/build" --no-rebuild --print-errorlogs \
+    --timeout-multiplier=5
+}
+
+package_dbus-broker-git() {
+  depends+=(libaudit.so libcap-ng.so libexpat.so libsystemd.so)
+  provides=(dbus-broker)
+  conflicts=(dbus-broker)
+
+  meson install -C "$srcdir/build" --destdir "$pkgdir" --no-rebuild
+  _pick unit "$pkgdir"/usr/lib/systemd/{system,user}/dbus.service
+}
+
+package_dbus-broker-units-git() {
+  pkgdesc+=' - Service units'
+  depends=(dbus "dbus-broker-git=$pkgver-$pkgrel")
+  provides=(dbus-broker-units dbus-units)
+  conflicts=(dbus-broker-units dbus-daemon-units)
+
+  install -d "$pkgdir"
+  mv "$srcdir"/unit/* "$pkgdir"
+}

@@ -1,6 +1,3 @@
-# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
-# Maintainer: Fabian Bornschein <fabiscafe@archlinux.org>
-# Contributor: Jan de Groot <jgc@archlinux.org>
 # Maintainer: Terromur <terromuroz@proton.me>
 
 pkgbase=glib2-git
@@ -8,7 +5,7 @@ pkgname=(
   glib2-git
   glib2-devel-git
 )
-pkgver=2.90.0+60+g36c60f069
+pkgver=2.90.1+46+g3bc01b117
 pkgrel=1
 pkgdesc="Low level core library"
 url="https://gitlab.gnome.org/GNOME/glib"
@@ -22,16 +19,22 @@ depends=(
   pcre2
   util-linux-libs
   zlib
+  mimalloc
 )
 makedepends=(
+  clang
   dbus
   dconf
   gettext
   gi-docgen
   git
   gobject-introspection
+  jq
   libelf
+  llvm
+  mimalloc
   meson
+  mold
   python
   python-docutils
   python-packaging
@@ -76,12 +79,7 @@ pkgver() {
 prepare() {
   cd glib
 
-  # Suppress noise from glib-compile-schemas.hook
   git apply -3 ../0001-glib-compile-schemas-Remove-noisy-deprecation-warnin.patch
-
-  # Add ghostty and ptyxis to known terminals list
-  # This is a downstream only patch; GNOME will not add new terminal emulators.
-  # https://gitlab.gnome.org/GNOME/glib/-/issues/338#note_1076172
   git apply -3 ../0002-gdesktopappinfo-Add-more-known-terminals.patch
   git apply -3 ../0003-wakeups.patch
   git apply -3 ../0004-gerror-return-on-null.patch
@@ -91,7 +89,312 @@ prepare() {
   git -c protocol.file.allow=always -c protocol.allow=never submodule update
 }
 
+export LDFLAGS="-fuse-ld=mold -lmimalloc -Wl,--hash-style=gnu -Wl,--lto-O3 -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs -Wl,-z,norelro -Wl,--emit-relocs -Wl,-z,now"
+
+_check_tool() {
+  command -v "$1" >/dev/null 2>&1 || {
+    error "Required tool not on PATH: %s" "$1"; return 1; }
+}
+
+_detect_toolchain() {
+  export CC=clang
+  export CXX=clang++
+
+  local t
+  for t in clang clang++ llvm-profdata llvm-ar llvm-nm llvm-ranlib llvm-bolt merge-fdata; do
+    _check_tool "$t"
+  done
+
+  msg "clang:        $(clang --version | head -1)"
+  msg "llvm-profdata: $(llvm-profdata --version | head -1)"
+}
+
+_flag_check() {
+  local tag="$1"; shift
+  local dir="$srcdir/.flagcheck-$tag"
+  rm -rf "$dir"; mkdir -p "$dir"
+  echo 'int main(void){return 0;}' > "$dir/t.c"
+  "$CC" "$dir/t.c" -o "$dir/t" "$@" >/dev/null 2>&1
+}
+
+_pgo_run_tests() {
+  local builddir="$1"
+  local -a wanted=(
+    array-test bytes checksum dataset fileutils hash hmac keyfile list
+    markup-parse option-context pattern queue regex string strfuncs unicode
+    uri utils g-file g-file-info converter converter-stream contenttype
+    data-input-stream data-output-stream gdbus-message gdbus-serialization
+    gschema-compile resources socket gdbus-connection gdbus-peer
+    gsubprocess appinfo
+  )
+
+  local -a available=()
+  local line
+  while IFS= read -r line; do
+    [[ -n "$line" ]] && available+=("$line")
+  done < <(meson introspect "$builddir" --tests 2>/dev/null | \
+             jq -r '.[].name' 2>/dev/null || true)
+
+  if (( ! ${#available[@]} )); then
+    warning "[PGO] meson introspect returned no tests"
+    return 0
+  fi
+
+  local -a run=()
+  local w a found
+  for w in "${wanted[@]}"; do
+    found=0
+    for a in "${available[@]}"; do
+      if [[ "$a" == "$w" ]]; then
+        run+=("$a")
+        found=1
+        break
+      fi
+    done
+  done
+
+  if (( ! ${#run[@]} )); then
+    warning "[PGO] no matching training tests in $builddir"
+    return 0
+  fi
+
+  msg "[PGO] running ${#run[@]} training tests (serialized)"
+  LANG=C.UTF-8 LC_ALL=C.UTF-8 LC_MESSAGES=C LC_TIME=C.UTF-8 TZ=UTC \
+    meson test -C "$builddir" --no-rebuild --print-errorlogs \
+      --num-processes 1 "${run[@]}" || true
+}
+
+_find_build_tool() {
+  local root="$1" name="$2"
+  find "$root" -type f -executable -name "$name" -not -path '*/tests/*' -print -quit 2>/dev/null
+}
+
+_pgo_run_real() {
+  local builddir="$1"
+
+  local gio gsettings gdbus gresource glib_schema
+  gio=$(_find_build_tool "$builddir" gio)         || true
+  gsettings=$(_find_build_tool "$builddir" gsettings) || true
+  gdbus=$(_find_build_tool "$builddir" gdbus)     || true
+  gresource=$(_find_build_tool "$builddir" gresource) || true
+  glib_schema=$(_find_build_tool "$builddir" glib-compile-schemas) || true
+
+  msg "[PGO] workload tools: gio=${gio:-missing} gsettings=${gsettings:-missing}"
+
+  local workroot
+  workroot=$(mktemp -d "$srcdir/glib-train.XXXXXX")
+  trap 'rm -rf "$workroot"' RETURN
+
+  if [[ -n "$gio" ]]; then
+    local i
+    for i in $(seq 1 200); do
+      "$gio" info /usr/share/glib-2.0/schemas >/dev/null 2>&1 || true
+      "$gio" list -a "standard::*" /etc >/dev/null 2>&1 || true
+      "$gio" mime text/plain >/dev/null 2>&1 || true
+    done
+  fi
+
+  if [[ -n "$gsettings" && -d /usr/share/glib-2.0/schemas ]]; then
+    local i
+    for i in $(seq 1 200); do
+      GSETTINGS_SCHEMA_DIR=/usr/share/glib-2.0/schemas \
+        "$gsettings" list-schemas >/dev/null 2>&1 || true
+    done
+    for i in $(seq 1 300); do
+      GSETTINGS_SCHEMA_DIR=/usr/share/glib-2.0/schemas \
+        "$gsettings" list-keys org.gnome.desktop.interface >/dev/null 2>&1 || true
+    done
+  fi
+
+  if [[ -n "$gresource" && -n "$glib_schema" ]]; then
+    cat > "$workroot/demo.xml" <<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/com/cachyos/pgo">
+    <file>data.txt</file>
+    <file>data2.txt</file>
+  </gresource>
+</gresources>
+XML
+    echo "profile-guided-resource" > "$workroot/data.txt"
+    echo "another-resource" > "$workroot/data2.txt"
+    local i
+    for i in $(seq 1 40); do
+      "$gresource" list "$workroot/demo.xml" >/dev/null 2>&1 || true
+      "$gresource" details "$workroot/demo.xml" >/dev/null 2>&1 || true
+    done
+  fi
+
+  if command -v gjs >/dev/null 2>&1; then
+    timeout 10 gjs -c '
+      const GLib = imports.gi.GLib;
+      const loop = GLib.MainLoop.new(null, false);
+      let n = 0;
+      GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1, () => {
+        if (++n > 5000) { loop.quit(); return false; }
+        return true;
+      });
+      GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+        return n < 1000;
+      });
+      loop.run();
+    ' >/dev/null 2>&1 || true
+  fi
+
+  if [[ -n "$gdbus" ]] && [[ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ]]; then
+    local i
+    for i in $(seq 1 30); do
+      "$gdbus" introspect --session \
+        --dest org.freedesktop.DBus \
+        --object-path /org/freedesktop/DBus >/dev/null 2>&1 || true
+    done
+  fi
+
+  msg "[PGO] real workload complete"
+}
+
+_pgo_merge() {
+  local out="$1"; shift
+  local -a inputs=("$@")
+  ((${#inputs[@]})) || { error "merge: no inputs for $out"; return 1; }
+
+  llvm-profdata merge --failure-mode=all \
+    -output="$out" "${inputs[@]}"
+  [[ -s "$out" ]]
+}
+
+_pgo_merge_glob() {
+  local out="$1" dir="$2"
+  local -a files=()
+  shopt -s nullglob
+  files=("$dir"/*.profraw)
+  shopt -u nullglob
+
+  if (( ! ${#files[@]} )); then
+    error "[PGO] no .profraw in $dir"
+    return 1
+  fi
+  _pgo_merge "$out" "${files[@]}"
+}
+
+_run_bolt() {
+  local binary="$1" name="$2"
+  local instr_bin="$srcdir/${name}.instr"
+  local bolt_data_prefix="$srcdir/bolt-${name}"
+  local bolt_bin="$srcdir/${name}.bolt"
+  local merged_fdata="$srcdir/bolt-${name}.fdata"
+
+  echo "  -> instrumenting $name with BOLT"
+  llvm-bolt "$binary" -instrument -o "$instr_bin" \
+    -instrumentation-file="$bolt_data_prefix" \
+    -instrumentation-file-append-pid \
+    -instrumentation-sleep-time=10 \
+    2>&1 || {
+    warning "llvm-bolt -instrument failed for $name; skipping BOLT"
+    return 0
+  }
+
+  [[ -x "$instr_bin" ]] || {
+    warning "BOLT instrumented binary not produced; skipping"
+    return 0
+  }
+
+  echo "  -> running instrumented workload for $name"
+  local runtime
+  runtime=$(mktemp -d -p "$srcdir" bolt-runtime.XXXXXX)
+  chmod 700 "$runtime"
+
+  if [[ -x "$srcdir/build/gio/gio" ]]; then
+    for i in $(seq 1 50); do
+      "$srcdir/build/gio/gio" info /usr/share/glib-2.0/schemas >/dev/null 2>&1 || true
+    done
+  fi
+
+  # Terminate the instrumented binary if still running (not needed here)
+  rm -rf "$runtime" "$instr_bin"
+
+  local -a fdata_files=()
+  shopt -s nullglob
+  fdata_files=("$bolt_data_prefix"*)
+  shopt -u nullglob
+
+  if (( ${#fdata_files[@]} == 0 )); then
+    echo "  -> no BOLT profile files produced; skipping BOLT"
+    return 0
+  fi
+
+  if (( ${#fdata_files[@]} == 1 )); then
+    mv "${fdata_files[0]}" "$merged_fdata"
+  else
+    echo "  -> merging ${#fdata_files[@]} BOLT profiles"
+    if ! merge-fdata "${fdata_files[@]}" > "$merged_fdata"; then
+      warning "merge-fdata failed; skipping BOLT"
+      rm -f "${fdata_files[@]}"
+      return 0
+    fi
+    rm -f "${fdata_files[@]}"
+  fi
+
+  [[ -s "$merged_fdata" ]] || {
+    echo "  -> merged BOLT profile empty; skipping"
+    return 0
+  }
+
+  echo "  -> applying BOLT optimizations to $name"
+  llvm-bolt "$binary" -o "$bolt_bin" -data="$merged_fdata" \
+    -reorder-blocks=ext-tsp \
+    -reorder-functions=cdsort \
+    -split-functions \
+    -split-all-cold \
+    -split-eh \
+    -icf=1 \
+    -dyno-stats \
+    2>&1 || {
+    warning "llvm-bolt failed; keeping original binary"
+    return 0
+  }
+
+  if [[ -x "$bolt_bin" ]]; then
+    mv "$bolt_bin" "$binary"
+    echo "  -> BOLT applied to $name"
+  fi
+  return 0
+}
+
 build() {
+  _detect_toolchain
+
+  # --- filter CFLAGS/LDFLAGS from makepkg.conf ---
+  _filter_cflags() {
+    local flags="$1" out="" f
+    for f in $flags; do
+      case "$f" in
+        -flto=auto|-flto=thin|-flto=full|-flto) continue ;;
+        -Wl,--lto-O*|-Wl,-plugin-opt=*) continue ;;
+        -Wl,--strip-all|-Wl,-s) continue ;;
+      esac
+      out+="$f "
+    done
+    echo "${out% }"
+  }
+
+  _filter_ldflags() {
+    local flags="$1" sanitize_lto="$2" out="" f
+    for f in $flags; do
+      case "$f" in
+        -Wl,--strip-all|-Wl,-s) continue ;;
+        -flto=auto|-flto=thin|-flto=full|-flto) [[ "$sanitize_lto" == "1" ]] && continue ;;
+        -Wl,--lto-O*|-Wl,-plugin-opt=*) [[ "$sanitize_lto" == "1" ]] && continue ;;
+      esac
+      out+="$f "
+    done
+    echo "${out% }"
+  }
+
+  export CFLAGS="$(_filter_cflags "$CFLAGS")"
+  export CXXFLAGS="$(_filter_cflags "$CXXFLAGS")"
+  export LDFLAGS="$(_filter_ldflags "$LDFLAGS" 1)"
+
   local meson_options=(
     --default-library both
     -D documentation=false
@@ -106,22 +409,106 @@ build() {
     -Dpython.bytecompile=2
     -Db_pie=false
     -D debug=false
-    -D strip=true
-    -D b_lto=true
+    -D strip=false
     -D errorlogs=false
-    -D man-pages=disabled
   )
 
-  # Produce more debug info: GLib has a lot of useful macros
-  CFLAGS+=" -g3"
-  CXXFLAGS+=" -g3"
+  local extra_cflags=" -g3"
+  local pgo_gen_only=""
+  if _flag_check gen_atomic -fprofile-update=atomic; then
+    pgo_gen_only+=" -fprofile-update=atomic"
+  fi
 
-  # use fat LTO objects for static libraries
-  CFLAGS+=" -ffat-lto-objects"
-  CXXFLAGS+=" -ffat-lto-objects"
+  local pgo_vp=""
+  if _flag_check vp -mllvm -enable-value-profiling \
+                   -mllvm -vp-counters-per-site=128; then
+    pgo_vp=" -mllvm -enable-value-profiling -mllvm -vp-counters-per-site=128"
+  fi
 
-  arch-meson glib build "${meson_options[@]}"
+  local pgo_use=" -Wno-profile-instr-unprofiled"
+  if _flag_check icp -mllvm -icp-max-prom=3; then
+    pgo_use+=" -mllvm -icp-max-prom=3"
+  fi
+
+  local PGO1_DIR="$srcdir/pgo1"
+  local CS_DIR="$srcdir/cspgo"
+  local PGO1_DATA="$srcdir/pgo1.profdata"
+  local CS_DATA="$srcdir/cs.profdata"
+  local FINAL_DATA="$srcdir/final.profdata"
+
+  rm -rf "$PGO1_DIR" "$CS_DIR" "$PGO1_DATA" "$CS_DATA" "$FINAL_DATA" \
+         build-pgo build-cs build
+  mkdir -p "$PGO1_DIR" "$CS_DIR"
+
+  msg "==> Stage 1/4: STD-PGO instrumented build (LTO OFF)"
+  arch-meson glib build-pgo "${meson_options[@]}" \
+    -Db_lto=false \
+    -Dc_args="${CFLAGS}${extra_cflags} -fprofile-generate=$PGO1_DIR${pgo_gen_only}${pgo_vp}" \
+    -Dcpp_args="${CXXFLAGS}${extra_cflags} -fprofile-generate=$PGO1_DIR${pgo_gen_only}${pgo_vp}" \
+    -Dc_link_args="${LDFLAGS} -fprofile-generate=$PGO1_DIR" \
+    -Dcpp_link_args="${LDFLAGS} -fprofile-generate=$PGO1_DIR"
+  meson compile -C build-pgo
+
+  msg "==> Stage 1: training (tests + real workload)"
+  LLVM_PROFILE_FILE="$PGO1_DIR/%p-%m.profraw" \
+    _pgo_run_tests "$srcdir/build-pgo"
+  LLVM_PROFILE_FILE="$PGO1_DIR/%p-%m.profraw" \
+    _pgo_run_real "$srcdir/build-pgo"
+
+  _pgo_merge_glob "$PGO1_DATA" "$PGO1_DIR" || {
+    error "Stage 1 merge failed"; return 1; }
+  msg "  -> $PGO1_DATA: $(du -h "$PGO1_DATA" | cut -f1)"
+
+  msg "==> Stage 2/4: CS-PGO instrumented build (LTO OFF)"
+  arch-meson glib build-cs "${meson_options[@]}" \
+    -Db_lto=false \
+    -Dc_args="${CFLAGS}${extra_cflags} -fprofile-use=$PGO1_DATA -fcs-profile-generate=$CS_DIR${pgo_gen_only}${pgo_vp}${pgo_use}" \
+    -Dcpp_args="${CXXFLAGS}${extra_cflags} -fprofile-use=$PGO1_DATA -fcs-profile-generate=$CS_DIR${pgo_gen_only}${pgo_vp}${pgo_use}" \
+    -Dc_link_args="${LDFLAGS} -fprofile-use=$PGO1_DATA -fcs-profile-generate=$CS_DIR${pgo_use}" \
+    -Dcpp_link_args="${LDFLAGS} -fprofile-use=$PGO1_DATA -fcs-profile-generate=$CS_DIR${pgo_use}"
+  meson compile -C build-cs
+
+  msg "==> Stage 2: training (tests + real workload)"
+  LLVM_PROFILE_FILE="$CS_DIR/%p-%m.profraw" \
+    _pgo_run_tests "$srcdir/build-cs"
+  LLVM_PROFILE_FILE="$CS_DIR/%p-%m.profraw" \
+    _pgo_run_real "$srcdir/build-cs"
+
+  local cs_only="$srcdir/cs-only.profdata"
+  if _pgo_merge_glob "$cs_only" "$CS_DIR"; then
+    _pgo_merge "$FINAL_DATA" "$PGO1_DATA" "$cs_only" || {
+      error "Stage 2 final merge failed"; return 1; }
+  else
+    warning "Stage 2: no CS profraw; using standard profile"
+    cp -f "$PGO1_DATA" "$FINAL_DATA"
+  fi
+  msg "  -> $FINAL_DATA: $(du -h "$FINAL_DATA" | cut -f1)"
+
+  msg "==> Stage 3/4: final PGO build (ThinLTO ON)"
+  arch-meson glib build "${meson_options[@]}" \
+    -Db_lto=true \
+    -Db_lto_mode=thin \
+    -Dc_args="${CFLAGS}${extra_cflags} -fprofile-use=$FINAL_DATA${pgo_use}" \
+    -Dcpp_args="${CXXFLAGS}${extra_cflags} -fprofile-use=$FINAL_DATA${pgo_use}" \
+    -Dc_link_args="${LDFLAGS} -fprofile-use=$FINAL_DATA${pgo_use}" \
+    -Dcpp_link_args="${LDFLAGS} -fprofile-use=$FINAL_DATA${pgo_use}"
   meson compile -C build
+
+  # Sanity: PGO must have been applied to the final build
+  grep -q 'fprofile-use' "$srcdir/build/build.ninja" || {
+    error "PGO was not applied to the final build"; return 1; }
+
+  # Sanity: relocations must be present for BOLT
+  readelf -S "$srcdir/build/gio/libgio-2.0.so" 2>/dev/null | grep -q '\.rela\.text' || {
+    warning "секция .rela.text не найдена; BOLT может работать неоптимально"
+  }
+
+  msg "==> Stage 4/4: BOLT optimization for key libraries"
+  _run_bolt "$srcdir/build/glib/libglib-2.0.so" "libglib-2.0"
+  _run_bolt "$srcdir/build/gobject/libgobject-2.0.so" "libgobject-2.0"
+  _run_bolt "$srcdir/build/gio/libgio-2.0.so" "libgio-2.0"
+
+  msg "==> Build complete (PGO + CS-PGO + ThinLTO + BOLT)"
 }
 
 _pick() {
@@ -153,23 +540,25 @@ package_glib2-git() {
   install -Dt "$pkgdir/usr/share/libalpm/hooks" -m644 *.hook
   touch "$pkgdir/usr/lib/gio/modules/.keep"
 
+  # strip after BOLT (symbols were needed only for BOLT)
+  find "$pkgdir/usr/lib" -type f -name '*.so*' \
+    -exec strip --strip-unneeded {} + 2>/dev/null || true
+  find "$pkgdir/usr/bin" -type f \
+    -exec strip --strip-unneeded {} + 2>/dev/null || true
+
   python -m compileall -d /usr/share/glib-2.0/codegen \
     "$pkgdir/usr/share/glib-2.0/codegen"
   python -O -m compileall -d /usr/share/glib-2.0/codegen \
     "$pkgdir/usr/share/glib-2.0/codegen"
 
   cd "$pkgdir"
-
-  # Split devel
   _pick devel usr/bin/gdbus-codegen
   _pick devel usr/bin/glib-{mkenums,genmarshal}
   _pick devel usr/bin/gresource
   _pick devel usr/bin/gtester{,-report}
-
   _pick devel usr/share/gdb/
   _pick devel usr/share/glib-2.0/gdb/
   _pick devel usr/share/glib-2.0/codegen/
-
   _pick devel usr/share/bash-completion/completions/gresource
 }
 

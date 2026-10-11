@@ -1,0 +1,670 @@
+# Maintainer: Terromur <terromuroz@proton.me>
+
+pkgbase=systemd-pure-git
+pkgname=('systemd-git'
+         'systemd-libs-git'
+         'systemd-resolvconf-git'
+         'systemd-sysvcompat-git')
+pkgdesc='systemd (git version)'
+pkgver=263.devel.r92137.54b24a3855d
+pkgrel=1
+arch=('x86_64')
+license=('LGPL-2.1-or-later')
+url='https://www.github.com/systemd/systemd'
+makedepends=('acl' 'apparmor' 'cryptsetup' 'docbook-xsl' 'gperf' 'lz4' 'xz' 'pam' 'libelf'
+             'intltool' 'iptables' 'kmod' 'libarchive' 'libidn2' 'libgcrypt'
+             'libmicrohttpd' 'libxcrypt' 'libxslt' 'util-linux' 'linux-api-headers'
+             'python-jinja' 'python-lxml' 'quota-tools' 'shadow' 'git'
+             'meson' 'libseccomp' 'pcre2' 'audit' 'kexec-tools' 'libxkbcommon'
+             'bash-completion' 'p11-kit' 'systemd' 'libfido2' 'tpm2-tss' 'rsync'
+             'bpf' 'libbpf' 'clang' 'llvm' 'curl' 'gnutls' 'python-pyelftools'
+             'libpwquality' 'qrencode' 'lib32-gcc-libs' 'python-pefile' 'linux-headers' 'mold')
+conflicts=("mkinitcpio<38-1")
+options=('!strip')
+source=("$pkgbase-stable::git+https://github.com/systemd/systemd"
+        '0001-Use-Arch-Linux-device-access-groups.patch'
+        # bootloader files
+        'arch.conf'
+        'loader.conf'
+        'splash-arch.bmp'::'https://gitlab.archlinux.org/archlinux/packaging/packages/systemd/-/raw/main/splash-arch.bmp'
+        # pam configuration
+        'systemd-user.pam'
+        # pacman / libalpm hooks
+        'systemd-hook'
+        '20-systemd-sysusers.hook'
+        '21-systemd-tmpfiles.hook'
+        '25-systemd-binfmt.hook'
+        '25-systemd-catalog.hook'
+        '25-systemd-hwdb.hook'
+        '25-systemd-sysctl.hook'
+        '30-systemd-daemon-reload-system.hook'
+        '30-systemd-daemon-reload-user.hook'
+        '35-systemd-enqueue-marked.hook'
+        '35-systemd-udev-reload.hook'
+        '35-systemd-update.hook'
+        '0002-install-nvpcr-without-bootloader.patch')
+sha512sums=('SKIP'
+            'ddb9401e47d0bf01874f255803a4b2167ec631484189d29d03694101fd9c77724e735f16d99c5f4ffd8061ae78839b2826ff0e0a925a6f0dbca25f2cfb271a82'
+            '61032d29241b74a0f28446f8cf1be0e8ec46d0847a61dadb2a4f096e8686d5f57fe5c72bcf386003f6520bc4b5856c32d63bf3efe7eb0bc0deefc9f68159e648'
+            '3194d1f8bff31b88a79657df83632b9224b66ca2cf8fd806a3ef35cf7a43f46c09c57f3dfd02256a99b6514a8f789b7d3bcfd7e17e00e34aa55ff0c6cedb5f01'
+            '5a1d78b5170da5abe3d18fdf9f2c3a4d78f15ba7d1ee9ec2708c4c9c2e28973469bc19386f70b3cf32ffafbe4fcc4303e5ebbd6d5187a1df3314ae0965b25e75'
+            '32580b82e97573d3e499821e2ce415ff134c0ec52c9b44a3c0862c4007d347f55636d6afac3dfc6831a9b384c7448075bdf3a12f369b4d8b62b24dfdb9c8a76a'
+            '03269a4822e86142b30165f3c3f72d2dcb1bfa16949f6a0379a0ce7b354269862a5a2d2e053b1690bda9fabc0e93c64ec9796c65d3d4b1b51dfc9dfa561e12a1'
+            '299dcc7094ce53474521356647bdd2fb069731c08d14a872a425412fcd72da840727a23664b12d95465bf313e8e8297da31259508d1c62cc2dcea596160e21c5'
+            'da7a97d5d3701c70dd5388b0440da39006ee4991ce174777931fea2aa8c90846a622b2b911f02ae4d5fffb92680d9a7e211c308f0f99c04896278e2ee0d9a4dc'
+            '0d6bc3d928cfafe4e4e0bc04dbb95c5d2b078573e4f9e0576e7f53a8fab08a7077202f575d74a3960248c4904b5f7f0661bf17dbe163c524ab51dd30e3cb80f7'
+            '2b50b25e8680878f7974fa9d519df7e141ca11c4bfe84a92a5d01bb193f034b1726ea05b3c0030bad1fbda8dbb78bf1dc7b73859053581b55ba813c39b27d9dc'
+            'a1661ab946c6cd7d3c6251a2a9fd68afe231db58ce33c92c42594aedb5629be8f299ba08a34713327b373a3badd1554a150343d8d3e5dfb102999c281bd49154'
+            '9426829605bbb9e65002437e02ed54e35c20fdf94706770a3dc1049da634147906d6b98bf7f5e7516c84068396a12c6feaf72f92b51bdf19715e0f64620319de'
+            'a436d3f5126c6c0d6b58c6865e7bd38dbfbfb7babe017eeecb5e9d162c21902cbf4e0a68cf3ac2f99815106f9fa003b075bd2b4eb5d16333fa913df6e2f3e32a'
+            '190112e38d5a5c0ca91b89cd58f95595262a551530a16546e1d84700fc9644aa2ca677953ffff655261e8a7bff6e6af4e431424df5f13c00bc90b77c421bc32d'
+            '51ebf20a1c93c2a86e8ced0d68e91f4a2bf6a537a2d674e05da69961d5861213159e28f228ffdc897bed721abd61ff133f49aeb0a9ebbbe76020c5b847c2a2df'
+            'a50d202a9c2e91a4450b45c227b295e1840cc99a5e545715d69c8af789ea3dd95a03a30f050d52855cabdc9183d4688c1b534eaa755ebe93616f9d192a855ee3'
+            '825b9dd0167c072ba62cabe0677e7cd20f2b4b850328022540f122689d8b25315005fa98ce867cf6e7460b2b26df16b88bb3b5c9ebf721746dce4e2271af7b97'
+            'b3cd4fdae80baea445881cbc4f8233bd7d03231c9781f21220a75701e1fdd1e349788c23100d38c58be265e26db18ad760e5c65a2a54bcbf6bf8a9969d48e715')
+
+pkgver() {
+  cd "$pkgbase-stable"
+  local _major=$(sed 's/~/./g' meson.version)
+  printf '%s.r%s.%s' "${_major}" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+prepare() {
+  cd "${pkgbase}-stable"
+  patch -Np1 -i ../0001-Use-Arch-Linux-device-access-groups.patch
+  patch --batch --fuzz=0 -Np1 -i ../0002-install-nvpcr-without-bootloader.patch || return 1
+  sed -i "/^[[:space:]]*'ENABLE_BOOTLOADER',$/d" src/tpm2-setup/meson.build
+}
+
+_filter_cflags() {
+  local flags="$1" out="" f
+  for f in $flags; do
+    case "$f" in
+      -flto=auto|-flto=thin|-flto=full|-flto) continue ;;
+      -Wl,--lto-O*|-Wl,-plugin-opt=*) continue ;;
+      -Wl,--strip-all|-Wl,-s) continue ;;
+    esac
+    out+="$f "
+  done
+  echo "${out% }"
+}
+
+_filter_ldflags() {
+  local flags="$1" sanitize_lto="$2" out="" f
+  for f in $flags; do
+    case "$f" in
+      -Wl,--strip-all|-Wl,-s) continue ;;
+      -flto=auto|-flto=thin|-flto=full|-flto) [[ "$sanitize_lto" == "1" ]] && continue ;;
+      -Wl,--lto-O*|-Wl,-plugin-opt=*) [[ "$sanitize_lto" == "1" ]] && continue ;;
+    esac
+    out+="$f "
+  done
+  echo "${out% }"
+}
+
+_run_bolt() {
+  local binary="$1" name="$2"
+  if [[ -L "$binary" ]]; then
+    binary=$(readlink -f "$binary")
+  fi
+  [[ -x "$binary" ]] || { warning "Not an executable: $binary"; return 0; }
+
+  local instr_bin="$srcdir/${name}.instr"
+  local bolt_data_prefix="$srcdir/bolt-${name}"
+  local bolt_bin="$srcdir/${name}.bolt"
+  local merged_fdata="$srcdir/bolt-${name}.fdata"
+  local build_dir
+  build_dir=$(dirname "$binary")
+
+  echo "  -> instrumenting $name with BOLT"
+  llvm-bolt "$binary" -instrument -o "$instr_bin" \
+    -instrumentation-file="$bolt_data_prefix" \
+    -instrumentation-file-append-pid \
+    -instrumentation-sleep-time=10 \
+    2>&1 || { warning "llvm-bolt -instrument failed"; return 0; }
+
+  [[ -x "$instr_bin" ]] || { warning "Instrumented binary not produced"; return 0; }
+
+  echo "  -> running instrumented workload for $name"
+  mv "$binary" "${binary}.orig"
+  mv "$instr_bin" "$binary"
+
+  if [[ "$name" == "libudev" ]]; then
+    LD_LIBRARY_PATH="$build_dir:${LD_LIBRARY_PATH:-}" \
+      _pgo_train_udev "$build_dir" || true
+  else
+    LD_LIBRARY_PATH="$build_dir:${LD_LIBRARY_PATH:-}" \
+      _pgo_train_pid1 "$build_dir" || true
+  fi
+
+  mv "${binary}.orig" "$binary"
+  
+
+  # Locate the profile files.
+  local -a fdata_files=()
+  shopt -s nullglob
+  fdata_files=("$bolt_data_prefix"*)
+  shopt -u nullglob
+
+  if (( ${#fdata_files[@]} == 0 )); then
+    echo "  -> no BOLT profile files produced; skipping BOLT"
+    return 0
+  fi
+
+  if (( ${#fdata_files[@]} == 1 )); then
+    mv "${fdata_files[0]}" "$merged_fdata"
+  else
+    echo "  -> merging ${#fdata_files[@]} BOLT profiles"
+    if ! merge-fdata "${fdata_files[@]}" > "$merged_fdata"; then
+      warning "merge-fdata failed"; return 0
+    fi
+    rm -f "${fdata_files[@]}"
+  fi
+
+  [[ -s "$merged_fdata" ]] || { echo "Merged profile empty"; return 0; }
+
+  echo "  -> applying BOLT optimizations to $name"
+  llvm-bolt "$binary" -o "$bolt_bin" -data="$merged_fdata" \
+    -reorder-blocks=ext-tsp \
+    -reorder-functions=cdsort \
+    -split-functions \
+    -split-all-cold \
+    -split-eh \
+    -icf=1 \
+    -dyno-stats \
+    2>&1 || { warning "llvm-bolt failed"; return 0; }
+
+  if [[ -x "$bolt_bin" ]]; then
+    mv "$bolt_bin" "$binary"
+    echo "  -> BOLT applied to $name"
+  fi
+  return 0
+}
+
+_pgo_train_pid1() {
+  local build_dir="$1"
+  msg2 "PID 1 PGO training in ${build_dir} (systemd --test + offline analyze)"
+  cd "${build_dir}"
+
+  export SYSTEMD_PAGER=cat
+  export SYSTEMD_LOG_LEVEL=warning
+  export SYSTEMD_LOG_TARGET=console
+  export SYSTEMD_COLORS=0
+
+  local T='timeout --signal=TERM --kill-after=3 30'
+  local _ok=0 _fail=0
+
+  _try() {
+    if ${T} "$@" &>/dev/null; then
+      _ok=$((_ok + 1))
+    else
+      _fail=$((_fail + 1))
+      printf '  [pgo-pid1] fail: %s\n' "$*" >&2
+    fi
+  }
+
+  local _targets=(basic.target sysinit.target multi-user.target graphical.target)
+  local _t
+  for _t in "${_targets[@]}"; do
+    _try ./systemd --test --system --unit="${_t}"
+  done
+
+  _try ./systemd --test --system --unit=basic.target     --log-level=info
+  _try ./systemd --test --system --unit=multi-user.target --log-level=debug
+
+  for _t in default.target basic.target; do
+    _try ./systemd --test --user --unit="${_t}"
+  done
+
+  local _ext _units _i
+  for _ext in service socket target timer mount path slice device swap; do
+    _units=()
+    shopt -s nullglob
+    _units+=( /usr/lib/systemd/system/*."${_ext}" )
+    _units+=( /etc/systemd/system/*."${_ext}" )
+    shopt -u nullglob
+    (( ${#_units[@]} )) || continue
+
+    for (( _i=0; _i<${#_units[@]}; _i+=40 )); do
+      _try ./systemd-analyze --offline=yes verify "${_units[@]:_i:40}"
+    done
+  done
+  unset _ext _units
+
+  _try ./systemd-analyze --offline=yes dump
+
+  shopt -s nullglob
+  local _svcs=( /usr/lib/systemd/system/*.service )
+  shopt -u nullglob
+  local _svc
+  for _svc in "${_svcs[@]}"; do
+    _try ./systemd-analyze security --offline=yes "${_svc}"
+  done
+
+  _try ./systemd-analyze --offline=yes critical-chain
+
+  msg2 "PID 1 PGO training: ${_ok} ok / ${_fail} failed"
+  (( _ok >= 20 )) || { error "Only ${_ok} training runs succeeded"; return 1; }
+  cd "${srcdir}"
+}
+
+_pgo_train_udev() {
+  local build_dir="$1"
+  msg2 "libudev training in ${build_dir} (udevadm enumeration workload)"
+  cd "${build_dir}"
+
+  local udevadm
+  udevadm=$(find "$build_dir" -maxdepth 2 -type f -executable -name udevadm -print -quit)
+  if [[ -z "$udevadm" ]]; then
+    warning "udevadm not found in $build_dir; skipping libudev training"
+    cd "${srcdir}"
+    return 1
+  fi
+  msg2 "  using udevadm: $udevadm"
+
+  export SYSTEMD_LOG_LEVEL=warning
+  export SYSTEMD_COLORS=0
+
+  local _ok=0 _fail=0
+  _try() {
+    if timeout --signal=TERM --kill-after=3 15 "$@" &>/dev/null; then
+      _ok=$((_ok + 1))
+    else
+      _fail=$((_fail + 1))
+    fi
+  }
+
+  local _uevent _devpath
+  while IFS= read -r _uevent; do
+    _devpath=${_uevent%/uevent}
+    _try "$udevadm" info --query=all --path="$_devpath"
+  done < <(find /sys -name uevent -type f 2>/dev/null)
+
+  _try "$udevadm" info --export-db
+
+  _try "$udevadm" trigger --dry-run --type=devices
+
+  _try "$udevadm" control --reload
+
+  msg2 "libudev training: ${_ok} ok / ${_fail} failed"
+  (( _ok >= 10 )) || { error "Too few libudev training runs succeeded"; cd "${srcdir}"; return 1; }
+  cd "${srcdir}"
+  return 0
+}
+
+build() {
+  local _timeservers=({0..3}.arch.pool.ntp.org)
+  local _nameservers=(
+    '9.9.9.9#dns.quad9.net'
+    '2620:fe::9#dns.quad9.net'
+    '1.1.1.1#cloudflare-dns.com'
+    '2606:4700:4700::1111#cloudflare-dns.com'
+    '8.8.8.8#dns.google'
+    '2001:4860:4860::8888#dns.google'
+  )
+
+  # Filter the environment flags before passing them to meson.
+  export CFLAGS="$(_filter_cflags "$CFLAGS")"
+  export CXXFLAGS="$(_filter_cflags "$CXXFLAGS")"
+  export LDFLAGS="$(_filter_ldflags "$LDFLAGS" 1)"
+
+  local _meson_options=(
+    -Dversion-tag="${_meson_version}-cachyos"
+    -Dvcs-tag=false
+    -Dshared-lib-tag="${_meson_version}"
+    -Dmode=release
+
+    -Dapparmor=disabled
+    -Dbootloader=disabled
+    -Dopenssl=enabled
+    -Dtpm2=enabled
+    -Dxenctrl=disabled
+    -Dbpf-framework=enabled
+    -Dima=false
+    -Dinstall-tests=false
+    -Dlibidn2=enabled
+    -Dlz4=enabled
+    -Dman=enabled
+    -Dselinux=disabled
+    -Dsshdprivsepdir=/usr/share/empty.sshd
+    -Dsysupdated=enabled
+    -Dvmlinux-h=provided
+    -Dvmlinux-h-path=/usr/src/linux-cachyos/vmlinux.h
+    -Dukify=disabled
+    -Dwerror=false
+
+    -Ddbuspolicydir=/usr/share/dbus-1/system.d
+    -Ddefault-dnssec=no
+    -Ddefault-kill-user-processes=false
+    -Ddefault-locale='C.UTF-8'
+    -Dlocalegen-path=/usr/bin/locale-gen
+    -Ddns-over-tls=openssl
+    -Dfallback-hostname='cachyos'
+    -Dnologin-path=/usr/bin/nologin
+    -Dntp-servers="${_timeservers[*]}"
+    -Ddns-servers="${_nameservers[*]}"
+    -Drpmmacrosdir=no
+
+    -Dsbat-distro='cachyos'
+    -Dsbat-distro-summary='CachyOS'
+    -Dsbat-distro-pkgname="${pkgbase}"
+    -Dsbat-distro-version="${pkgver}"
+    -Dsbat-distro-url='https://cachyos.org/'
+    -D b_pie=false
+    -Dpython.bytecompile=2
+    -Dimds=disabled
+    -Dnspawn=disabled
+    -Dvmspawn=disabled
+    -Dmachined=false
+    -Dportabled=false
+    -Dnsresourced=false
+    -Dmountfsd=false
+    -Dsysupdate=disabled
+    -Dsysupdated=disabled
+    -Drepart=disabled
+    -Dsysext=false
+    -Dimportd=disabled
+    -Dstoragetm=false
+    -Dsysinstall=false
+    -Dpstore=false
+    -Dquotacheck=false
+    -Dreport=disabled
+    -Dmeasure=disabled
+    -Dnss-mymachines=disabled
+    -Dremote=disabled
+    -Dbzip2=disabled
+    -Dqrencode=disabled
+    -Dgnutls=disabled
+    -Dlibcurl=disabled
+    -Dima=false
+    -Dipe=false
+    -Durlify=false
+    -Dlibidn2=disabled
+    -Dstrip=false
+  )
+
+  local _pgo_dir="${srcdir}/pgo-data"
+  local _pgo_raw_std="${_pgo_dir}/raw-std"
+  local _pgo_raw_cs="${_pgo_dir}/raw-cs"
+  local _pgo_profdata_std="${_pgo_dir}/systemd-std.profdata"
+  local _pgo_profdata_cs="${_pgo_dir}/systemd-cs.profdata"
+  local _pgo_profdata_final="${_pgo_dir}/systemd-final.profdata"
+
+  msg2 "LLVM PGO stage 1/5: instrumented build (standard)"
+  rm -rf build build-pgo-gen build-cs "${_pgo_dir}"
+  mkdir -p "${_pgo_raw_std}" "${_pgo_raw_cs}"
+
+  export CC=clang
+  export CXX=clang++
+
+  arch-meson "${pkgbase}-stable" build-pgo-gen "${_meson_options[@]}" \
+    -Db_lto=false \
+    -Dc_args="${CFLAGS} -fprofile-generate=${_pgo_raw_std}" \
+    -Dcpp_args="${CXXFLAGS} -fprofile-generate=${_pgo_raw_std}" \
+    -Dc_link_args="${LDFLAGS} -fprofile-generate" \
+    -Dcpp_link_args="${LDFLAGS} -fprofile-generate"
+
+  meson compile -C build-pgo-gen
+
+  msg2 "LLVM PGO stage 2/5: PID 1 training workload (standard)"
+  export LLVM_PROFILE_FILE="${_pgo_raw_std}/%p-%m.profraw"
+  _pgo_train_pid1 build-pgo-gen
+  unset LLVM_PROFILE_FILE
+
+  msg2 "LLVM PGO stage 3/5: merge profraw → profdata (standard)"
+  shopt -s nullglob
+  local _raws_std=( "${_pgo_raw_std}"/*.profraw )
+  shopt -u nullglob
+  (( ${#_raws_std[@]} )) || { error "No .profraw files produced."; return 1; }
+  llvm-profdata merge --failure-mode=all -output="${_pgo_profdata_std}" "${_raws_std[@]}"
+  llvm-profdata show --counts "${_pgo_profdata_std}" >/dev/null || { error "Merged standard profile corrupted."; return 1; }
+
+  msg2 "LLVM PGO stage 4/5: CS-PGO instrumented build"
+  arch-meson "${pkgbase}-stable" build-cs "${_meson_options[@]}" \
+    -Db_lto=false \
+    -Dc_args="${CFLAGS} -fprofile-use=${_pgo_profdata_std} -fcs-profile-generate=${_pgo_raw_cs} -Wno-profile-instr-unprofiled" \
+    -Dcpp_args="${CXXFLAGS} -fprofile-use=${_pgo_profdata_std} -fcs-profile-generate=${_pgo_raw_cs} -Wno-profile-instr-unprofiled" \
+    -Dc_link_args="${LDFLAGS} -fprofile-use=${_pgo_profdata_std} -fcs-profile-generate" \
+    -Dcpp_link_args="${LDFLAGS} -fprofile-use=${_pgo_profdata_std} -fcs-profile-generate"
+
+  meson compile -C build-cs
+
+  msg2 "LLVM PGO stage 4b/5: PID 1 training workload (CS)"
+  export LLVM_PROFILE_FILE="${_pgo_raw_cs}/%p-%m.profraw"
+  _pgo_train_pid1 build-cs
+  unset LLVM_PROFILE_FILE
+
+  msg2 "LLVM PGO stage 4c/5: merge CS profiles"
+  shopt -s nullglob
+  local _raws_cs=( "${_pgo_raw_cs}"/*.profraw )
+  shopt -u nullglob
+  if (( ${#_raws_cs[@]} )); then
+    llvm-profdata merge --failure-mode=all -output="${_pgo_profdata_cs}" "${_raws_cs[@]}"
+  else
+    warning "No CS .profraw files; using standard profile."
+    cp "${_pgo_profdata_std}" "${_pgo_profdata_cs}"
+  fi
+
+  msg2 "LLVM PGO stage 4d/5: final merge (standard + CS)"
+  llvm-profdata merge --failure-mode=all -output="${_pgo_profdata_final}" \
+    "${_pgo_profdata_std}" "${_pgo_profdata_cs}"
+  [[ -s "${_pgo_profdata_final}" ]] || { error "Final merged profile empty."; return 1; }
+
+  msg2 "LLVM PGO stage 5/5: final optimized build (ThinLTO ON)"
+  arch-meson "${pkgbase}-stable" build "${_meson_options[@]}" \
+  -Db_lto=true \
+  -Db_lto_mode=default \
+  -Dc_args="${CFLAGS} -fprofile-use=${_pgo_profdata_final} -Wno-profile-instr-unprofiled" \
+  -Dcpp_args="${CXXFLAGS} -fprofile-use=${_pgo_profdata_final} -Wno-profile-instr-unprofiled" \
+  -Dc_link_args="${LDFLAGS} -Wl,--emit-relocs" \
+  -Dcpp_link_args="${LDFLAGS} -Wl,--emit-relocs"
+
+  meson compile -C build
+
+  # Sanity: PGO must have been applied to the final build
+  grep -q 'fprofile-use' "$srcdir/build/build.ninja" || {
+    error "PGO was not applied to the final build"; return 1; }
+
+  # Sanity: relocations must be present for BOLT
+  readelf -S "$srcdir/build/systemd" 2>/dev/null | grep -q '\.rela\.text' || {
+    warning "Section .rela.text not found; BOLT may be suboptimal."
+  }
+
+  msg2 "BOLT stage: optimizing systemd daemon and libs"
+  _run_bolt "$srcdir/build/systemd" "systemd"
+
+  local _lib _target
+  for _lib in libsystemd libudev; do
+    _target=$(find "$srcdir/build" -maxdepth 1 -name "${_lib}.so.*.*" -type f -print -quit)
+    if [[ -n "$_target" ]]; then
+      _run_bolt "$_target" "$_lib"
+    else
+      warning "${_lib} real .so not found; skipping BOLT"
+    fi
+  done
+
+  msg2 "Build complete (PGO + CS-PGO + ThinLTO + BOLT)"
+}
+
+_check_nvpcr_files() {
+  local _root="$1" _name
+  for _name in cryptsetup hardware login verity; do
+    if [[ ! -s "${_root}/usr/lib/nvpcr/${_name}.nvpcr" ]]; then
+      printf 'ERROR: Missing or empty required NVPCR definition: %s\n' \
+        "${_root}/usr/lib/nvpcr/${_name}.nvpcr" >&2
+      return 1
+    fi
+  done
+}
+
+package_systemd-git() {
+  pkgdesc='system and service manager'
+  pkgdesc+=' (git version) with PGO + CS-PGO + BOLT'
+  license+=(
+    'CC0-1.0' # siphash
+    'GPL-2.0-or-later' # udev
+    'MIT-0' # documentation and config files
+  )
+  depends=(
+    "systemd-libs-git=${pkgver}"
+    'acl' 'libacl.so' 'bash' 'cryptsetup' 'libcryptsetup.so' 'dbus'
+    'dbus-units' 'kbd' 'kmod' 'hwdata'
+    'libgcrypt' 'libxcrypt' 'libcrypt.so' 'libidn2' 'lz4' 'pam'
+    'libelf' 'libseccomp' 'libseccomp.so' 'util-linux' 'libblkid.so'
+    'libmount.so' 'xz' 'pcre2' 'audit' 'libaudit.so'
+    'openssl' 'libcrypto.so' 'libssl.so')
+  provides=('nss-myhostname' "systemd-tools=${pkgver}" "udev=${pkgver}")
+  provides+=("systemd=${pkgver}")
+  replaces=('nss-myhostname' 'systemd-tools' 'udev')
+  conflicts=('nss-myhostname' 'systemd-tools' 'udev')
+  conflicts+=('systemd')
+  optdepends=(
+    'apparmor: additional security features'
+    'curl: systemd-journal-upload, machinectl pull-tar and pull-raw'
+    'gnutls: systemd-journal-gatewayd and systemd-journal-remote'
+    'iptables: firewall features'
+    'libarchive: convert DDIs to tarballs'
+    'libbpf: support BPF programs'
+    'libfido2: unlocking LUKS2 volumes with FIDO2 token'
+    'libmicrohttpd: systemd-journal-gatewayd and systemd-journal-remote'
+    'libp11-kit: support PKCS#11'
+    'libpwquality: check password quality'
+    'polkit: allow administration as unprivileged user'
+    'qemu-base: systemd-vmspawn'
+    'qrencode: show QR codes'
+    'quota-tools: kernel-level quota management'
+    'systemd-sysvcompat: symlink package to provide sysvinit binaries'
+    "systemd-ukify-git=${pkgver}: combine kernel and initrd into a signed Unified Kernel Image"
+    'tpm2-tss: unlocking LUKS2 volumes with TPM2')
+  backup=(
+    etc/pam.d/systemd-user
+    etc/systemd/coredump.conf
+    etc/systemd/homed.conf
+    etc/systemd/journald.conf
+    etc/systemd/journal-remote.conf
+    etc/systemd/journal-upload.conf
+    etc/systemd/logind.conf
+    etc/systemd/networkd.conf
+    etc/systemd/oomd.conf
+    etc/systemd/pstore.conf
+    etc/systemd/resolved.conf
+    etc/systemd/sleep.conf
+    etc/systemd/system.conf
+    etc/systemd/timesyncd.conf
+    etc/systemd/user.conf
+    etc/udev/iocost.conf
+    etc/udev/udev.conf
+  )
+  install=systemd.install
+
+  meson install -C build --no-rebuild --destdir "$pkgdir" --quiet
+  _check_nvpcr_files "$pkgdir" || return 1
+
+  # Runtime libraries shipped with systemd-libs.
+  install -d -m0755 systemd-libs/lib/
+  mv "$pkgdir"/usr/lib/lib{nss,systemd,udev}*.so* systemd-libs/lib/
+  mv "$pkgdir"/usr/lib/pkgconfig systemd-libs/lib/pkgconfig
+  mv "$pkgdir"/usr/include systemd-libs/include
+  mv "$pkgdir"/usr/share/man/man3 systemd-libs/man3
+
+  # Manpages shipped with systemd-sysvcompat.
+  rm "$pkgdir"/usr/share/man/man8/{halt,poweroff,reboot,shutdown}.8
+
+  # Executables (symlinks) shipped with systemd-sysvcompat.
+  rm "$pkgdir"/usr/bin/{halt,init,poweroff,reboot,shutdown}
+
+  # Files shipped with systemd-resolvconf.
+  rm "$pkgdir"/usr/{bin/resolvconf,share/man/man1/resolvconf.1}
+
+  # Avoid potential conflict with [core]/filesystem.
+  rm "$pkgdir"/usr/share/factory/etc/{issue,nsswitch.conf}
+  sed -i -e '/^C \/etc\/nsswitch\.conf/d' \
+         -e '/^C \/etc\/issue/d' "$pkgdir"/usr/lib/tmpfiles.d/etc.conf
+
+  # Ship default policy to leave services disabled.
+  echo 'disable *' >"$pkgdir"/usr/lib/systemd/system-preset/99-default.preset
+
+  # The group 'systemd-journal' is allocated dynamically...
+  install -d -o root -g root -m 2755 "$pkgdir"/var/log/journal
+
+  # Example bootctl configuration.
+  install -D -m0644 arch.conf "$pkgdir"/usr/share/systemd/bootctl/arch.conf
+  install -D -m0644 loader.conf "$pkgdir"/usr/share/systemd/bootctl/loader.conf
+  install -D -m0644 splash-arch.bmp "$pkgdir"/usr/share/systemd/bootctl/splash-arch.bmp
+
+  # Pacman hooks.
+  install -D -m0755 systemd-hook "$pkgdir"/usr/share/libalpm/scripts/systemd-hook
+  install -D -m0644 -t "$pkgdir"/usr/share/libalpm/hooks *.hook
+
+  # Overwrite systemd-user PAM configuration with our own.
+  install -D -m0644 systemd-user.pam "$pkgdir"/etc/pam.d/systemd-user
+
+  # Directory for cryptsetup keys.
+  install -d -m0700 "$pkgdir"/etc/cryptsetup-keys.d
+
+  # Handle uncommon license.
+  install -d -m0755 "$pkgdir"/usr/share/licenses/$pkgbase
+  ln -s /usr/share/doc/systemd/LICENSES/MIT-0.txt "$pkgdir"/usr/share/licenses/$pkgbase/
+
+  # Symlink kernel-install to installkernel.
+  ln -s kernel-install "$pkgdir"/usr/bin/installkernel
+  ln -s kernel-install.8.gz "$pkgdir"/usr/share/man/man8/installkernel.8.gz
+
+  # Strip after BOLT
+  find "$pkgdir/usr/lib" -type f -name '*.so*' -exec strip --strip-unneeded {} + 2>/dev/null || true
+  find "$pkgdir/usr/bin" -type f -exec strip --strip-unneeded {} + 2>/dev/null || true
+}
+
+package_systemd-libs-git() {
+  pkgdesc='systemd client libraries'
+  pkgdesc+=' (git version) with PGO + CS-PGO + BOLT'
+  depends=('glibc' 'libgcc' 'libgcc_s.so' 'libgcrypt' 'lz4' 'xz'  'zstd')
+  license+=(
+    'CC0-1.0' # siphash
+    'GPL-2.0-or-later WITH Linux-syscall-note' # src/basic/linux/*
+  )
+  provides=('libsystemd' 'libsystemd.so' 'libudev.so')
+  provides+=("systemd-libs=${pkgver}")
+  conflicts=('libsystemd')
+  conflicts+=('systemd-libs')
+  replaces=('libsystemd')
+
+  install -d -m0755 "$pkgdir"/usr/share/man
+  mv systemd-libs/lib "$pkgdir"/usr/lib
+  mv systemd-libs/include "$pkgdir"/usr/include
+  mv systemd-libs/man3 "$pkgdir"/usr/share/man/man3
+}
+
+package_systemd-resolvconf-git() {
+  pkgdesc='systemd resolvconf replacement (for use with systemd-resolved)'
+  pkgdesc+=' (git version) with PGO + CS-PGO + BOLT'
+  depends=("systemd-git=${pkgver}")
+  provides=('openresolv' 'resolvconf')
+  provides+=("systemd-resolvconf=${pkgver}")
+  conflicts=('resolvconf')
+  conflicts+=('systemd-resolvconf')
+
+  install -d -m0755 "$pkgdir"/usr/bin
+  ln -s resolvectl "$pkgdir"/usr/bin/resolvconf
+
+  install -d -m0755 "$pkgdir"/usr/share/man/man1
+  ln -s resolvectl.1.gz "$pkgdir"/usr/share/man/man1/resolvconf.1.gz
+}
+
+package_systemd-sysvcompat-git() {
+  pkgdesc='sysvinit compat for systemd'
+  pkgdesc+=' (git version) with PGO + CS-PGO + BOLT'
+  conflicts=('sysvinit')
+  conflicts+=('systemd-sysvcompat')
+  depends=("systemd-git=${pkgver}")
+  provides=("systemd-sysvcompat=${pkgver}")
+
+  install -D -m0644 -t "$pkgdir"/usr/share/man/man8 \
+    build/man/{halt,poweroff,reboot,shutdown}.8
+
+  install -d -m0755 "$pkgdir"/usr/bin
+  ln -s ../lib/systemd/systemd "$pkgdir"/usr/bin/init
+  for tool in halt poweroff reboot shutdown; do
+    ln -s systemctl "$pkgdir"/usr/bin/$tool
+  done
+}
