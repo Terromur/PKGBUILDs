@@ -75,7 +75,7 @@ prepare() {
   patch --batch --fuzz=0 -Np1 -i ../0002-install-nvpcr-without-bootloader.patch || return 1
   sed -i "/^[[:space:]]*'ENABLE_BOOTLOADER',$/d" src/tpm2-setup/meson.build
 }
-
+export LDFLAGS="-fuse-ld=mold -Wl,--hash-style=gnu -Wl,--lto-O3 -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs -Wl,--icf=safe -Wl,-z,norelro -Wl,--emit-relocs -Wl,-z,now"
 _filter_cflags() {
   local flags="$1" out="" f
   for f in $flags; do
