@@ -1,7 +1,7 @@
 #Maintainer: Terromur <terromuroz@proton.me>
 
 pkgname=mimalloc
-pkgver=3.5.3
+pkgver=3.5.4
 pkgrel=6.1
 pkgdesc='General-purpose allocator with excellent performance characteristics'
 arch=(x86_64 aarch64)
