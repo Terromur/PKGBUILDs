@@ -8,7 +8,7 @@ _gitname=${pkgbase%-git}
 pkgname=(
   dav1d-git
 )
-pkgver=1.5.4.r30.g7f12cf2
+pkgver=1.5.4.r31.g99f3354
 pkgrel=1
 pkgdesc="AV1 cross-platform decoder focused on speed and correctness"
 url="https://code.videolan.org/videolan/dav1d"
@@ -16,6 +16,7 @@ license=(BSD-2-Clause)
 arch=(x86_64)
 makedepends=(
   doxygen
+  glibc
   git
   graphviz
   meson
