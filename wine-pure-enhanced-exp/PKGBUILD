@@ -8,7 +8,7 @@ source=(
   "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=766285c4fc8fcf92e9d7c76f5f8a5f5d65d3fb5f"
   "git+https://github.com/GloriousEggroll/proton-ge-custom.git"
   "git+https://github.com/elgabo86/gwine.git"
-  "git+https://github.com/starcitizen-lug/patches.git"
+  "git+https://github.com/starcitizen-lug/patches.git#commit=01a904b60c469abcea5610c46d8a3a93f00a1504"
   "git+https://github.com/NelloKudo/spritz-wine.git"
   "git+https://github.com/whrvt/wine-osu-patches.git#branch=winello"
   30-win32-aliases.conf
@@ -264,7 +264,7 @@ prepare() {
         local wine_osu_patches_dir="${srcdir}/wine-osu-patches"
 if [ -d "${wine_osu_patches_dir}" ]; then
   while IFS= read -r -d '' patch; do
-    msg2 "Applying wine-osu-patches patches: ${p#${wine_osu_patches_dir}/}"
+    msg2 "Applying wine-osu-patches patches: ${patch#${wine_osu_patches_dir}/}"
     patch -Np1 < "$patch"
   done < <(find "${wine_osu_patches_dir}" \
     -type f \
@@ -273,8 +273,7 @@ if [ -d "${wine_osu_patches_dir}" ]; then
         -not -path "${wine_osu_patches_dir}/0003-build-fix-undebug-optimize/0005-configure-Enforce-4-byte-stack-alignment-on-clang-fo.patch" \
         -not -path "${wine_osu_patches_dir}/0003-build-fix-undebug-optimize/0007-include-Prefer-builtin-atomics.patch" \
         -not -path "${wine_osu_patches_dir}/0004-proton-fsync/*" \
-        -not -path "${wine_osu_patches_dir}/0005-windowing-system-integration/0001-misc/0013-winex11.drv-Do-not-enable-disable-XInput2-when-clipp.patch" \
-        -not -path "${wine_osu_patches_dir}/0005-windowing-system-integration/0001-misc/0014-winecfg-Add-a-checkbox-to-enable-virtual-desktop-tas.patch" \
+        -not -path "${wine_osu_patches_dir}/0005-windowing-system-integration/0001-misc/0013-winecfg-Add-a-checkbox-to-enable-virtual-desktop-tas.patch" \
         -not -path "${wine_osu_patches_dir}/0005-windowing-system-integration/0002-proton/0008-winex11.drv-Only-process-raw-input-in-default-winsta.patch" \
         -not -path "${wine_osu_patches_dir}/0006-audio/*" \
         -not -path "${wine_osu_patches_dir}/0007-proton-additions/0013-server-user32-Backport-more-raw-input-changes-from-P.patch" \
@@ -289,7 +288,7 @@ if [ -d "${wine_osu_patches_dir}" ]; then
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/600hz-default.patch" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0042-server-rename-debug_level-to-_debug_level-to-hint-br.patch" \
         -print0 | sort -z)
-fi  
+fi 
   
           local proton_patches_dir="${srcdir}/proton-ge-custom/patches"
 if [ -d "${proton_patches_dir}" ]; then
@@ -337,6 +336,7 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/ntdll-Hide_Wine_Exports/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/ntdll-ext4-case-folder/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/winex11-Window_Style/*" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/winedevice-Default_Drivers/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-wayland/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wineland-child-rendering/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/bluetooth-le/*" \

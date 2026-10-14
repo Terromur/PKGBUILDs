@@ -8,7 +8,7 @@ source=(
   "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=766285c4fc8fcf92e9d7c76f5f8a5f5d65d3fb5f"
   "git+https://github.com/GloriousEggroll/proton-ge-custom.git"
   "git+https://github.com/elgabo86/gwine.git"
-  "git+https://github.com/starcitizen-lug/patches.git"
+  "git+https://github.com/starcitizen-lug/patches.git#commit=01a904b60c469abcea5610c46d8a3a93f00a1504"
   "git+https://github.com/NelloKudo/spritz-wine.git"
   "git+https://github.com/whrvt/wine-osu-patches.git"
   30-win32-aliases.conf
@@ -306,6 +306,7 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/comctl32_animate_avi/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/mmsystem.dll16-MIDIHDR_Refcount/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/windowscodecs-TIFF_Support/*" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/wine-staging/winedevice-Default_Drivers/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-wayland/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wineland-child-rendering/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/bluetooth-le/*" \
