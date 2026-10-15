@@ -491,7 +491,7 @@ build() {
   local _s3_flags
   _s3_flags=$(_pgo_use_flags "$_cs_dir/cs.profdata")
 
-  local _s3_flags_lto="${_s3_flags} -flto=full"
+  local _s3_flags_="${_s3_flags} -f=full"
   local _ld_final="${_LDFLAGS_NO_STRIP} -flto=full -Wl,--lto-O3"
 
   echo "==> Stage 3/4: Final optimised build (ThinLTO + PGO + CS-PGO)..."
