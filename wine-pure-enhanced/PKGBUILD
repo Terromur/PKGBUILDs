@@ -324,6 +324,7 @@ if [ -d "${spritz_patches_dir}" ]; then
         -not -path "${spritz_patches_dir}/0005-misc/0004-ntdll-Never-use-CLOCK_REALTIME_COARSE.patch" \
         -not -path "${spritz_patches_dir}/0004-proton-fsync/*" \
         -not -path "${spritz_patches_dir}/0006-winewayland/0021-server-Store-keyboard-layout-in-thread-struct.patch" \
+        -not -path "${spritz_patches_dir}/0006-winewayland/0022-win32u-Implement-cross-thread-keyboard-layout-query.patch" \
         -not -path "${spritz_patches_dir}/0007-ntoskrnl/*" \
         -not -path "${spritz_patches_dir}/0008-pending-MR/10829-Futex-optimizations/*" \
         -print0 | sort -z)
@@ -363,6 +364,7 @@ fi
         -not -path "${starcitizen_lug_dir}/wine/winewayland-guess-primary-output.patch" \
         -not -path "${starcitizen_lug_dir}/wine/winewayland-systray.patch" \
         -not -path "${starcitizen_lug_dir}/wine/winewayland-prefer-relative-pointer.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/sc_gpumem.patch" \
         -print0 | sort -z)
     fi
 
