@@ -1,14 +1,14 @@
 # Maintainer: Terromur <terromuroz@proton.me>
 
 pkgname=wine-pure-enhanced
-pkgver=11.18.r350.g39d6437794f
+pkgver=11.19.r55.g3033ee4aa5c
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=39d6437794f244b4c486fb75bfd151a78964ec24"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=766285c4fc8fcf92e9d7c76f5f8a5f5d65d3fb5f"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=3033ee4aa5c0e18e0596fd7edc56691f7c15ee05"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=2395d93338d6b75d44c4c68fec38213f2398a5a9"
   "git+https://github.com/GloriousEggroll/proton-ge-custom.git"
   "git+https://github.com/elgabo86/gwine.git"
-  "git+https://github.com/starcitizen-lug/patches.git#commit=01a904b60c469abcea5610c46d8a3a93f00a1504"
+  "git+https://github.com/starcitizen-lug/patches.git"
   "git+https://github.com/NelloKudo/spritz-wine.git"
   "git+https://github.com/whrvt/wine-osu-patches.git"
   30-win32-aliases.conf
@@ -47,7 +47,6 @@ source=(
   0006-comdlg32-use-XDG-Desktop-Portal-for-native-file-dial.patch
   0007-comdlg32-fix-portal-dialog-compatibility-and-respons.patch
   0008-comdlg32-add-wow64-unix-call-table-for-32-bit.patch
-  proton-em-winewayland.patch
   0001-ntdll-alertable-sleep-fast-path.patch
   0007-msi-rewrite-all-tables-on-long-strref.patch
   0008-wined3d-only-map-host-visible-bo.patch
@@ -58,7 +57,6 @@ source=(
 )
 
 sha256sums=(
-  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -225,9 +223,6 @@ prepare() {
   # https://gitlab.winehq.org/wine/wine/-/merge_requests/11069
   patch -Np1 -i "${srcdir}/kernelbase-Handle-misaligned-stack-in-OpenThread.patch"
   
-  # winewayland fixes & improvements from Proton-EM
-  patch -Np1 -i "${srcdir}/proton-em-winewayland.patch"
-  
   # Other patches
   patch -Np1 -i "${srcdir}/joystick.patch"
   patch -Np1 -i "${srcdir}/no-winemenubuilder.patch"
@@ -328,7 +323,7 @@ if [ -d "${spritz_patches_dir}" ]; then
         -not -path "${spritz_patches_dir}/0003-tkg/0001-ntdll-loader-add-support-for-overriding-IMAGE_FILE_L.patch" \
         -not -path "${spritz_patches_dir}/0005-misc/0004-ntdll-Never-use-CLOCK_REALTIME_COARSE.patch" \
         -not -path "${spritz_patches_dir}/0004-proton-fsync/*" \
-        -not -path "${spritz_patches_dir}/0006-winewayland/*" \
+        -not -path "${spritz_patches_dir}/0007-ntoskrnl/*" \
         -not -path "${spritz_patches_dir}/0008-pending-MR/10829-Futex-optimizations/*" \
         -print0 | sort -z)
 fi
@@ -366,6 +361,7 @@ fi
         -not -path "${starcitizen_lug_dir}/wine/winewayland-fullscreen-idle-inhibit.patch" \
         -not -path "${starcitizen_lug_dir}/wine/winewayland-guess-primary-output.patch" \
         -not -path "${starcitizen_lug_dir}/wine/winewayland-systray.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/winewayland-prefer-relative-pointer.patch" \
         -print0 | sort -z)
     fi
 
