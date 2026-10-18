@@ -323,6 +323,7 @@ if [ -d "${spritz_patches_dir}" ]; then
         -not -path "${spritz_patches_dir}/0003-tkg/0001-ntdll-loader-add-support-for-overriding-IMAGE_FILE_L.patch" \
         -not -path "${spritz_patches_dir}/0005-misc/0004-ntdll-Never-use-CLOCK_REALTIME_COARSE.patch" \
         -not -path "${spritz_patches_dir}/0004-proton-fsync/*" \
+        -not -path "${spritz_patches_dir}/0006-winewayland/0021-server-Store-keyboard-layout-in-thread-struct.patch" \
         -not -path "${spritz_patches_dir}/0007-ntoskrnl/*" \
         -not -path "${spritz_patches_dir}/0008-pending-MR/10829-Futex-optimizations/*" \
         -print0 | sort -z)
