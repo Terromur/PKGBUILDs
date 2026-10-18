@@ -273,6 +273,7 @@ if [ -d "${wine_osu_patches_dir}" ]; then
         -not -path "${wine_osu_patches_dir}/0006-audio/*" \
         -not -path "${wine_osu_patches_dir}/0007-proton-additions/0013-server-user32-Backport-more-raw-input-changes-from-P.patch" \
         -not -path "${wine_osu_patches_dir}/0008-winewayland-additions/0021-server-Store-keyboard-layout-in-thread-struct.patch" \
+        -not -path "${wine_osu_patches_dir}/0008-winewayland-additions/0022-win32u-Implement-cross-thread-keyboard-layout-query.patch" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0009-win32u-Add-WINE_DISABLE_IME.patch" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0016-HACK-proton-server-Close-desktop-immediately-when-la.patch" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0036-winex11-Uninit-winattrs-fix.patch" \
@@ -405,6 +406,7 @@ fi
         -not -path "${starcitizen_lug_dir}/wine/winewayland-guess-primary-output.patch" \
         -not -path "${starcitizen_lug_dir}/wine/winewayland-systray.patch" \
         -not -path "${starcitizen_lug_dir}/wine/winewayland-prefer-relative-pointer.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/sc_gpumem.patch" \
         -print0 | sort -z)
     fi
 
