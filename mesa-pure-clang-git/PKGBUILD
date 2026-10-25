@@ -7,7 +7,7 @@
 # Contributor: Andreas Radke <andyrtr@archlinux.org>
 
 pkgname=mesa-pure-clang-git
-pkgver=26.3.0_devel.230759.1887da10a6e.1bf6a79
+pkgver=27.0.0_devel.232251.0e8f40efb01.ce4a757
 pkgrel=1
 pkgdesc="A purely personal Mesa build"
 url="https://www.mesa3d.org/"
@@ -93,10 +93,8 @@ source=(
   "u_d3d12.patch"
   "rusticl-radeonsi.conf"
   "mesa-buildsystem-improvements.patch"
-  "mesa-26.2-llvm23-libclc.patch"
 )
 sha256sums=(
-  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -172,7 +170,7 @@ build() {
     -D valgrind=disabled
     -D video-codecs=all
     -D vulkan-drivers=amd
-    -D vulkan-layers=device-select,overlay,screenshot,vram-report-limit,anti-lag
+    -D vulkan-layers=device-select,overlay,screenshot,vram-report-limit
     -D vulkan-beta=true
     -D python.bytecompile=2
     -D strip=true
