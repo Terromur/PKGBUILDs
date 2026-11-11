@@ -154,7 +154,7 @@ build() {
     -D c_args="-march=native -mtune=native -O2 -pipe -fno-stack-protector -fno-stack-check -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -mharden-sls=none -fno-ident -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement=1 -mllvm -enable-dfa-jump-thread -mtls-dialect=gnu2 -fsplit-machine-functions -mllvm -unroll-threshold=500 -D_FORTIFY_SOURCE=0"
     -D c_link_args="-lmimalloc -fuse-ld=mold -flto=auto -O3 -Wl,--lto-O3 -Wl,--hash-style=gnu -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs -Wl,--strip-all -Wl,--icf=safe -Wl,-z,norelro"
     -D cpp_args="-march=native -mtune=native -O2 -pipe -fno-stack-protector -fno-stack-check -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -mharden-sls=none -fno-ident -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement=1 -mllvm -enable-dfa-jump-thread -mtls-dialect=gnu2 -fsplit-machine-functions -mllvm -unroll-threshold=500 -D_FORTIFY_SOURCE=0 -DNDEBUG -Wp,-U_GLIBCXX_ASSERTIONS"
-    -D cpp_link_args="-lmimalloc -fuse-ld=mold -flto=auto -O3 -Wl,--lto-O3 -Wl,--hash-style=gnu -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs -Wl,--strip-all -Wl,--icf=safe -Wl,-z,norelro"
+    -D cpp_link_args="-fuse-ld=mold -flto=auto -O3 -Wl,--lto-O3 -Wl,--hash-style=gnu -Wl,--as-needed -Wl,-Bsymbolic-functions -Wl,-z,pack-relative-relocs -Wl,--strip-all -Wl,--icf=safe -Wl,-z,norelro"
     -D b_asneeded=false
     -D b_ndebug=true
     -D gallium-drivers=radeonsi
