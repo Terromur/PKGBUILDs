@@ -273,6 +273,9 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/game-patches/black-desert-keep-fullscreen-on-focus-loss.patch" \
         -not -path "${proton_patches_dir}/game-patches/max-payne-cpu-detection.patch" \
         -not -path "${proton_patches_dir}/game-patches/return-to-krondor-text-bitmap-readback.patch" \
+        -not -path "${proton_patches_dir}/game-patches/ace-lsass-samss-service-stub.patch" \
+        -not -path "${proton_patches_dir}/game-patches/ace-wineboot-start-samss-service.patch" \
+        -not -path "${proton_patches_dir}/game-patches/layered-overlay-direct-present.patch" \
         -not -path "${proton_patches_dir}/ge-video-rework/*" \
         -not -path "${proton_patches_dir}/lsteamclient/*" \
         -not -path "${proton_patches_dir}/pipewire/*" \
@@ -287,6 +290,7 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/proton/wine_host_block_envvar.patch" \
         -not -path "${proton_patches_dir}/proton/winex11-mutter-cinnamon.patch" \
         -not -path "${proton_patches_dir}/proton/build_failure_prevention-add-nls.patch" \
+        -not -path "${proton_patches_dir}/proton/0003-HACK-ntdll-redirect-streamline-dlls-for-upgrade.patch" \
         -not -path "${proton_patches_dir}/protonfixes/*" \
         -not -path "${proton_patches_dir}/vkd3d-proton/*" \
 	-not -path "${proton_patches_dir}/wine-hotfixes/disabled/*" \
@@ -305,9 +309,13 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-wayland/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wineland-child-rendering/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/bluetooth-le/*" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/llvm-libc/*" \
         -not -path "${proton_patches_dir}/wineopenxr/*" \
         -not -path "${proton_patches_dir}/wine-mono/*" \
         -not -path "${proton_patches_dir}/low_latency_layer/*" \
+        -not -path "${proton_patches_dir}/steam_helper/*" \
+        -not -path "${proton_patches_dir}/vrclient/*" \
+        -not -path "${proton_patches_dir}/openvr/*" \
         -print0 | sort -z)
 fi
   
@@ -365,6 +373,7 @@ fi
         -not -path "${starcitizen_lug_dir}/wine/winewayland-systray.patch" \
         -not -path "${starcitizen_lug_dir}/wine/winewayland-prefer-relative-pointer.patch" \
         -not -path "${starcitizen_lug_dir}/wine/sc_gpumem.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/d3dkmt-sync-getfd.patch" \
         -print0 | sort -z)
     fi
 
