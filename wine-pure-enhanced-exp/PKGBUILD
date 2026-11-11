@@ -1,11 +1,11 @@
 # Maintainer: Terromur <terromuroz@proton.me>
 
 pkgname=wine-pure-enhanced-exp
-pkgver=11.19.r55.g3033ee4aa5c
+pkgver=11.20.r154.g8891603b59c
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=3033ee4aa5c0e18e0596fd7edc56691f7c15ee05"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=2395d93338d6b75d44c4c68fec38213f2398a5a9"
+  "git+https://gitlab.winehq.org/wine/wine.git#commit=8891603b59c12a61b156e7b36499123dc1ad49ed"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=711f5be0b016c2730c268eb92369bf56b9ec9782"
   "git+https://github.com/GloriousEggroll/proton-ge-custom.git"
   "git+https://github.com/elgabo86/gwine.git"
   "git+https://github.com/starcitizen-lug/patches.git"
@@ -17,11 +17,8 @@ source=(
   0002-wine.inf-Set-a-valid-Win10-ProductId.patch
   0003-wineboot-On-prefix-upgrade-update-win10-build-number.patch
   0004-wineboot-Generate-better-DigitalProductId.patch
-  0005-wineboot-Load-root-certificates-on-prefix-update.patch
   Disable-optimization-of-some-functions.patch
   winecfg-Add-tweaks-tab-page.patch
-  ntdll-loader-add-support-for-overriding-IMAGE_FILE_L.patch
-  Add-workarounds-for-game-launchers.patch
   0001-HACK-ws2_32-Block-first-internet-connection-for-some.patch
   Configure-Enforce-4-byte-stack-alignment-on-clang-for-PE-builds.patch
   10108.patch
@@ -43,7 +40,6 @@ source=(
   wineserver-close-released-lock-fds.patch
   wine-msvcrt-binary-ccs-utf8-bom.patch
   wine-msvcrt-narrow-open-createfilea.patch
-  wine-pipe-file-position.patch
   0006-comdlg32-use-XDG-Desktop-Portal-for-native-file-dial.patch
   0007-comdlg32-fix-portal-dialog-compatibility-and-respons.patch
   0008-comdlg32-add-wow64-unix-call-table-for-32-bit.patch
@@ -57,10 +53,6 @@ source=(
 )
 
 sha256sums=(
-  'SKIP'
-  'SKIP'
-  'SKIP'
-  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -187,7 +179,6 @@ prepare() {
   patch -Np1 -i "${srcdir}/0002-wine.inf-Set-a-valid-Win10-ProductId.patch"
   patch -Np1 -i "${srcdir}/0003-wineboot-On-prefix-upgrade-update-win10-build-number.patch"
   patch -Np1 -i "${srcdir}/0004-wineboot-Generate-better-DigitalProductId.patch"
-  patch -Np1 -i "${srcdir}/0005-wineboot-Load-root-certificates-on-prefix-update.patch"
 
   # Disable optimization of some functions on Clang, as this breaks some games
   # TODO: Understand root causes and check latest Clang
@@ -196,13 +187,6 @@ prepare() {
 
   # Add tweaks tab page in winecfg
   patch -Np1 -i "${srcdir}/winecfg-Add-tweaks-tab-page.patch"
-
-  # Patch from Proton. Works only if WINE_LARGE_ADDRESS_AWARE environment
-  # variable is specified.
-  patch -Np1 -i "${srcdir}/ntdll-loader-add-support-for-overriding-IMAGE_FILE_L.patch"
-
-  # Fix black windows in some launchers when using winewayland
-  patch -Np1 -i "${srcdir}/Add-workarounds-for-game-launchers.patch"
 
   # Fixes anti-cheat bypass for Mihoyo games
   # Patch by @NelloKudo
@@ -233,7 +217,6 @@ prepare() {
   patch -Np1 -i "${srcdir}/wineserver-close-released-lock-fds.patch"
   patch -Np1 -i "${srcdir}/wine-msvcrt-binary-ccs-utf8-bom.patch"
   patch -Np1 -i "${srcdir}/wine-msvcrt-narrow-open-createfilea.patch"
-  patch -Np1 -i "${srcdir}/wine-pipe-file-position.patch"
   patch -Np1 -i "${srcdir}/0006-comdlg32-use-XDG-Desktop-Portal-for-native-file-dial.patch"
   patch -Np1 -i "${srcdir}/0007-comdlg32-fix-portal-dialog-compatibility-and-respons.patch"
   patch -Np1 -i "${srcdir}/0008-comdlg32-add-wow64-unix-call-table-for-32-bit.patch"
@@ -274,6 +257,9 @@ if [ -d "${wine_osu_patches_dir}" ]; then
         -not -path "${wine_osu_patches_dir}/0007-proton-additions/0013-server-user32-Backport-more-raw-input-changes-from-P.patch" \
         -not -path "${wine_osu_patches_dir}/0008-winewayland-additions/0021-server-Store-keyboard-layout-in-thread-struct.patch" \
         -not -path "${wine_osu_patches_dir}/0008-winewayland-additions/0022-win32u-Implement-cross-thread-keyboard-layout-query.patch" \
+        -not -path "${wine_osu_patches_dir}/0008-winewayland-additions/0084-win32u-Don-t-return-early-if-no-monitor-id-is-presen.patch" \
+        -not -path "${wine_osu_patches_dir}/0008-winewayland-additions/0103-win32u-Implement-copying-to-window-surface-for-openg.patch" \
+        -not -path "${wine_osu_patches_dir}/0008-winewayland-additions/0104-HACK-win32u-Implement-cross-process-rendering-for-Op.patch" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0009-win32u-Add-WINE_DISABLE_IME.patch" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0016-HACK-proton-server-Close-desktop-immediately-when-la.patch" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0036-winex11-Uninit-winattrs-fix.patch" \
@@ -283,6 +269,7 @@ if [ -d "${wine_osu_patches_dir}" ]; then
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0040-wineusb-usb-annoyances.patch" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/600hz-default.patch" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0042-server-rename-debug_level-to-_debug_level-to-hint-br.patch" \
+        -not -path "${wine_osu_patches_dir}/9000-misc-additions/0029-ntdll-Silence-HeapEnableTerminationOnCorruption.patch" \
         -print0 | sort -z)
 fi 
   
@@ -303,6 +290,9 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/game-patches/black-desert-keep-fullscreen-on-focus-loss.patch" \
         -not -path "${proton_patches_dir}/game-patches/max-payne-cpu-detection.patch" \
         -not -path "${proton_patches_dir}/game-patches/return-to-krondor-text-bitmap-readback.patch" \
+        -not -path "${proton_patches_dir}/game-patches/ace-lsass-samss-service-stub.patch" \
+        -not -path "${proton_patches_dir}/game-patches/ace-wineboot-start-samss-service.patch" \
+        -not -path "${proton_patches_dir}/game-patches/layered-overlay-direct-present.patch" \
         -not -path "${proton_patches_dir}/ge-video-rework/*" \
         -not -path "${proton_patches_dir}/lsteamclient/*" \
         -not -path "${proton_patches_dir}/pipewire/*" \
@@ -318,6 +308,7 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/proton/wine_host_block_envvar.patch" \
         -not -path "${proton_patches_dir}/proton/winex11-mutter-cinnamon.patch" \
         -not -path "${proton_patches_dir}/proton/build_failure_prevention-add-nls.patch" \
+        -not -path "${proton_patches_dir}/proton/0003-HACK-ntdll-redirect-streamline-dlls-for-upgrade.patch" \
         -not -path "${proton_patches_dir}/protonfixes/*" \
         -not -path "${proton_patches_dir}/vkd3d-proton/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/disabled/*" \
@@ -336,9 +327,13 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/wine-hotfixes/wine-wayland/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/wineland-child-rendering/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/bluetooth-le/*" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/llvm-libc/*" \
         -not -path "${proton_patches_dir}/wineopenxr/*" \
+        -not -path "${proton_patches_dir}/openvr/*" \
         -not -path "${proton_patches_dir}/wine-mono/*" \
         -not -path "${proton_patches_dir}/low_latency_layer/*" \
+        -not -path "${proton_patches_dir}/steam_helper/*" \
+        -not -path "${proton_patches_dir}/vrclient/*" \
         -print0 | sort -z)
 fi
   
@@ -351,6 +346,7 @@ if [ -d "${spritz_patches_dir}" ]; then
     -type f \
     -name "*.patch" \
         -not -path "${spritz_patches_dir}/0001-spritz/0002-HACK-ws2_32-Block-first-internet-connection-for-some.patch" \
+        -not -path "${spritz_patches_dir}/0001-spritz/0010-crypt32-Don-t-sort-items-when-updating-attributes-fo.patch" \
         -not -path "${spritz_patches_dir}/0001-spritz/0006-HACK-winex11-Make-WM-focus-the-window-by-default.patch" \
         -not -path "${spritz_patches_dir}/0001-spritz/0008-winex11-Ignore-XI_BadDevice-errors-on-X_OpenDevice-w.patch" \
         -not -path "${spritz_patches_dir}/0003-tkg/0001-ntdll-loader-add-support-for-overriding-IMAGE_FILE_L.patch" \
@@ -369,6 +365,7 @@ if [ -d "${spritz_patches_dir}" ]; then
         -not -path "${spritz_patches_dir}/0007-ntoskrnl/*" \
         -not -path "${spritz_patches_dir}/0008-pending-MR/10829-Futex-optimizations/*" \
         -not -path "${spritz_patches_dir}/0008-pending-MR/9866-Revert-ntdll-Switch-to-CLOCK-BOOTTIME-for-monotonic-counters-when-available-/*" \
+        -not -path "${spritz_patches_dir}/0008-pending-MR/10871-Respect-runtime-font-smoothing-settings/0003-winex11.drv-Preserve-disabled-font-smoothing.patch" \
         -print0 | sort -z)
 fi
 
@@ -407,6 +404,8 @@ fi
         -not -path "${starcitizen_lug_dir}/wine/winewayland-systray.patch" \
         -not -path "${starcitizen_lug_dir}/wine/winewayland-prefer-relative-pointer.patch" \
         -not -path "${starcitizen_lug_dir}/wine/sc_gpumem.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/current-thread-for-writing-minidump.patch" \
+        -not -path "${starcitizen_lug_dir}/wine/d3dkmt-sync-getfd.patch" \
         -print0 | sort -z)
     fi
 
