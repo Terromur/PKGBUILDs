@@ -148,7 +148,6 @@ build() {
     -Dallow-broken-lto=true
     -D llvm=disabled
     -D optimization=3
-    -D amd-use-llvm=false
     -D android-libbacktrace=disabled
     -D android-strict=false
     -D c_args="-march=native -mtune=native -O2 -pipe -fno-stack-protector -fno-stack-check -fno-math-errno -fno-trapping-math -fno-semantic-interposition -fcf-protection=none -mharden-sls=none -fno-ident -mllvm -adce-remove-loops -mllvm -enable-ext-tsp-block-placement=1 -mllvm -enable-dfa-jump-thread -mtls-dialect=gnu2 -fsplit-machine-functions -mllvm -unroll-threshold=500 -D_FORTIFY_SOURCE=0"
