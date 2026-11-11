@@ -8,8 +8,8 @@ pkgbase=mutter-git
 pkgname=(
   mutter-git
 )
-pkgver=51.0+11+g888a7b7dac
-pkgrel=2
+pkgver=51.1+80+gefad8e9f30
+pkgrel=1
 pkgdesc="Window manager and compositor for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
 arch=(x86_64)
@@ -142,7 +142,7 @@ _pick() {
 }
 
 package_mutter-git() {
-  provides=(libmutter-51.so mutter)
+  provides=(libmutter-52.so mutter)
   conflicts=(mutter)
   optdepends=(
     'bash-completion: Bash completions for gdctl'

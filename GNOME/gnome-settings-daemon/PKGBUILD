@@ -3,7 +3,7 @@
 # Maintainer: Terromur <terromuroz@proton.me>
 
 pkgname=gnome-settings-daemon
-pkgver=51.0
+pkgver=51.1
 pkgrel=1
 pkgdesc="GNOME Settings Daemon"
 url="https://gitlab.gnome.org/GNOME/gnome-settings-daemon"
@@ -63,7 +63,7 @@ source=(
   "git+https://gitlab.gnome.org/GNOME/gnome-settings-daemon.git#tag=${pkgver/[a-z]/.&}"
   "git+https://gitlab.gnome.org/GNOME/libgnome-volume-control.git"
 )
-b2sums=('bf44b171992735d1800ff87fce8c164245882187a63fd38011d5d3f72f05e8fb6a55a5a36b576b83dc49a833e2f2dc8ac55d622d29e6da25fcf642674df2c69d'
+b2sums=('52dd4163a11446ad7de40f0ac736dcbed18d72efbdb164bd790c947c375c840adde0d88a2ad2a920b29ed70611b87cf838c07478c228ccbf8cbde618582853f8'
         'SKIP')
 
 prepare() {
