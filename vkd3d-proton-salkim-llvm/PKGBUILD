@@ -1,7 +1,7 @@
 # Maintainer: Terromur <terromuroz@proton.me>
 
 pkgname=vkd3d-proton-salkim-llvm
-pkgver=3.0.1.r6940.31863ccb
+pkgver=3.0.1.r7038.a9428806
 pkgrel=1
 pkgdesc="Enhances VKD3D-Proton with low-latency frame pacing"
 arch=('x86_64')

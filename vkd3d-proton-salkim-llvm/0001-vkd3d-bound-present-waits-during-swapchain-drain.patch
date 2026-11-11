@@ -22,7 +22,7 @@ diff --git a/libs/vkd3d/swapchain.c b/libs/vkd3d/swapchain.c
 index 5f2e9355..7cf25f63 100644
 --- a/libs/vkd3d/swapchain.c
 +++ b/libs/vkd3d/swapchain.c
-@@ -22,6 +22,7 @@
+@@ -23,6 +23,7 @@
   */
  
  #define VKD3D_DBG_CHANNEL VKD3D_DBG_CHANNEL_API
@@ -30,17 +30,18 @@ index 5f2e9355..7cf25f63 100644
  
  #ifdef _WIN32
  #include "vkd3d_win32.h"
-@@ -650,6 +651,9 @@
+@@ -664,6 +665,10 @@
  
  static void dxgi_vk_swap_chain_cleanup_waiter_thread(struct dxgi_vk_swap_chain *chain)
  {
 +    pthread_mutex_lock(&chain->wait_thread.lock);
 +    chain->wait_thread.skip_waits = true;
 +    pthread_mutex_unlock(&chain->wait_thread.lock);
-     dxgi_vk_swap_chain_push_present_id(chain, 0, 0, 0, true, 0);
++
+     dxgi_vk_swap_chain_push_present_id(chain, 0, 0, 0, true, false, 0);
      pthread_join(chain->wait_thread.thread, NULL);
      pthread_mutex_destroy(&chain->wait_thread.lock);
-@@ -1970,6 +1974,16 @@
+@@ -1992,6 +1997,16 @@
      pthread_mutex_unlock(&chain->wait_thread.lock);
  }
  
@@ -57,18 +58,19 @@ index 5f2e9355..7cf25f63 100644
  static void dxgi_vk_swap_chain_destroy_swapchain_in_present_task(struct dxgi_vk_swap_chain *chain)
  {
      const struct vkd3d_vk_device_procs *vk_procs = &chain->queue->device->vk_procs;
-@@ -4371,8 +4385,9 @@
+@@ -4420,8 +4435,10 @@
          {
              cookie = vkd3d_queue_timeline_trace_register_present_wait(timeline_trace, entry.id);
              /* In skip wait mode we just need to make sure that we signal latency fences properly. */
 -            if (!chain->wait_thread.skip_waits)
 +            if (!dxgi_vk_swap_chain_should_skip_present_waits(chain))
              {
-+              VkResult vr;
++                VkResult vr;
++
                  /* We don't really care if we observed OUT_OF_DATE or something here. */
                  if (chain->present.wait2)
                  {
-@@ -4380,14 +4395,24 @@
+@@ -4429,14 +4446,24 @@
                      memset(&wait_info, 0, sizeof(wait_info));
                      wait_info.sType = VK_STRUCTURE_TYPE_PRESENT_WAIT_2_INFO_KHR;
                      wait_info.presentId = entry.id;
