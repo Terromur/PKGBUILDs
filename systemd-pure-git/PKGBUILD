@@ -6,7 +6,7 @@ pkgname=('systemd-git'
          'systemd-resolvconf-git'
          'systemd-sysvcompat-git')
 pkgdesc='systemd (git version)'
-pkgver=263.devel.r92137.54b24a3855d
+pkgver=263.devel.r94157.fc2bfbae8a7
 pkgrel=1
 arch=('x86_64')
 license=('LGPL-2.1-or-later')
@@ -292,7 +292,35 @@ _pgo_train_udev() {
   return 0
 }
 
+_rustc_pgo_wrapper() {
+  local _link_flag="$1" _wrapper_dir="$2" _native_file="$3"
+  local _wrapper="$_wrapper_dir/rustc"
+  mkdir -p "$_wrapper_dir"
+
+  cat > "$_wrapper" <<EOF
+#!/bin/sh
+for _arg in "\$@"; do
+  case "\$_arg" in
+    --version|-V|-vV|--print|--print=*)
+      exec /usr/bin/rustc "\$@"
+      ;;
+  esac
+done
+exec /usr/bin/rustc "\$@" -C link-arg=${_link_flag}
+EOF
+  chmod +x "$_wrapper"
+
+  cat > "$_native_file" <<EOF
+[binaries]
+rust  = '$_wrapper'
+rustc = '$_wrapper'
+EOF
+}
+
 build() {
+  local _meson_version
+  _meson_version=$(sed 's/~/./g' "${srcdir}/${pkgbase}-stable/meson.version")
+
   local _timeservers=({0..3}.arch.pool.ntp.org)
   local _nameservers=(
     '9.9.9.9#dns.quad9.net'
@@ -303,7 +331,6 @@ build() {
     '2001:4860:4860::8888#dns.google'
   )
 
-  # Filter the environment flags before passing them to meson.
   export CFLAGS="$(_filter_cflags "$CFLAGS")"
   export CXXFLAGS="$(_filter_cflags "$CXXFLAGS")"
   export LDFLAGS="$(_filter_ldflags "$LDFLAGS" 1)"
@@ -327,7 +354,7 @@ build() {
     -Dman=enabled
     -Dselinux=disabled
     -Dsshdprivsepdir=/usr/share/empty.sshd
-    -Dsysupdated=enabled
+    -Dsysupdated=disabled
     -Dvmlinux-h=provided
     -Dvmlinux-h-path=/usr/src/linux-cachyos/vmlinux.h
     -Dukify=disabled
@@ -350,7 +377,7 @@ build() {
     -Dsbat-distro-pkgname="${pkgbase}"
     -Dsbat-distro-version="${pkgver}"
     -Dsbat-distro-url='https://cachyos.org/'
-    -D b_pie=false
+    -Db_pie=false
     -Dpython.bytecompile=2
     -Dimds=disabled
     -Dnspawn=disabled
@@ -376,10 +403,10 @@ build() {
     -Dqrencode=disabled
     -Dgnutls=disabled
     -Dlibcurl=disabled
-    -Dima=false
+    # -Dima=false
     -Dipe=false
     -Durlify=false
-    -Dlibidn2=disabled
+    # -Dlibidn2=disabled
     -Dstrip=false
   )
 
@@ -397,12 +424,25 @@ build() {
   export CC=clang
   export CXX=clang++
 
-  arch-meson "${pkgbase}-stable" build-pgo-gen "${_meson_options[@]}" \
-    -Db_lto=false \
-    -Dc_args="${CFLAGS} -fprofile-generate=${_pgo_raw_std}" \
-    -Dcpp_args="${CXXFLAGS} -fprofile-generate=${_pgo_raw_std}" \
-    -Dc_link_args="${LDFLAGS} -fprofile-generate" \
-    -Dcpp_link_args="${LDFLAGS} -fprofile-generate"
+  _rustc_pgo_wrapper -fprofile-generate \
+    "$srcdir/rustc-pgo-std" "$srcdir/rustc-pgo-std.ini"
+
+  RUSTC="$srcdir/rustc-pgo-std/rustc" \
+  PATH="$srcdir/rustc-pgo-std:$PATH" \
+    arch-meson "${pkgbase}-stable" build-pgo-gen "${_meson_options[@]}" \
+      --native-file "$srcdir/rustc-pgo-std.ini" \
+      -Db_lto=false \
+      -Dc_args="${CFLAGS} -fprofile-generate=${_pgo_raw_std}" \
+      -Dcpp_args="${CXXFLAGS} -fprofile-generate=${_pgo_raw_std}" \
+      -Dc_link_args="${LDFLAGS} -fprofile-generate" \
+      -Dcpp_link_args="${LDFLAGS} -fprofile-generate"
+
+  if ! grep -qs 'rustc-pgo-std' build-pgo-gen/build.ninja; then
+    error "rustc wrapper (std) not referenced by meson."
+    msg2 "meson resolved rustc to:"
+    grep -m1 -oE 'command = [^ ]*rustc[^ ]*' build-pgo-gen/build.ninja || true
+    return 1
+  fi
 
   meson compile -C build-pgo-gen
 
@@ -417,15 +457,29 @@ build() {
   shopt -u nullglob
   (( ${#_raws_std[@]} )) || { error "No .profraw files produced."; return 1; }
   llvm-profdata merge --failure-mode=all -output="${_pgo_profdata_std}" "${_raws_std[@]}"
-  llvm-profdata show --counts "${_pgo_profdata_std}" >/dev/null || { error "Merged standard profile corrupted."; return 1; }
+  llvm-profdata show --counts "${_pgo_profdata_std}" >/dev/null || {
+    error "Merged standard profile corrupted."; return 1; }
 
   msg2 "LLVM PGO stage 4/5: CS-PGO instrumented build"
-  arch-meson "${pkgbase}-stable" build-cs "${_meson_options[@]}" \
-    -Db_lto=false \
-    -Dc_args="${CFLAGS} -fprofile-use=${_pgo_profdata_std} -fcs-profile-generate=${_pgo_raw_cs} -Wno-profile-instr-unprofiled" \
-    -Dcpp_args="${CXXFLAGS} -fprofile-use=${_pgo_profdata_std} -fcs-profile-generate=${_pgo_raw_cs} -Wno-profile-instr-unprofiled" \
-    -Dc_link_args="${LDFLAGS} -fprofile-use=${_pgo_profdata_std} -fcs-profile-generate" \
-    -Dcpp_link_args="${LDFLAGS} -fprofile-use=${_pgo_profdata_std} -fcs-profile-generate"
+  _rustc_pgo_wrapper -fcs-profile-generate \
+    "$srcdir/rustc-pgo-cs" "$srcdir/rustc-pgo-cs.ini"
+
+  RUSTC="$srcdir/rustc-pgo-cs/rustc" \
+  PATH="$srcdir/rustc-pgo-cs:$PATH" \
+    arch-meson "${pkgbase}-stable" build-cs "${_meson_options[@]}" \
+      --native-file "$srcdir/rustc-pgo-cs.ini" \
+      -Db_lto=false \
+      -Dc_args="${CFLAGS} -fprofile-use=${_pgo_profdata_std} -fcs-profile-generate=${_pgo_raw_cs} -Wno-profile-instr-unprofiled" \
+      -Dcpp_args="${CXXFLAGS} -fprofile-use=${_pgo_profdata_std} -fcs-profile-generate=${_pgo_raw_cs} -Wno-profile-instr-unprofiled" \
+      -Dc_link_args="${LDFLAGS} -fprofile-use=${_pgo_profdata_std} -fcs-profile-generate" \
+      -Dcpp_link_args="${LDFLAGS} -fprofile-use=${_pgo_profdata_std} -fcs-profile-generate"
+
+  if ! grep -qs 'rustc-pgo-cs' build-cs/build.ninja; then
+    error "rustc wrapper (cs) not referenced by meson."
+    msg2 "meson resolved rustc to:"
+    grep -m1 -oE 'command = [^ ]*rustc[^ ]*' build-cs/build.ninja || true
+    return 1
+  fi
 
   meson compile -C build-cs
 
@@ -451,21 +505,21 @@ build() {
   [[ -s "${_pgo_profdata_final}" ]] || { error "Final merged profile empty."; return 1; }
 
   msg2 "LLVM PGO stage 5/5: final optimized build (ThinLTO ON)"
+  unset RUSTC
+
   arch-meson "${pkgbase}-stable" build "${_meson_options[@]}" \
-  -Db_lto=true \
-  -Db_lto_mode=default \
-  -Dc_args="${CFLAGS} -fprofile-use=${_pgo_profdata_final} -Wno-profile-instr-unprofiled" \
-  -Dcpp_args="${CXXFLAGS} -fprofile-use=${_pgo_profdata_final} -Wno-profile-instr-unprofiled" \
-  -Dc_link_args="${LDFLAGS} -Wl,--emit-relocs" \
-  -Dcpp_link_args="${LDFLAGS} -Wl,--emit-relocs"
+    -Db_lto=true \
+    -Db_lto_mode=default \
+    -Dc_args="${CFLAGS} -fprofile-use=${_pgo_profdata_final} -Wno-profile-instr-unprofiled" \
+    -Dcpp_args="${CXXFLAGS} -fprofile-use=${_pgo_profdata_final} -Wno-profile-instr-unprofiled" \
+    -Dc_link_args="${LDFLAGS}" \
+    -Dcpp_link_args="${LDFLAGS}"
 
   meson compile -C build
 
-  # Sanity: PGO must have been applied to the final build
   grep -q 'fprofile-use' "$srcdir/build/build.ninja" || {
     error "PGO was not applied to the final build"; return 1; }
 
-  # Sanity: relocations must be present for BOLT
   readelf -S "$srcdir/build/systemd" 2>/dev/null | grep -q '\.rela\.text' || {
     warning "Section .rela.text not found; BOLT may be suboptimal."
   }
