@@ -1,11 +1,11 @@
 # Maintainer: Terromur <terromuroz@proton.me>
 
 pkgname=wine-pure-enhanced-exp
-pkgver=11.20.r154.g8891603b59c
+pkgver=11.22.r0.g9f8c4ae4d35
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=8891603b59c12a61b156e7b36499123dc1ad49ed"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=711f5be0b016c2730c268eb92369bf56b9ec9782"
+  "git+https://gitlab.winehq.org/wine/wine.git"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git"
   "git+https://github.com/GloriousEggroll/proton-ge-custom.git"
   "git+https://github.com/elgabo86/gwine.git"
   "git+https://github.com/starcitizen-lug/patches.git"
@@ -255,9 +255,6 @@ if [ -d "${wine_osu_patches_dir}" ]; then
         -not -path "${wine_osu_patches_dir}/0005-windowing-system-integration/0002-proton/0008-winex11.drv-Only-process-raw-input-in-default-winsta.patch" \
         -not -path "${wine_osu_patches_dir}/0006-audio/*" \
         -not -path "${wine_osu_patches_dir}/0007-proton-additions/0013-server-user32-Backport-more-raw-input-changes-from-P.patch" \
-        -not -path "${wine_osu_patches_dir}/0008-winewayland-additions/0021-server-Store-keyboard-layout-in-thread-struct.patch" \
-        -not -path "${wine_osu_patches_dir}/0008-winewayland-additions/0022-win32u-Implement-cross-thread-keyboard-layout-query.patch" \
-        -not -path "${wine_osu_patches_dir}/0008-winewayland-additions/0084-win32u-Don-t-return-early-if-no-monitor-id-is-presen.patch" \
         -not -path "${wine_osu_patches_dir}/0008-winewayland-additions/0103-win32u-Implement-copying-to-window-surface-for-openg.patch" \
         -not -path "${wine_osu_patches_dir}/0008-winewayland-additions/0104-HACK-win32u-Implement-cross-process-rendering-for-Op.patch" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0009-win32u-Add-WINE_DISABLE_IME.patch" \
@@ -268,8 +265,6 @@ if [ -d "${wine_osu_patches_dir}" ]; then
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0014-appwiz-Add-env.-vars-to-skip-mono-gecko-installation.patch" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0040-wineusb-usb-annoyances.patch" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/600hz-default.patch" \
-        -not -path "${wine_osu_patches_dir}/9000-misc-additions/0042-server-rename-debug_level-to-_debug_level-to-hint-br.patch" \
-        -not -path "${wine_osu_patches_dir}/9000-misc-additions/0029-ntdll-Silence-HeapEnableTerminationOnCorruption.patch" \
         -print0 | sort -z)
 fi 
   
