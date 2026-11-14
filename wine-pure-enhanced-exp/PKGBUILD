@@ -265,6 +265,7 @@ if [ -d "${wine_osu_patches_dir}" ]; then
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0014-appwiz-Add-env.-vars-to-skip-mono-gecko-installation.patch" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0040-wineusb-usb-annoyances.patch" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/600hz-default.patch" \
+        -not -path "${wine_osu_patches_dir}/9000-misc-additions/0042-server-rename-debug_level-to-_debug_level-to-hint-br.patch" \
         -print0 | sort -z)
 fi 
   
