@@ -1,11 +1,11 @@
 # Maintainer: Terromur <terromuroz@proton.me>
 
 pkgname=wine-pure-enhanced-exp
-pkgver=11.22.r37.g589a301a390
+pkgver=11.22.r138.g97027f879ba
 pkgrel=1
 source=(
-  "git+https://gitlab.winehq.org/wine/wine.git#commit=589a301a390517b2d3d4b68e26b22dd32376e198"
-  "git+https://gitlab.winehq.org/wine/wine-staging.git#commit=40ab84054fe2ead6c689de31405ba36269e9ee3a"
+  "git+https://gitlab.winehq.org/wine/wine.git"
+  "git+https://gitlab.winehq.org/wine/wine-staging.git"
   "git+https://github.com/GloriousEggroll/proton-ge-custom.git"
   "git+https://github.com/elgabo86/gwine.git"
   "git+https://github.com/starcitizen-lug/patches.git"
@@ -255,6 +255,7 @@ if [ -d "${wine_osu_patches_dir}" ]; then
         -not -path "${wine_osu_patches_dir}/0005-windowing-system-integration/0002-proton/0008-winex11.drv-Only-process-raw-input-in-default-winsta.patch" \
         -not -path "${wine_osu_patches_dir}/0006-audio/*" \
         -not -path "${wine_osu_patches_dir}/0007-proton-additions/0013-server-user32-Backport-more-raw-input-changes-from-P.patch" \
+        -not -path "${wine_osu_patches_dir}/0008-winewayland-additions/0025-HACK-win32u-Implement-cross-process-rendering-for-Op.patch" \
         -not -path "${wine_osu_patches_dir}/0008-winewayland-additions/0103-win32u-Implement-copying-to-window-surface-for-openg.patch" \
         -not -path "${wine_osu_patches_dir}/0008-winewayland-additions/0104-HACK-win32u-Implement-cross-process-rendering-for-Op.patch" \
         -not -path "${wine_osu_patches_dir}/9000-misc-additions/0009-win32u-Add-WINE_DISABLE_IME.patch" \
