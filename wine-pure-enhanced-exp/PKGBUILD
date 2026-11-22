@@ -325,6 +325,7 @@ if [ -d "${proton_patches_dir}" ]; then
         -not -path "${proton_patches_dir}/wine-hotfixes/wineland-child-rendering/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/bluetooth-le/*" \
         -not -path "${proton_patches_dir}/wine-hotfixes/llvm-libc/*" \
+        -not -path "${proton_patches_dir}/wine-hotfixes/winepipewire/*" \
         -not -path "${proton_patches_dir}/wineopenxr/*" \
         -not -path "${proton_patches_dir}/openvr/*" \
         -not -path "${proton_patches_dir}/wine-mono/*" \
