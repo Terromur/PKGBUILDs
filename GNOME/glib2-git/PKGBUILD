@@ -40,6 +40,7 @@ makedepends=(
   python-packaging
   shared-mime-info
   util-linux
+  llvm-bolt
 )
 checkdepends=(
   desktop-file-utils
