@@ -75,6 +75,7 @@ makedepends=(
   systemd
   valgrind
   webrtc-audio-processing-1
+  sndio
 )
 checkdepends=(
   desktop-file-utils
